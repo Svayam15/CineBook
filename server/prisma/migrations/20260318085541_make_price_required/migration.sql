@@ -1,0 +1,2 @@
+-- AlterTable
+ALTER TABLE "Show" ALTER COLUMN "price" DROP DEFAULT;

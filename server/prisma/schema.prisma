@@ -1,0 +1,171 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+///////////////////////
+// ENUMS
+///////////////////////
+
+enum SeatStatus {
+  AVAILABLE
+  LOCKED
+  BOOKED
+}
+
+enum SeatType {
+  REGULAR
+  GOLDEN
+}
+
+enum BookingStatus {
+  PENDING
+  PAID
+  CANCELLED
+  FAILED
+}
+
+enum PaymentType {
+  CASH
+  CARD
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+enum OTPType {
+  SIGNUP
+  LOGIN
+  FORGOT_PASSWORD
+}
+
+///////////////////////
+// MODELS
+///////////////////////
+
+model User {
+  id        Int      @id @default(autoincrement())
+  name      String
+  surname   String
+  username  String   @unique
+  email     String   @unique
+  password  String
+  role      Role     @default(USER)
+  createdAt DateTime @default(now())
+
+  bookings Booking[]
+}
+
+model OTP {
+  id           Int       @id @default(autoincrement())
+  email        String
+  otp          String
+  type         OTPType
+  expiresAt    DateTime
+  used         Boolean   @default(false)
+  attempts     Int       @default(0)
+  resendCount  Int       @default(0)
+  blockedUntil DateTime?
+  userData     Json?
+  createdAt    DateTime  @default(now())
+}
+
+model LoginAttempt {
+  id           Int       @id @default(autoincrement())
+  email        String    @unique
+  attempts     Int       @default(0)
+  blockedUntil DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+}
+
+model Movie {
+  id        Int      @id @default(autoincrement())
+  title     String
+  duration  Int
+  createdAt DateTime @default(now())
+
+  shows Show[]
+}
+
+model Theatre {
+  id       Int    @id @default(autoincrement())
+  name     String
+  location String
+
+  shows Show[]
+}
+
+model Show {
+  id             Int      @id @default(autoincrement())
+  movieId        Int
+  theatreId      Int
+  startTime      DateTime
+  totalSeats     Int
+  showType       String
+  regularPrice   Float
+  hasGoldenSeats Boolean  @default(false)
+  goldenSeats    Int?
+  goldenPrice    Float?
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+
+  movie   Movie   @relation(fields: [movieId], references: [id])
+  theatre Theatre @relation(fields: [theatreId], references: [id])
+
+  seats    ShowSeat[]
+  bookings Booking[]
+}
+
+model ShowSeat {
+  id               Int        @id @default(autoincrement())
+  showId           Int
+  row              String
+  number           Int
+  type             SeatType   @default(REGULAR)
+  status           SeatStatus @default(AVAILABLE)
+  lockedAt         DateTime?
+  pendingBookingId Int?
+
+  show         Show          @relation(fields: [showId], references: [id])
+  bookingSeats BookingSeat[]
+
+  @@unique([showId, row, number])
+}
+
+model Booking {
+  id           Int           @id @default(autoincrement())
+  userId       Int
+  showId       Int
+  status       BookingStatus @default(PENDING)
+  paymentType  PaymentType   @default(CARD)
+  totalAmount  Float?
+  paymentId    String?
+  refundId     String?
+  refundAmount Float?
+  cancelledAt  DateTime?
+  createdAt    DateTime      @default(now())
+
+  user  User          @relation(fields: [userId], references: [id])
+  show  Show          @relation(fields: [showId], references: [id])
+  seats BookingSeat[]
+}
+
+model BookingSeat {
+  id         Int      @id @default(autoincrement())
+  bookingId  Int
+  showSeatId Int
+  seatType   SeatType
+  seatPrice  Float
+
+  booking  Booking  @relation(fields: [bookingId], references: [id])
+  showSeat ShowSeat @relation(fields: [showSeatId], references: [id])
+
+  @@unique([bookingId, showSeatId])
+}

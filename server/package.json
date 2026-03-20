@@ -1,0 +1,33 @@
+{
+  "name": "server",
+  "version": "1.0.0",
+  "description": "Backend for ticket booking system",
+  "main": "server.js",
+  "type": "module",
+  "scripts": {
+    "dev": "nodemon server.js",
+    "start": "node server.js",
+    "worker": "node --env-file=.env src/workers/booking_worker.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@prisma/client": "^5.19.1",
+    "@upstash/redis": "^1.37.0",
+    "bcrypt": "6.0.0",
+    "bullmq": "^5.71.0",
+    "cookie-parser": "^1.4.6",
+    "cors": "^2.8.5",
+    "dotenv": "17.3.1",
+    "express": "5.2.1",
+    "ioredis": "^5.10.0",
+    "jsonwebtoken": "^9.0.2",
+    "resend": "^6.9.4",
+    "stripe": "^20.4.1"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.0",
+    "prisma": "^5.19.1"
+  }
+}

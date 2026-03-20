@@ -1,0 +1,284 @@
+import prisma from "../utils/prisma.js";
+import { generateSeats } from "../utils/generateSeats.js";
+import * as seatService from "../services/seat_service.js";
+
+const ALLOWED_SEAT_COUNTS = [120, 150, 180, 200, 250, 300];
+const ALLOWED_SHOW_TYPES = ["2D", "3D", "4D"];
+
+// ⏰ Helper — format to 12hr IST
+const formatToIST = (date) => {
+  return new Date(date).toLocaleString("en-IN", {
+    timeZone: "Asia/Kolkata",
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+  });
+};
+
+// ⏰ Helper — calculate end time
+const getEndTime = (startTime, durationMinutes) => {
+  return new Date(new Date(startTime).getTime() + durationMinutes * 60 * 1000);
+};
+
+// ⏰ Helper — format full show response
+const formatShow = (show) => {
+  if (!show.startTime) return show;
+  const endTime = getEndTime(show.startTime, show.movie?.duration || 0);
+  return {
+    ...show,
+    startTime: formatToIST(show.startTime),
+    endTime: formatToIST(endTime),
+    createdAt: formatToIST(show.createdAt),
+  };
+};
+
+// CREATE SHOW (ADMIN)
+export const createShow = async (req, res) => {
+  try {
+    const {
+      movieId,
+      theatreId,
+      startTime,
+      totalSeats,
+      showType,
+      regularPrice,
+      hasGoldenSeats,
+      goldenSeats,
+      goldenPrice,
+    } = req.body;
+
+    // Validate required fields
+    if (!movieId || !theatreId || !startTime || !totalSeats || !showType || !regularPrice) {
+      return res.status(400).json({ message: "All fields are required" });
+    }
+
+    // Validate showType
+    if (!ALLOWED_SHOW_TYPES.includes(showType)) {
+      return res.status(400).json({ message: "showType must be 2D, 3D or 4D" });
+    }
+
+    // Validate totalSeats
+    if (!ALLOWED_SEAT_COUNTS.includes(totalSeats)) {
+      return res.status(400).json({
+        message: "Total seats must be one of: 120, 150, 180, 200, 250, 300",
+      });
+    }
+
+    if (!startTime.includes("+05:30")) {
+      return res.status(400).json({
+        message: "startTime must be in IST format (e.g. 2026-04-01T18:00:00+05:30)",
+      });
+    }
+
+    // Validate startTime
+    if (new Date(startTime) <= new Date()) {
+      return res.status(400).json({ message: "Start time must be in the future" });
+    }
+
+    // Validate regularPrice
+    if (regularPrice <= 0) {
+      return res.status(400).json({ message: "Regular price must be greater than 0" });
+    }
+
+    // Validate golden seats
+    if (hasGoldenSeats) {
+      if (!goldenSeats || !goldenPrice) {
+        return res.status(400).json({ message: "Golden seats count and price are required" });
+      }
+
+      if (goldenSeats < 30) {
+        return res.status(400).json({ message: "Golden seats must be at least 30" });
+      }
+
+      if (goldenSeats > totalSeats) {
+        return res.status(400).json({ message: "Golden seats cannot exceed total seats" });
+      }
+
+      if (goldenPrice <= regularPrice) {
+        return res.status(400).json({ message: "Golden price must be greater than regular price" });
+      }
+    }
+
+    // Create show
+    const show = await prisma.show.create({
+      data: {
+        movieId,
+        theatreId,
+        startTime: new Date(startTime),
+        totalSeats,
+        showType,
+        regularPrice,
+        hasGoldenSeats: hasGoldenSeats || false,
+        goldenSeats: hasGoldenSeats ? goldenSeats : null,
+        goldenPrice: hasGoldenSeats ? goldenPrice : null,
+      },
+    });
+
+    // Generate seats
+    const seats = generateSeats(totalSeats, hasGoldenSeats ? goldenSeats : 0);
+
+    // Insert seats
+    await prisma.showSeat.createMany({
+      data: seats.map((seat) => ({
+        showId: show.id,
+        row: seat.row,
+        number: seat.number,
+        type: seat.type,
+      })),
+    });
+
+    res.status(201).json({
+      message: "Show created with seats",
+      show: {
+        id: show.id,
+        showType: show.showType,
+        totalSeats: show.totalSeats,
+        regularPrice: show.regularPrice,
+        hasGoldenSeats: show.hasGoldenSeats,
+        goldenSeats: show.goldenSeats,
+        goldenPrice: show.goldenPrice,
+      },
+    });
+  } catch (err) {
+    console.error("Create show error:", err.message);
+    res.status(500).json({ message: "Failed to create show" });
+  }
+};
+
+// GET ALL SHOWS (PUBLIC)
+export const getShows = async (req, res) => {
+  try {
+    const shows = await prisma.show.findMany({
+      where: { isActive: true }, // ← only active shows
+      include: { movie: true, theatre: true },
+      orderBy: { startTime: "asc" },
+    });
+    res.json(shows.map((show) => formatShow(show))); // ← fix this line
+  } catch (err) {
+    console.error("Get shows error:", err);
+    res.status(500).json({ message: "Failed to fetch shows" });
+  }
+};
+
+// GET SHOW BY ID (PUBLIC)
+export const getShowById = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const show = await prisma.show.findUnique({
+      where: { id: parseInt(id) },
+      include: { movie: true, theatre: true },
+    });
+
+    if (!show) {
+      return res.status(404).json({ message: "Show not found" });
+    }
+
+    if (!show.isActive) {
+      return res.status(400).json({ message: "This show has been cancelled" });
+    }
+
+    res.json(formatShow(show));
+  } catch (err) {
+    console.error("Get show error:", err.message);
+    res.status(500).json({ message: "Failed to fetch show" });
+  }
+};
+
+// GET SEATS FOR A SHOW (PUBLIC)
+export const getShowSeats = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const show = await prisma.show.findUnique({
+      where: { id: parseInt(id) },
+    });
+
+    if (!show) {
+      return res.status(404).json({ message: "Show not found" });
+    }
+
+    if (!show.isActive) {
+      return res.status(400).json({ message: "This show has been cancelled" });
+    }
+
+    const seats = await seatService.getShowSeats(id);
+    res.json(seats);
+  } catch (err) {
+    console.error("Get seats error:", err.message);
+    res.status(500).json({ message: "Failed to fetch seats" });
+  }
+};
+
+// DELETE SHOW (ADMIN) — cancels all bookings + refunds
+export const deleteShow = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const show = await prisma.show.findUnique({
+      where: { id: parseInt(id) },
+      include: {
+        bookings: {
+          where: {
+            status: "PAID",
+            paymentType: "CARD",
+          },
+        },
+      },
+    });
+
+    if (!show) {
+      return res.status(404).json({ message: "Show not found" });
+    }
+
+    if (!show.isActive) {
+      return res.status(400).json({ message: "Show already cancelled" });
+    }
+
+    await prisma.$transaction(async (tx) => {
+      // 1. Release all seats
+      await tx.showSeat.updateMany({
+        where: { showId: parseInt(id) },
+        data: {
+          status: "AVAILABLE",
+          lockedAt: null,
+          pendingBookingId: null,
+        },
+      });
+
+      // 2. Cancel all bookings
+      await tx.booking.updateMany({
+        where: {
+          showId: parseInt(id),
+          status: { in: ["PENDING", "PAID"] },
+        },
+        data: {
+          status: "CANCELLED",
+          cancelledAt: new Date(),
+        },
+      });
+
+      // 3. Mark show as inactive
+      await tx.show.update({
+        where: { id: parseInt(id) },
+        data: { isActive: false },
+      });
+    });
+
+    // 4. Refund all CARD payments (100% since admin canceled)
+    // This will be handled by refund_service
+    // 5. Send emails to all affected users
+    // This will be handled by email_service
+
+    res.json({
+      message: "Show cancelled, all bookings cancelled",
+      affectedBookings: show.bookings.length,
+    });
+  } catch (err) {
+    console.error("Delete show error:", err.message);
+    res.status(500).json({ message: "Failed to cancel show" });
+  }
+};
