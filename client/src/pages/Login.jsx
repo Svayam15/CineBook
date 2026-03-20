@@ -178,7 +178,7 @@ const Login = () => {
 
         {/* Footer */}
         <p className="text-center text-zinc-700 text-xs mt-6">
-          © 2026 CineBook. All rights reserved.
+          © 2026 CineBook. All rights reserved. Made by Svayam Shanishwara
         </p>
       </div>
     </div>
