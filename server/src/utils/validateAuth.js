@@ -1,5 +1,5 @@
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-const usernameRegex = /^[a-z0-9_]{3,}$/;
+const usernameRegex = /^[a-z0-9_]{3,20}$/;
 const passwordRegex =
   /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&]).{8,16}$/;
 
@@ -38,7 +38,7 @@ export const validateSignup = ({
   }
 
   // Password
-  if (!passwordRegex.test(password)) {
+  if (!password) {
     errors.password = "Password is required"; }
   else if (!passwordRegex.test(password)) {
     errors.password =
