@@ -101,7 +101,7 @@ export const verifyPayment = async (req, res) => {
         })),
       });
 
-      return await tx.booking.update({
+      return tx.booking.update({
         where: { id: bookingId },
         data: { status: "PAID", paymentId: paymentIntentId },
       });
@@ -109,7 +109,7 @@ export const verifyPayment = async (req, res) => {
 
     // ✅ Send booking confirmation email — fetch updated seats for email
     const bookingSeats = await prisma.bookingSeat.findMany({
-      where: { bookingId: bookingId },
+      where: { bookingId },
       include: { showSeat: true },
     });
 

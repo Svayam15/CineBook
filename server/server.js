@@ -14,12 +14,12 @@ if (!PORT) {
 
 // ⏱️ Release expired locks every 1 minute
 setInterval(() => {
-  releaseExpiredLocks();
+  releaseExpiredLocks().catch((err) => logger.error(`Release locks error: ${err.message}`));
 }, 60 * 1000);
 
 // 🧹 Cleanup expired OTPs every 1 hour
 setInterval(() => {
-  cleanupExpiredOTPs();
+  cleanupExpiredOTPs().catch((err) => logger.error(`Cleanup OTPs error: ${err.message}`));
 }, 60 * 60 * 1000);
 
 const server = app.listen(PORT, () => {

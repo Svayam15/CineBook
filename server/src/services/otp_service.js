@@ -1,9 +1,10 @@
 import prisma from "../utils/prisma.js";
+import logger from "../config/logger.js";
 import { Resend } from "resend";
 import crypto from "crypto";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
-const FROM_EMAIL = process.env.FROM_EMAIL || "onboarding@resend.dev";
+const FROM_EMAIL = process.env.FROM_EMAIL;
 
 const OTP_EXPIRY_MINS = 10;
 const MAX_OTP_ATTEMPTS = 3;
@@ -105,7 +106,7 @@ export const createAndSendOTP = async ({ email, type, userData = null }) => {
   // Send email
   await sendOTPEmail(email, otp, type);
 
-  console.log(`📧 OTP sent to ${email} for ${type}`);
+  logger.info(`📧 OTP sent to ${email} for ${type}`);
 };
 
 // ✅ VERIFY OTP
@@ -192,9 +193,9 @@ export const cleanupExpiredOTPs = async () => {
       },
     });
     if (result.count > 0) {
-      console.log(`🧹 Cleaned up ${result.count} expired OTPs`);
+      logger.info(`🧹 Cleaned up ${result.count} expired OTPs`);
     }
   } catch (err) {
-    console.error("OTP cleanup error:", err.message);
+    logger.error(`OTP cleanup error: ${err.message}`);
   }
 };

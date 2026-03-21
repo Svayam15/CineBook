@@ -2,11 +2,10 @@ import prisma from "../utils/prisma.js";
 import asyncHandler from "../utils/asyncHandler.js";
 import { bookingQueue } from "../queues/booking_queue.js";
 import { processRefund, processBulkRefunds } from "../services/refund_service.js";
-import { calculateRefund } from "../services/booking_service.js";
+
 import {
   sendShowCancelledEmail,
   sendBookingCancelledEmail,
-  sendBookingConfirmationEmail, // ← ADD
 } from "../services/email_service.js";
 import logger from "../config/logger.js";
 

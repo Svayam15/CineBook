@@ -1,6 +1,7 @@
 import { Worker } from "bullmq";
 import connection from "../config/redis.js";
 import prisma from "../utils/prisma.js";
+import logger from "../config/logger.js";
 import { SEAT_STATUS, BOOKING_STATUS } from "../utils/constants.js";
 
 const worker = new Worker(
@@ -8,7 +9,7 @@ const worker = new Worker(
   async (job) => {
     const { userId, showId, seatIds, paymentType } = job.data;
 
-    return await prisma.$transaction(async (tx) => {
+    return prisma.$transaction(async (tx) => {
 
       // 1️⃣ Check show exists and is active
       const show = await tx.show.findUnique({
@@ -106,24 +107,24 @@ const worker = new Worker(
 );
 
 worker.on("completed", (job) => {
-  console.log(`✅ Seats reserved for job ${job.id}`);
+  logger.info(`✅ Seats reserved for job ${job.id}`);
 });
 
 worker.on("failed", (job, err) => {
-  console.log(`❌ Booking failed for job ${job.id}: ${err.message}`);
+  logger.error(`❌ Booking failed for job ${job.id}: ${err.message}`);
 });
 
-console.log("🚀 Worker started...");
+logger.info("🚀 Worker started...");
 
 if (process.env.NODE_ENV !== "production") {
   setInterval(async () => {
-    const isPaused = await worker.isPaused();
-    console.log(`💓 Worker alive | paused: ${isPaused}`);
+    const isPaused = worker.isPaused();
+    logger.info(`💓 Worker alive | paused: ${isPaused}`);
   }, 5000);
 }
 
 process.on("SIGTERM", async () => {
   await worker.close();
   await prisma.$disconnect();
-  console.log("👋 Worker shut down");
+  logger.info("👋 Worker shut down");
 });

@@ -1,6 +1,7 @@
 import prisma from "../utils/prisma.js";
 import asyncHandler from "../utils/asyncHandler.js";
 import * as bookingService from "../services/booking_service.js";
+import { bookingQueue } from "../queues/booking_queue.js";
 import { MAX_SEATS_PER_BOOKING } from "../utils/constants.js";
 
 // 🎟️ CREATE BOOKING

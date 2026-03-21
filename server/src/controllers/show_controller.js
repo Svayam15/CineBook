@@ -146,7 +146,7 @@ export const createShow = async (req, res) => {
       },
     });
   } catch (err) {
-    console.error("Create show error:", err.message);
+    logger.error(`Create show error: ${err.message}`);
     res.status(500).json({ message: "Failed to create show" });
   }
 };
@@ -161,7 +161,7 @@ export const getShows = async (req, res) => {
     });
     res.json(shows.map((show) => formatShow(show))); // ← fix this line
   } catch (err) {
-    console.error("Get shows error:", err);
+    logger.error(`Get shows error: ${err.message}`);
     res.status(500).json({ message: "Failed to fetch shows" });
   }
 };
@@ -186,7 +186,7 @@ export const getShowById = async (req, res) => {
 
     res.json(formatShow(show));
   } catch (err) {
-    console.error("Get show error:", err.message);
+    logger.error(`Get show error: ${err.message}`);
     res.status(500).json({ message: "Failed to fetch show" });
   }
 };
@@ -211,7 +211,7 @@ export const getShowSeats = async (req, res) => {
     const seats = await seatService.getShowSeats(id);
     res.json(seats);
   } catch (err) {
-    console.error("Get seats error:", err.message);
+    logger.error(`Get seats error: ${err.message}`);
     res.status(500).json({ message: "Failed to fetch seats" });
   }
 };

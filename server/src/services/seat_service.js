@@ -9,7 +9,7 @@ export const getShowSeats = async (showId) => {
     throw error;
   }
 
-  const seats = await prisma.showSeat.findMany({
+    return prisma.showSeat.findMany({
     where: { showId: parseInt(showId) },
     orderBy: [
       { row: "asc" },
@@ -17,7 +17,6 @@ export const getShowSeats = async (showId) => {
     ],
   });
 
-  return seats;
 };
 
 
@@ -29,7 +28,7 @@ export const getAvailableSeats = async (showId) => {
     throw error;
   }
 
-  const seats = await prisma.showSeat.findMany({
+   return prisma.showSeat.findMany({
     where: {
       showId: parseInt(showId),
       status: SEAT_STATUS.AVAILABLE,
@@ -39,6 +38,4 @@ export const getAvailableSeats = async (showId) => {
       { number: "asc" },
     ],
   });
-
-  return seats;
 };

@@ -10,8 +10,7 @@ export const authMiddleware = (req, res, next) => {
       return res.status(401).json({ message: "Unauthorized: No token" });
     }
 
-    const decoded = jwt.verify(token, JWT_SECRET);
-    req.user = decoded; // { userId, role }
+    req.user = jwt.verify(token, JWT_SECRET); // { userId, role }
     next();
   } catch (err) {
     // ← distinguish between expired and invalid
