@@ -1,4 +1,5 @@
 import { Resend } from "resend";
+import logger from "../config/logger.js";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
@@ -37,9 +38,9 @@ export const sendBookingConfirmationEmail = async ({ user, booking, show, seats 
       `,
     });
 
-    console.log(`📧 Booking confirmation email sent to ${user.email}`);
+    logger.info(`📧 Booking confirmation email sent to ${user.email}`);
   } catch (err) {
-    console.error("Email error (booking confirmation):", err.message);
+    logger.error(`Email error (booking confirmation): ${err.message}`);
   }
 };
 
@@ -71,9 +72,9 @@ export const sendShowCancelledEmail = async ({ user, booking, show, refundAmount
       `,
     });
 
-    console.log(`📧 Show cancelled email sent to ${user.email}`);
+    logger.info(`📧 Show cancelled email sent to ${user.email}`);
   } catch (err) {
-    console.error("Email error (show cancelled):", err.message);
+    logger.error(`Email error (show cancelled): ${err.message}`);
   }
 };
 
@@ -110,9 +111,9 @@ export const sendBookingCancelledEmail = async ({ user, booking, show, refundAmo
       `,
     });
 
-    console.log(`📧 Booking cancelled email sent to ${user.email}`);
+    logger.info(`📧 Booking cancelled email sent to ${user.email}`);
   } catch (err) {
-    console.error("Email error (booking cancelled):", err.message);
+    logger.error(`Email error (booking cancelled): ${err.message}`);
   }
 };
 
@@ -135,8 +136,8 @@ export const sendPasswordResetSuccessEmail = async ({ user }) => {
         </div>
       `,
     });
-    console.log(`📧 Password reset success email sent to ${user.email}`);
+    logger.info(`📧 Password reset success email sent to ${user.email}`);
   } catch (err) {
-    console.error("Email error (password reset success):", err.message);
+    logger.error(`Email error (password reset success): ${err.message}`);
   }
 };

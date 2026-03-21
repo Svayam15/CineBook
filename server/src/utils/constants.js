@@ -22,9 +22,9 @@ export const SEAT_TYPE = {
 };
 
 export const SHOW_TYPE = {
-  TWO_D: "TWO_D",
-  THREE_D: "THREE_D",
-  FOUR_D: "FOUR_D",
+  TWO_D: "2D",
+  THREE_D: "3D",
+  FOUR_D: "4D",
 };
 
 export const LOCK_EXPIRY_TIME = 10 * 60 * 1000; // 10 mins
@@ -36,3 +36,9 @@ export const ALLOWED_SEAT_COUNTS = [120, 150, 180, 200, 250, 300];
 export const CANCELLATION_HOURS_THRESHOLD = 3; // hours before show
 
 export const CANCELLATION_FEE_PERCENT = 10; // 10% fee
+
+export const OTP_TYPE = {
+  SIGNUP: "SIGNUP",
+  LOGIN: "LOGIN",
+  FORGOT_PASSWORD: "FORGOT_PASSWORD",
+};

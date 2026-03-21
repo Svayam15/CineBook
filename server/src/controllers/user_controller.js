@@ -1,29 +1,27 @@
 import prisma from "../utils/prisma.js";
+import asyncHandler from "../utils/asyncHandler.js";
 
-export const getMe = async (req, res) => {
-  try {
-    const userId = req.user.userId;
+export const getMe = asyncHandler(async (req, res) => {
+  const userId = req.user.userId;
 
-    const user = await prisma.user.findUnique({
-      where: { id: userId },
-      select: {
-        id: true,
-        name: true,
-        surname: true,
-        username: true,
-        email: true,
-        role: true,      // ← ADD role
-        createdAt: true, // ← ADD createdAt
-      },
-    });
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: {
+      id: true,
+      name: true,
+      surname: true,
+      username: true,
+      email: true,
+      role: true,
+      createdAt: true,
+    },
+  });
 
-    if (!user) {
-      return res.status(404).json({ message: "User not found" }); // ← ADD
-    }
-
-    res.json(user);
-  } catch (err) {
-    console.error("Get me error:", err.message); // ← ADD
-    res.status(500).json({ message: "Failed to fetch user" });
+  if (!user) {
+    const error = new Error("User not found");
+    error.statusCode = 404;
+    throw error;
   }
-};
+
+  res.json(user);
+});

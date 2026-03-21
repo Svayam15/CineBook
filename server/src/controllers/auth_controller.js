@@ -5,6 +5,7 @@ import { validateSignup } from "../utils/validateAuth.js";
 import { createAndSendOTP, verifyOTP } from "../services/otp_service.js";
 import { checkLoginBlock, recordFailedAttempt, resetLoginAttempts } from "../services/login_attempt_service.js";
 import { sendPasswordResetSuccessEmail } from "../services/email_service.js";
+import { OTP_TYPE } from "../utils/constants.js";
 
 const JWT_SECRET = process.env.JWT_SECRET;
 
@@ -282,7 +283,7 @@ export const resendOTP = async (req, res) => {
       return res.status(400).json({ message: "Email and type are required" });
     }
 
-    if (!["SIGNUP", "LOGIN", "FORGOT_PASSWORD"].includes(type)) {
+    if (!Object.values(OTP_TYPE).includes(type)) {
       return res.status(400).json({ message: "Invalid OTP type" });
     }
 

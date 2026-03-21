@@ -3,10 +3,8 @@ import { generateSeats } from "../utils/generateSeats.js";
 import * as seatService from "../services/seat_service.js";
 import { processBulkRefunds } from "../services/refund_service.js";
 import { sendShowCancelledEmail } from "../services/email_service.js";
+import { ALLOWED_SEAT_COUNTS, SHOW_TYPE } from "../utils/constants.js";
 import logger from "../config/logger.js";
-
-const ALLOWED_SEAT_COUNTS = [120, 150, 180, 200, 250, 300];
-const ALLOWED_SHOW_TYPES = ["2D", "3D", "4D"];
 
 // ⏰ Helper — format to 12hr IST
 const formatToIST = (date) => {
@@ -59,7 +57,7 @@ export const createShow = async (req, res) => {
     }
 
     // Validate showType
-    if (!ALLOWED_SHOW_TYPES.includes(showType)) {
+    if (!Object.values(SHOW_TYPE).includes(showType)) {
       return res.status(400).json({ message: "showType must be 2D, 3D or 4D" });
     }
 

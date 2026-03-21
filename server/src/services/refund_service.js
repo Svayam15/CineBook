@@ -1,5 +1,6 @@
 import Stripe from "stripe";
 import prisma from "../utils/prisma.js";
+import logger from "../config/logger.js";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
@@ -7,7 +8,7 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 export const processRefund = async ({ bookingId, refundAmount, paymentId }) => {
   try {
     if (!paymentId) {
-      console.log(`⚠️ No paymentId for booking ${bookingId} — skipping Stripe refund`);
+      logger.warn(`⚠️ No paymentId for booking ${bookingId} — skipping Stripe refund`);
       return null;
     }
 
@@ -27,11 +28,11 @@ export const processRefund = async ({ bookingId, refundAmount, paymentId }) => {
       },
     });
 
-    console.log(`✅ Refund processed: ${refund.id} — ₹${refundAmount}`);
+    logger.info(`✅ Refund processed: ${refund.id} — ₹${refundAmount}`);
 
     return refund;
   } catch (err) {
-    console.error("Refund error:", err.message);
+    logger.error(`Refund error: ${err.message}`);
     throw new Error("Failed to process refund");
   }
 };
@@ -49,7 +50,7 @@ export const processBulkRefunds = async (showId) => {
       },
     });
 
-    console.log(`💳 Processing ${bookings.length} refunds for show ${showId}`);
+    logger.info(`💳 Processing ${bookings.length} refunds for show ${showId}`);
 
     const results = await Promise.allSettled(
       bookings.map((booking) =>
@@ -64,11 +65,11 @@ export const processBulkRefunds = async (showId) => {
     const succeeded = results.filter((r) => r.status === "fulfilled").length;
     const failed = results.filter((r) => r.status === "rejected").length;
 
-    console.log(`✅ Refunds: ${succeeded} succeeded, ${failed} failed`);
+    logger.info(`✅ Refunds: ${succeeded} succeeded, ${failed} failed`);
 
     return { succeeded, failed };
   } catch (err) {
-    console.error("Bulk refund error:", err.message);
+    logger.error(`Bulk refund error: ${err.message}`);
     throw new Error("Failed to process bulk refunds");
   }
 };

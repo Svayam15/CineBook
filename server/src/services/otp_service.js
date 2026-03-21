@@ -1,5 +1,6 @@
 import prisma from "../utils/prisma.js";
 import logger from "../config/logger.js";
+import { OTP_TYPE } from "../utils/constants.js";
 import { Resend } from "resend";
 import crypto from "crypto";
 
@@ -20,15 +21,15 @@ const generateOTP = () => {
 // 📧 Send OTP email
 const sendOTPEmail = async (email, otp, type) => {
   const subjects = {
-    SIGNUP: "🎬 Verify your email - Ticket Booking",
-    LOGIN: "🔐 Your login OTP - Ticket Booking",
-    FORGOT_PASSWORD: "🔑 Reset your password - Ticket Booking",
+    [OTP_TYPE.SIGNUP]: "🎬 Verify your email - Ticket Booking",
+    [OTP_TYPE.LOGIN]: "🔐 Your login OTP - Ticket Booking",
+    [OTP_TYPE.FORGOT_PASSWORD]: "🔑 Reset your password - Ticket Booking",
   };
 
   const messages = {
-    SIGNUP: `Welcome! Your signup verification OTP is:`,
-    LOGIN: `Your login OTP is:`,
-    FORGOT_PASSWORD: `Your password reset OTP is:`,
+    [OTP_TYPE.SIGNUP]: `Welcome! Your signup verification OTP is:`,
+    [OTP_TYPE.LOGIN]: `Your login OTP is:`,
+    [OTP_TYPE.FORGOT_PASSWORD]: `Your password reset OTP is:`,
   };
 
   await resend.emails.send({

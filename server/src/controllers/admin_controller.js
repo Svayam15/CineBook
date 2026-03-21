@@ -2,6 +2,7 @@ import prisma from "../utils/prisma.js";
 import asyncHandler from "../utils/asyncHandler.js";
 import { bookingQueue } from "../queues/booking_queue.js";
 import { processRefund, processBulkRefunds } from "../services/refund_service.js";
+import { PAYMENT_TYPE } from "../utils/constants.js";
 
 import {
   sendShowCancelledEmail,
@@ -111,7 +112,7 @@ export const adminCreateBooking = asyncHandler(async (req, res) => {
     throw error;
   }
 
-  if (!["CASH", "CARD"].includes(paymentType)) {
+  if (!Object.values(PAYMENT_TYPE).includes(paymentType)) {
     const error = new Error("paymentType must be CASH or CARD");
     error.statusCode = 400;
     throw error;

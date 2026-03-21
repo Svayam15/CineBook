@@ -7,6 +7,8 @@ import {
   CANCELLATION_FEE_PERCENT,
 } from "../utils/constants.js";
 
+import logger from "../config/logger.js";
+
 // ⏱️ RELEASE EXPIRED LOCKS
 export const releaseExpiredLocks = async () => {
   try {
@@ -49,9 +51,9 @@ export const releaseExpiredLocks = async () => {
       });
     }
 
-    console.log(`♻️ Released ${expiredSeats.length} expired locked seats`);
+    logger.info(`♻️ Released ${expiredSeats.length} expired locked seats`);
   } catch (err) {
-    console.error("Failed to release expired locks:", err.message);
+    logger.error(`Failed to release expired locks: ${err.message}`);
   }
 };
 
@@ -71,7 +73,7 @@ export const createBooking = async ({ userId, showId, seatIds, paymentType }) =>
     }
   );
 
-  console.log(`📥 Booking job queued: ${job.id}`);
+  logger.info(`📥 Booking job queued: ${job.id}`);
 
   return { jobId: job.id };
 };
