@@ -1,73 +1,52 @@
 import prisma from "../utils/prisma.js";
+import asyncHandler from "../utils/asyncHandler.js";
+import logger from "../config/logger.js";
 
 // CREATE MOVIE (ADMIN)
-export const createMovie = async (req, res) => {
-  try {
-    const { title, duration } = req.body;
+export const createMovie = asyncHandler(async (req, res) => {
+  const { title, duration } = req.body;
 
-    if (!title || !duration) {
-      return res.status(400).json({
-        message: "Title and duration are required",
-      });
-    }
-
-    const movie = await prisma.movie.create({
-      data: {
-        title,
-        duration,
-      },
-    });
-
-    res.status(201).json({
-      message: "Movie created",
-      movie,
-    });
-  } catch (err) {
-    res.status(500).json({
-      message: "Failed to create movie",
-    });
+  if (!title || !duration) {
+    const error = new Error("Title and duration are required");
+    error.statusCode = 400;
+    throw error;
   }
-};
+
+  const movie = await prisma.movie.create({
+    data: { title, duration },
+  });
+
+  logger.info(`Movie created: ${movie.title}`);
+  res.status(201).json({ message: "Movie created", movie });
+});
 
 // GET ALL MOVIES (PUBLIC)
-export const getMovies = async (req, res) => {
-  try {
-    const movies = await prisma.movie.findMany({
-      orderBy: { createdAt: "desc" },
-    });
-
-    res.json(movies);
-  } catch (err) {
-    res.status(500).json({
-      message: "Failed to fetch movies",
-    });
-  }
-};
+export const getMovies = asyncHandler(async (req, res) => {
+  const movies = await prisma.movie.findMany({
+    orderBy: { createdAt: "desc" },
+  });
+  res.json(movies);
+});
 
 // GET MOVIE BY ID (PUBLIC)
-export const getMovieById = async (req, res) => {
-  try {
-    const { id } = req.params;
+export const getMovieById = asyncHandler(async (req, res) => {
+  const { id } = req.params;
 
-    const movie = await prisma.movie.findUnique({
-      where: { id: parseInt(id) },
-      include: {
-        shows: {
-          include: {
-            theatre: true,
-          },
-          orderBy: { startTime: "asc" },
-        },
+  const movie = await prisma.movie.findUnique({
+    where: { id: parseInt(id) },
+    include: {
+      shows: {
+        include: { theatre: true },
+        orderBy: { startTime: "asc" },
       },
-    });
+    },
+  });
 
-    if (!movie) {
-      return res.status(404).json({ message: "Movie not found" });
-    }
-
-    res.json(movie);
-  } catch (err) {
-    console.error("Get movie error:", err.message);
-    res.status(500).json({ message: "Failed to fetch movie" });
+  if (!movie) {
+    const error = new Error("Movie not found");
+    error.statusCode = 404;
+    throw error;
   }
-};
+
+  res.json(movie);
+});

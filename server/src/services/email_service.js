@@ -1,7 +1,12 @@
 import { Resend } from "resend";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
-const FROM_EMAIL = process.env.FROM_EMAIL || "onboarding@resend.dev";
+
+if (!process.env.FROM_EMAIL) {
+  throw new Error("FROM_EMAIL is not defined in environment variables");
+}
+
+const FROM_EMAIL = process.env.FROM_EMAIL;
 
 // 🎟️ BOOKING CONFIRMED + PAYMENT SUCCESSFUL
 export const sendBookingConfirmationEmail = async ({ user, booking, show, seats }) => {

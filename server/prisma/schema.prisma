@@ -74,6 +74,8 @@ model OTP {
   blockedUntil DateTime?
   userData     Json?
   createdAt    DateTime  @default(now())
+
+  @@index([email, type, used])
 }
 
 model LoginAttempt {
@@ -137,6 +139,9 @@ model ShowSeat {
   bookingSeats BookingSeat[]
 
   @@unique([showId, row, number])
+  @@index([showId, status]) // ← ADD
+  @@index([pendingBookingId]) // ← ADD
+  @@index([lockedAt]) // ← ADD
 }
 
 model Booking {
@@ -155,6 +160,9 @@ model Booking {
   user  User          @relation(fields: [userId], references: [id])
   show  Show          @relation(fields: [showId], references: [id])
   seats BookingSeat[]
+
+  @@index([userId]) // ← ADD
+  @@index([showId, status]) // ← ADD
 }
 
 model BookingSeat {

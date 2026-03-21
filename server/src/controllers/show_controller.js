@@ -1,6 +1,9 @@
 import prisma from "../utils/prisma.js";
 import { generateSeats } from "../utils/generateSeats.js";
 import * as seatService from "../services/seat_service.js";
+import { processBulkRefunds } from "../services/refund_service.js";
+import { sendShowCancelledEmail } from "../services/email_service.js";
+import logger from "../config/logger.js";
 
 const ALLOWED_SEAT_COUNTS = [120, 150, 180, 200, 250, 300];
 const ALLOWED_SHOW_TYPES = ["2D", "3D", "4D"];
@@ -214,6 +217,7 @@ export const getShowSeats = async (req, res) => {
 };
 
 // DELETE SHOW (ADMIN) — cancels all bookings + refunds
+// DELETE SHOW (ADMIN) — replace the existing deleteShow function only
 export const deleteShow = async (req, res) => {
   try {
     const { id } = req.params;
@@ -221,64 +225,55 @@ export const deleteShow = async (req, res) => {
     const show = await prisma.show.findUnique({
       where: { id: parseInt(id) },
       include: {
+        movie: true,
+        theatre: true,
         bookings: {
-          where: {
-            status: "PAID",
-            paymentType: "CARD",
-          },
+          where: { status: "PAID" },
+          include: { user: true, seats: true },
         },
       },
     });
 
-    if (!show) {
-      return res.status(404).json({ message: "Show not found" });
-    }
-
-    if (!show.isActive) {
-      return res.status(400).json({ message: "Show already cancelled" });
-    }
+    if (!show) return res.status(404).json({ message: "Show not found" });
+    if (!show.isActive) return res.status(400).json({ message: "Show already cancelled" });
 
     await prisma.$transaction(async (tx) => {
-      // 1. Release all seats
       await tx.showSeat.updateMany({
         where: { showId: parseInt(id) },
-        data: {
-          status: "AVAILABLE",
-          lockedAt: null,
-          pendingBookingId: null,
-        },
+        data: { status: "AVAILABLE", lockedAt: null, pendingBookingId: null },
       });
 
-      // 2. Cancel all bookings
       await tx.booking.updateMany({
-        where: {
-          showId: parseInt(id),
-          status: { in: ["PENDING", "PAID"] },
-        },
-        data: {
-          status: "CANCELLED",
-          cancelledAt: new Date(),
-        },
+        where: { showId: parseInt(id), status: { in: ["PENDING", "PAID"] } },
+        data: { status: "CANCELLED", cancelledAt: new Date() },
       });
 
-      // 3. Mark show as inactive
       await tx.show.update({
         where: { id: parseInt(id) },
         data: { isActive: false },
       });
     });
 
-    // 4. Refund all CARD payments (100% since admin canceled)
-    // This will be handled by refund_service
-    // 5. Send emails to all affected users
-    // This will be handled by email_service
+    // ✅ NOW PROPERLY CALLS refunds & emails
+    await processBulkRefunds(parseInt(id));
+
+    for (const booking of show.bookings) {
+      sendShowCancelledEmail({
+        user: booking.user,
+        booking,
+        show,
+        refundAmount: booking.totalAmount,
+      }).catch((err) => logger.error(`Delete show email error: ${err.message}`));
+    }
+
+    logger.info(`Show ${id} deleted. Affected bookings: ${show.bookings.length}`);
 
     res.json({
       message: "Show cancelled, all bookings cancelled",
       affectedBookings: show.bookings.length,
     });
   } catch (err) {
-    console.error("Delete show error:", err.message);
+    logger.error(`Delete show error: ${err.message}`);
     res.status(500).json({ message: "Failed to cancel show" });
   }
 };

@@ -11,18 +11,19 @@ import {
   adminSignup,
   verifyAdminSignup,
 } from "../controllers/auth_controller.js";
+import { authLimiter, otpLimiter } from "../middlewares/rateLimiter_middleware.js";
 
 const router = express.Router();
 
-router.post("/signup", signup);
-router.post("/verify-signup", verifySignup);
-router.post("/login", login);
-router.post("/verify-login", verifyLogin);
-router.post("/forgot-password", forgotPassword);
-router.post("/reset-password", resetPassword);
-router.post("/resend-otp", resendOTP);
+router.post("/signup", authLimiter, signup);
+router.post("/verify-signup", authLimiter, verifySignup);
+router.post("/login", authLimiter, login);
+router.post("/verify-login", authLimiter, verifyLogin);
+router.post("/forgot-password", authLimiter, forgotPassword);
+router.post("/reset-password", authLimiter, resetPassword);
+router.post("/resend-otp", otpLimiter, resendOTP);
 router.post("/logout", logout);
-router.post("/admin-signup", adminSignup);
-router.post("/verify-admin-signup", verifyAdminSignup);
+router.post("/admin-signup", authLimiter, adminSignup);
+router.post("/verify-admin-signup", authLimiter, verifyAdminSignup);
 
 export default router;
