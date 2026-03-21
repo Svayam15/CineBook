@@ -1,5 +1,6 @@
 import "./src/config/env.js";
 import app from "./src/app.js";
+import "./src/workers/booking_worker.js";
 import { releaseExpiredLocks } from "./src/services/booking_service.js";
 import { cleanupExpiredOTPs } from "./src/services/otp_service.js";
 import logger from "./src/config/logger.js";
