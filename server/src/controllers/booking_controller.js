@@ -34,7 +34,7 @@ export const createBooking = asyncHandler(async (req, res) => {
 });
 
 
-// 📊 GET BOOKING STATUS
+// 📊 GET BOOKING STATUS VIA SSE
 export const getBookingStatus = asyncHandler(async (req, res) => {
   const { jobId } = req.params;
 
@@ -44,11 +44,58 @@ export const getBookingStatus = asyncHandler(async (req, res) => {
     throw error;
   }
 
-  const result = await bookingService.getBookingStatus(jobId);
+  // SSE headers
+  res.setHeader("Content-Type", "text/event-stream");
+  res.setHeader("Cache-Control", "no-cache");
+  res.setHeader("Connection", "keep-alive");
+  res.flushHeaders();
 
-  res.status(200).json({
-    success: true,
-    ...result,
+  const sendEvent = (data) => {
+    res.write(`data: ${JSON.stringify(data)}\n\n`);
+  };
+
+  // Check job status every 1 second
+  const interval = setInterval(async () => {
+    try {
+      const job = await bookingQueue.getJob(jobId);
+
+      if (!job) {
+        sendEvent({ status: "failed", reason: "Job not found" });
+        clearInterval(interval);
+        res.end();
+        return;
+      }
+
+      const state = await job.getState();
+
+      if (state === "completed") {
+        sendEvent({ status: "success", booking: job.returnvalue });
+        clearInterval(interval);
+        res.end();
+        return;
+      }
+
+      if (state === "failed") {
+        sendEvent({ status: "failed", reason: job.failedReason });
+        clearInterval(interval);
+        res.end();
+        return;
+      }
+
+      // Still processing
+      sendEvent({ status: state });
+
+    } catch (err) {
+      sendEvent({ status: "failed", reason: err.message });
+      clearInterval(interval);
+      res.end();
+    }
+  }, 1000);
+
+  // Cleanup if client disconnects
+  req.on("close", () => {
+    clearInterval(interval);
+    res.end();
   });
 });
 

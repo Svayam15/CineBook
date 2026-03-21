@@ -277,3 +277,23 @@ export const deleteShow = async (req, res) => {
     res.status(500).json({ message: "Failed to cancel show" });
   }
 };
+
+// GET AVAILABLE SEATS FOR A SHOW (PUBLIC)
+export const getAvailableSeats = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const show = await prisma.show.findUnique({
+      where: { id: parseInt(id) },
+    });
+
+    if (!show) return res.status(404).json({ message: "Show not found" });
+    if (!show.isActive) return res.status(400).json({ message: "This show has been cancelled" });
+
+    const seats = await seatService.getAvailableSeats(id);
+    res.json(seats);
+  } catch (err) {
+    logger.error(`Get available seats error: ${err.message}`);
+    res.status(500).json({ message: "Failed to fetch available seats" });
+  }
+};

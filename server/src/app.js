@@ -12,11 +12,14 @@ import theatreRoutes from "./routes/theatre_routes.js";
 import adminRoutes from "./routes/admin_routes.js";
 import errorMiddleware from "./middlewares/error_middleware.js";
 import { globalLimiter } from "./middlewares/rateLimiter_middleware.js";
+import { authMiddleware } from "./middlewares/auth_middleware.js";
+import { requireAdmin } from "./middlewares/role_middleware.js";
+import serverAdapter from "./config/bullBoard.js";
 import logger from "./config/logger.js";
 
 const app = express();
 
-// 🔒 Helmet — sets ~14 security headers automatically
+// 🔒 Helmet
 app.use(helmet());
 
 // 🌐 CORS
@@ -29,11 +32,8 @@ if (!allowedOrigins || allowedOrigins.length === 0) {
 
 app.use(cors({
   origin: (origin, callback) => {
-    // Allow requests with no origin (mobile apps, curl, etc.)
     if (!origin) return callback(null, true);
-    if (allowedOrigins.includes(origin)) {
-      return callback(null, true);
-    }
+    if (allowedOrigins.includes(origin)) return callback(null, true);
     return callback(new Error("Not allowed by CORS"));
   },
   credentials: true,
@@ -42,7 +42,15 @@ app.use(cors({
 // 🌐 Global rate limiter
 app.use(globalLimiter);
 
-app.use(express.json({ limit: "10kb" }));
+// ⚠️ Raw body for Stripe webhook — MUST be before express.json()
+app.use((req, res, next) => {
+  if (req.originalUrl === "/payment/webhook") {
+    next();
+  } else {
+    express.json({ limit: "10kb" })(req, res, next);
+  }
+});
+
 app.use(cookieParser());
 
 // 🛣️ Routes
@@ -54,6 +62,14 @@ app.use("/bookings", bookingRoutes);
 app.use("/payment", paymentRoutes);
 app.use("/theatres", theatreRoutes);
 app.use("/admin", adminRoutes);
+
+// 🐂 Bull Board — admin only
+app.use(
+  "/admin/queues",
+  authMiddleware,
+  requireAdmin,
+  serverAdapter.getRouter()
+);
 
 // ✅ Health check
 app.get("/", (req, res) => {
