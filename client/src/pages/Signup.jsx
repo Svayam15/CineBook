@@ -15,15 +15,19 @@ const Signup = () => {
   });
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [errors, setErrors] = useState({});
 
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
+    // Clear error when user types
+    if (errors[name]) setErrors((prev) => ({ ...prev, [name]: "" }));
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
+    setErrors({});
     try {
       const res = await api.post("/auth/signup", formData);
       toast.success(res.data.message);
@@ -31,7 +35,11 @@ const Signup = () => {
         state: { email: formData.email, type: "SIGNUP" },
       });
     } catch (err) {
-      toast.error(err.message);
+      if (err.errors) {
+        setErrors(err.errors); // ← show field errors
+      } else {
+        toast.error(err.message);
+      }
     } finally {
       setLoading(false);
     }
@@ -71,8 +79,10 @@ const Signup = () => {
                   onChange={handleChange}
                   placeholder="John"
                   required
-                  className="w-full bg-dark border border-border text-white rounded-xl px-4 py-3 outline-none focus:border-primary focus:ring-1 focus:ring-primary transition placeholder-zinc-700 text-sm"
+                  className={`w-full bg-dark border text-white rounded-xl px-4 py-3 outline-none focus:ring-1 transition placeholder-zinc-700 text-sm
+                    ${errors.name ? "border-red-500 focus:border-red-500 focus:ring-red-500" : "border-border focus:border-primary focus:ring-primary"}`}
                 />
+                {errors.name && <p className="text-red-400 text-xs mt-1">⚠️ {errors.name}</p>}
               </div>
               <div>
                 <label className="block text-sm text-muted mb-1.5">Last Name</label>
@@ -83,8 +93,10 @@ const Signup = () => {
                   onChange={handleChange}
                   placeholder="Doe"
                   required
-                  className="w-full bg-dark border border-border text-white rounded-xl px-4 py-3 outline-none focus:border-primary focus:ring-1 focus:ring-primary transition placeholder-zinc-700 text-sm"
+                  className={`w-full bg-dark border text-white rounded-xl px-4 py-3 outline-none focus:ring-1 transition placeholder-zinc-700 text-sm
+                    ${errors.surname ? "border-red-500 focus:border-red-500 focus:ring-red-500" : "border-border focus:border-primary focus:ring-primary"}`}
                 />
+                {errors.surname && <p className="text-red-400 text-xs mt-1">⚠️ {errors.surname}</p>}
               </div>
             </div>
 
@@ -98,8 +110,10 @@ const Signup = () => {
                 onChange={handleChange}
                 placeholder="john_doe"
                 required
-                className="w-full bg-dark border border-border text-white rounded-xl px-4 py-3 outline-none focus:border-primary focus:ring-1 focus:ring-primary transition placeholder-zinc-700 text-sm"
+                className={`w-full bg-dark border text-white rounded-xl px-4 py-3 outline-none focus:ring-1 transition placeholder-zinc-700 text-sm
+                  ${errors.username ? "border-red-500 focus:border-red-500 focus:ring-red-500" : "border-border focus:border-primary focus:ring-primary"}`}
               />
+              {errors.username && <p className="text-red-400 text-xs mt-1">⚠️ {errors.username}</p>}
             </div>
 
             {/* Email */}
@@ -112,8 +126,10 @@ const Signup = () => {
                 onChange={handleChange}
                 placeholder="john@example.com"
                 required
-                className="w-full bg-dark border border-border text-white rounded-xl px-4 py-3 outline-none focus:border-primary focus:ring-1 focus:ring-primary transition placeholder-zinc-700 text-sm"
+                className={`w-full bg-dark border text-white rounded-xl px-4 py-3 outline-none focus:ring-1 transition placeholder-zinc-700 text-sm
+                  ${errors.email ? "border-red-500 focus:border-red-500 focus:ring-red-500" : "border-border focus:border-primary focus:ring-primary"}`}
               />
+              {errors.email && <p className="text-red-400 text-xs mt-1">⚠️ {errors.email}</p>}
             </div>
 
             {/* Password */}
@@ -127,7 +143,8 @@ const Signup = () => {
                   onChange={handleChange}
                   placeholder="Min 8 chars with uppercase, number & symbol"
                   required
-                  className="w-full bg-dark border border-border text-white rounded-xl px-4 py-3 pr-12 outline-none focus:border-primary focus:ring-1 focus:ring-primary transition placeholder-zinc-700 text-sm"
+                  className={`w-full bg-dark border text-white rounded-xl px-4 py-3 pr-12 outline-none focus:ring-1 transition placeholder-zinc-700 text-sm
+                    ${errors.password ? "border-red-500 focus:border-red-500 focus:ring-red-500" : "border-border focus:border-primary focus:ring-primary"}`}
                 />
                 <button
                   type="button"
@@ -137,9 +154,10 @@ const Signup = () => {
                   {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                 </button>
               </div>
-              <p className="text-xs text-muted mt-1.5">
-                8-16 chars with uppercase, lowercase, number & special character
-              </p>
+              {errors.password
+                ? <p className="text-red-400 text-xs mt-1">⚠️ {errors.password}</p>
+                : <p className="text-xs text-muted mt-1.5">8-16 chars with uppercase, lowercase, number & special character</p>
+              }
             </div>
 
             {/* Submit */}

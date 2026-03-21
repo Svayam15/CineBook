@@ -1,3 +1,4 @@
+/// <reference types="vite/client" />
 import axios from "axios";
 
 const api = axios.create({
@@ -12,7 +13,8 @@ const api = axios.create({
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    const message = error.response?.data?.message || "Something went wrong";
+      const data = error.response?.data;
+    const message = data?.message || (data?.errors ? Object.values(data.errors)[0] : "Something went wrong");
     return Promise.reject({ message, status: error.response?.status });
   }
 );
