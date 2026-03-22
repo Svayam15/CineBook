@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
 import useAuthStore from "./store/authStore";
 import api from "./api/axios";
@@ -31,23 +31,20 @@ import WindowBooking from "./pages/admin/WindowBooking";
 import ProtectedRoute from "./components/common/ProtectedRoute";
 
 function App() {
-  const { isAuthenticated, user } = useAuthStore();
+  const { isAuthenticated, user, authChecked } = useAuthStore();
   const setUser = useAuthStore((state) => state.setUser);
   const clearAuth = useAuthStore((state) => state.clearAuth);
-  const [authChecked, setAuthChecked] = useState(false);
+  const setAuthChecked = useAuthStore((state) => state.setAuthChecked);
 
   useEffect(() => {
     const verifyAuth = async () => {
       try {
-        // Always call /users/me on mount to get fresh user data (including role)
-        // This ensures role is always up-to-date after refresh/tab reopen
         const res = await api.get("/users/me");
         setUser(res.data);
       } catch {
-        // If the call fails (token expired / not logged in), clear everything
         clearAuth();
       } finally {
-        setAuthChecked(true);
+        setAuthChecked();
       }
     };
     verifyAuth().catch(console.error);
@@ -95,9 +92,9 @@ function App() {
 
       {/*
         Root route logic:
-        - Not logged in           → LandingPage
-        - Logged in as ADMIN      → Redirect to /admin
-        - Logged in as USER       → Home
+        - Not logged in      → LandingPage
+        - Logged in as ADMIN → /admin
+        - Logged in as USER  → Home
       */}
       <Route
         path="/"
@@ -112,94 +109,54 @@ function App() {
         }
       />
 
-      {/* Show details — accessible to all, booking requires login */}
+      {/* Show details — accessible to all */}
       <Route path="/shows/:id" element={<ShowDetails />} />
 
       {/* Protected user routes */}
       <Route
         path="/payment"
-        element={
-          <ProtectedRoute>
-            <Payment />
-          </ProtectedRoute>
-        }
+        element={<ProtectedRoute><Payment /></ProtectedRoute>}
       />
       <Route
         path="/my-bookings"
-        element={
-          <ProtectedRoute>
-            <MyBookings />
-          </ProtectedRoute>
-        }
+        element={<ProtectedRoute><MyBookings /></ProtectedRoute>}
       />
       <Route
         path="/booking-confirm"
-        element={
-          <ProtectedRoute>
-            <BookingConfirm />
-          </ProtectedRoute>
-        }
+        element={<ProtectedRoute><BookingConfirm /></ProtectedRoute>}
       />
 
       {/* Admin routes */}
       <Route
         path="/admin"
-        element={
-          <ProtectedRoute adminOnly>
-            <Dashboard />
-          </ProtectedRoute>
-        }
+        element={<ProtectedRoute adminOnly><Dashboard /></ProtectedRoute>}
       />
       <Route
         path="/admin/movies"
-        element={
-          <ProtectedRoute adminOnly>
-            <Movies />
-          </ProtectedRoute>
-        }
+        element={<ProtectedRoute adminOnly><Movies /></ProtectedRoute>}
       />
       <Route
         path="/admin/theatres"
-        element={
-          <ProtectedRoute adminOnly>
-            <Theatres />
-          </ProtectedRoute>
-        }
+        element={<ProtectedRoute adminOnly><Theatres /></ProtectedRoute>}
       />
       <Route
         path="/admin/shows"
-        element={
-          <ProtectedRoute adminOnly>
-            <Shows />
-          </ProtectedRoute>
-        }
+        element={<ProtectedRoute adminOnly><Shows /></ProtectedRoute>}
       />
       <Route
         path="/admin/bookings"
-        element={
-          <ProtectedRoute adminOnly>
-            <Bookings />
-          </ProtectedRoute>
-        }
+        element={<ProtectedRoute adminOnly><Bookings /></ProtectedRoute>}
       />
       <Route
         path="/admin/users"
-        element={
-          <ProtectedRoute adminOnly>
-            <Users />
-          </ProtectedRoute>
-        }
+        element={<ProtectedRoute adminOnly><Users /></ProtectedRoute>}
       />
       <Route
         path="/admin/window-booking"
-        element={
-          <ProtectedRoute adminOnly>
-            <WindowBooking />
-          </ProtectedRoute>
-        }
+        element={<ProtectedRoute adminOnly><WindowBooking /></ProtectedRoute>}
       />
 
-      {/* Catch all — redirect to root */}
+      {/* Catch all */}
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );

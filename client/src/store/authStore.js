@@ -7,15 +7,18 @@ const useAuthStore = create(
     (set) => ({
       user: null,
       isAuthenticated: false,
+      authChecked: false,
 
       setUser: (user) => set({ user, isAuthenticated: true }),
 
+      setAuthChecked: () => set({ authChecked: true }),
+
       logout: async () => {
         await api.post("/auth/logout");
-        set({ user: null, isAuthenticated: false });
+        set({ user: null, isAuthenticated: false, authChecked: true });
       },
 
-      clearAuth: () => set({ user: null, isAuthenticated: false }),
+      clearAuth: () => set({ user: null, isAuthenticated: false, authChecked: true }),
     }),
     {
       name: "auth-storage",
@@ -23,7 +26,7 @@ const useAuthStore = create(
   )
 );
 
-// 🔄 Multi-tab logout sync
+// Multi-tab logout sync
 window.addEventListener("storage", (e) => {
   if (e.key === "auth-storage") {
     const newValue = e.newValue ? JSON.parse(e.newValue) : null;
