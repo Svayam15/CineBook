@@ -35,6 +35,27 @@ export const createBooking = asyncHandler(async (req, res) => {
 });
 
 
+// 📊 GET BOOKING STATUS REST (for admin polling)
+export const getBookingStatusRest = asyncHandler(async (req, res) => {
+  const { jobId } = req.params;
+  const job = await bookingQueue.getJob(jobId);
+
+  if (!job) {
+    return res.json({ status: "failed", reason: "Job not found" });
+  }
+
+  const state = await job.getState();
+
+  if (state === "completed") {
+    return res.json({ status: "success", booking: job.returnvalue });
+  }
+  if (state === "failed") {
+    return res.json({ status: "failed", reason: job.failedReason });
+  }
+  return res.json({ status: state });
+});
+
+
 // 📊 GET BOOKING STATUS VIA SSE
 export const getBookingStatus = asyncHandler(async (req, res) => {
   const { jobId } = req.params;
@@ -169,3 +190,4 @@ export const cancelBooking = asyncHandler(async (req, res) => {
 
   res.json({ success: true, message: "Booking cancelled" });
 });
+

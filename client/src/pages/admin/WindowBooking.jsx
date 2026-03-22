@@ -56,7 +56,7 @@ const WindowBooking = () => {
     });
   };
 
-  const handleBook = async () => {
+    const handleBook = async () => {
     if (!selectedShow || selectedSeats.length === 0) {
       toast.error("Select a show and at least one seat");
       return;
@@ -71,33 +71,38 @@ const WindowBooking = () => {
 
       toast.success("Booking queued!");
 
-      await new Promise((resolve) => setTimeout(resolve, 500));
+      const jobId = res.data.jobId;
+      let attempts = 0;
+      const maxAttempts = 15;
 
-      // SSE for booking status
-      const eventSource = new EventSource(
-        `${import.meta.env.VITE_API_URL}/bookings/status/${res.data.jobId}`,
-        { withCredentials: true }
-      );
+      const pollInterval = setInterval(async () => {
+        attempts++;
+        try {
+          const statusRes = await api.get(`/bookings/status-rest/${jobId}`);
+          const { status, reason } = statusRes.data;
 
-      eventSource.onmessage = (e) => {
-        const data = JSON.parse(e.data);
-        if (data.status === "success") {
-          toast.success("Booking confirmed! 🎉");
-          setSelectedSeats([]);
-          handleShowSelect(selectedShow);
-          eventSource.close();
-          setBooking(false);
-        } else if (data.status === "failed") {
-          toast.error(data.reason || "Booking failed");
-          eventSource.close();
+          if (status === "success") {
+            clearInterval(pollInterval);
+            toast.success("Booking confirmed! 🎉");
+            setSelectedSeats([]);
+            await handleShowSelect(selectedShow);
+            setBooking(false);
+          } else if (status === "failed") {
+            clearInterval(pollInterval);
+            toast.error(reason || "Booking failed");
+            setBooking(false);
+          } else if (attempts >= maxAttempts) {
+            clearInterval(pollInterval);
+            toast.error("Booking timed out. Please try again.");
+            setBooking(false);
+          }
+        } catch (err) {
+          clearInterval(pollInterval);
+          toast.error(err.message);
           setBooking(false);
         }
-      };
+      }, 1000);
 
-      eventSource.onerror = () => {
-        eventSource.close();
-        setBooking(false);
-      };
     } catch (err) {
       toast.error(err.message);
       setBooking(false);
