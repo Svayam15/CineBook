@@ -12,6 +12,7 @@ import ResetPassword from "./pages/ResetPassword";
 
 // User pages
 import Home from "./pages/user/Home";
+import LandingPage from "./pages/LandingPage";
 import ShowDetails from "./pages/user/ShowDetails.jsx";
 import Payment from "./pages/user/Payment";
 import MyBookings from "./pages/user/MyBookings";
@@ -30,10 +31,9 @@ import WindowBooking from "./pages/admin/WindowBooking";
 import ProtectedRoute from "./components/common/ProtectedRoute";
 
 function App() {
-  const { clearAuth, setUser } = useAuthStore();
+  const { clearAuth, setUser, isAuthenticated } = useAuthStore();
   const [authChecked, setAuthChecked] = useState(false);
 
-  // Verify token on app startup
   useEffect(() => {
     const verifyAuth = async () => {
       try {
@@ -48,7 +48,6 @@ function App() {
     verifyAuth();
   }, []);
 
-  // Don't render routes until auth is checked
   if (!authChecked) {
     return (
       <div className="min-h-screen bg-dark flex items-center justify-center">
@@ -72,9 +71,13 @@ function App() {
       <Route path="/forgot-password" element={<ForgotPassword />} />
       <Route path="/reset-password" element={<ResetPassword />} />
 
-      {/* User routes */}
-      <Route path="/" element={<ProtectedRoute><Home /></ProtectedRoute>} />
-      <Route path="/shows/:id" element={<ProtectedRoute><ShowDetails /></ProtectedRoute>} />
+      {/* Root — Landing for non-logged in, Home for logged in */}
+      <Route path="/" element={isAuthenticated ? <Home /> : <LandingPage />} />
+
+      {/* Show details — accessible to all but booking requires login */}
+      <Route path="/shows/:id" element={<ShowDetails />} />
+
+      {/* Protected user routes */}
       <Route path="/payment" element={<ProtectedRoute><Payment /></ProtectedRoute>} />
       <Route path="/my-bookings" element={<ProtectedRoute><MyBookings /></ProtectedRoute>} />
       <Route path="/booking-confirm" element={<ProtectedRoute><BookingConfirm /></ProtectedRoute>} />

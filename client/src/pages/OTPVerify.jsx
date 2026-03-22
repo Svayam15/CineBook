@@ -11,7 +11,7 @@ const OTPVerify = () => {
   const location = useLocation();
   const { setUser } = useAuthStore();
 
-  const { email, type, stayLoggedIn } = location.state || {};
+  const { email, type, stayLoggedIn, redirect } = location.state || {};
 
   const [otp, setOtp] = useState(["", "", "", "", "", ""]);
   const [loading, setLoading] = useState(false);
@@ -97,7 +97,13 @@ const OTPVerify = () => {
       // Redirect based on role
       if (res.data.user.role === "ADMIN") {
         navigate("/admin");
-      } else {
+      }
+
+      else if (redirect) {
+  navigate(redirect); // ← redirect back to show
+}
+
+      else {
         navigate("/");
       }
     } catch (err) {

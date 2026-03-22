@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate,useLocation, Link } from "react-router-dom";
 import { Eye, EyeOff } from "lucide-react";
 import AuthLayout from "../components/auth/AuthLayout";
 import Spinner from "../components/common/Spinner"; // ← ADD THIS
@@ -8,6 +8,8 @@ import toast from "react-hot-toast";
 
 const Login = () => {
   const navigate = useNavigate();
+  const location = useLocation(); // ← ADD
+  const { redirect } = location.state || {};
   const [formData, setFormData] = useState({
     identifier: "",
     password: "",
@@ -40,6 +42,7 @@ const Login = () => {
           email: res.data.email,
           type: "LOGIN",
           stayLoggedIn: formData.stayLoggedIn,
+          redirect,
         },
       });
     } catch (err) {

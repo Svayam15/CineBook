@@ -3,6 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import axios from "../../api/axios";
 import api from "../../api/axios";
 import toast from "react-hot-toast";
+import useAuthStore from "../../store/authStore";
 
 const ShowDetails = () => {
   const { id } = useParams();
@@ -12,6 +13,7 @@ const ShowDetails = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [selectedSeats, setSelectedSeats] = useState([]);
+  const { isAuthenticated } = useAuthStore();
 
   useEffect(() => {
     const fetchShow = async () => {
@@ -47,8 +49,18 @@ const ShowDetails = () => {
     return sum + (price || 0);
   }, 0);
 
-  const handleProceed = async () => {
+// Update handleProceed:
+const handleProceed = async () => {
   if (selectedSeats.length === 0) return;
+
+  // If not logged in → redirect to login with redirect back
+  if (!isAuthenticated) {
+    navigate("/login", {
+      state: { redirect: `/shows/${id}` },
+    });
+    return;
+  }
+
   try {
     const res = await api.post("/bookings", {
       showId: parseInt(id),
