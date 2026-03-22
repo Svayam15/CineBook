@@ -25,7 +25,7 @@ const Users = () => {
     }
   };
 
-  useEffect(() => { fetchUsers(page); }, [page]);
+  useEffect(() => { fetchUsers(page).catch(console.error); }, [page]);
 
   const handleDelete = async (id) => {
     if (!confirm("Delete this user? This cannot be undone.")) return;
@@ -33,7 +33,7 @@ const Users = () => {
     try {
       await api.delete(`/admin/users/${id}`);
       toast.success("User deleted!");
-      fetchUsers(page);
+      await fetchUsers(page);
     } catch (err) {
       toast.error(err.message);
     } finally {

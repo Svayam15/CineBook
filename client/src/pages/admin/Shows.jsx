@@ -45,7 +45,7 @@ const Shows = () => {
     }
   };
 
-  useEffect(() => { fetchData(); }, []);
+  useEffect(() => { fetchData().catch(console.error); }, []);
 
   const handleAdd = async (e) => {
     e.preventDefault();
@@ -70,7 +70,7 @@ const Shows = () => {
       });
       toast.success("Show created!");
       setShowForm(false);
-      fetchData();
+      await fetchData();
     } catch (err) {
       toast.error(err.message);
     } finally {
@@ -84,7 +84,7 @@ const Shows = () => {
     try {
       await api.delete(`/admin/shows/${id}/cancel`);
       toast.success("Show cancelled!");
-      fetchData();
+      await fetchData();
     } catch (err) {
       toast.error(err.message);
     } finally {

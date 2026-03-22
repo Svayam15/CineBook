@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import axios from "../../api/axios";
+import api from "../../api/axios";
+import toast from "react-hot-toast";
 
 const ShowDetails = () => {
   const { id } = useParams();
@@ -27,7 +29,7 @@ const ShowDetails = () => {
         setLoading(false);
       }
     };
-    fetchShow();
+    fetchShow().catch(console.error);
   }, [id]);
 
   const toggleSeat = (seat) => {
@@ -45,12 +47,26 @@ const ShowDetails = () => {
     return sum + (price || 0);
   }, 0);
 
-  const handleProceed = () => {
-    if (selectedSeats.length === 0) return;
-    navigate("/payment", {
-      state: { show, selectedSeats, totalAmount },
+  const handleProceed = async () => {
+  if (selectedSeats.length === 0) return;
+  try {
+    const res = await api.post("/bookings", {
+      showId: parseInt(id),
+      seatIds: selectedSeats.map((s) => s.id),
     });
-  };
+    navigate("/payment", {
+      state: {
+        jobId: res.data.jobId,
+        showId: parseInt(id),
+        selectedSeats: selectedSeats.map((s) => s.id),
+        totalAmount,
+        show,
+      },
+    });
+  } catch (err) {
+    toast.error(err.message);
+  }
+};
 
   // Group seats by row
   const seatsByRow = seats.reduce((acc, seat) => {

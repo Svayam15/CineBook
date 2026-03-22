@@ -31,7 +31,7 @@ const Bookings = () => {
     }
   };
 
-  useEffect(() => { fetchBookings(page); }, [page]);
+  useEffect(() => { fetchBookings(page).catch(console.error); }, [page]);
 
   const handleCancel = async (bookingId) => {
     if (!confirm("Cancel this booking and refund the user?")) return;
@@ -39,7 +39,7 @@ const Bookings = () => {
     try {
       await api.delete(`/admin/bookings/${bookingId}`);
       toast.success("Booking cancelled!");
-      fetchBookings(page);
+      await fetchBookings(page);
     } catch (err) {
       toast.error(err.message);
     } finally {

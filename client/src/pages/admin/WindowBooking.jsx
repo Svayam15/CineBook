@@ -1,3 +1,4 @@
+/// <reference types="vite/client" />
 import { useEffect, useState } from "react";
 import AdminLayout from "../../components/admin/AdminLayout";
 import api from "../../api/axios";
@@ -14,8 +15,6 @@ const WindowBooking = () => {
   const [loadingShows, setLoadingShows] = useState(true);
   const [loadingSeats, setLoadingSeats] = useState(false);
   const [booking, setBooking] = useState(false);
-  const [jobId, setJobId] = useState(null);
-  const [bookingStatus, setBookingStatus] = useState(null);
 
   useEffect(() => {
     const fetchShows = async () => {
@@ -28,7 +27,7 @@ const WindowBooking = () => {
         setLoadingShows(false);
       }
     };
-    fetchShows();
+    fetchShows().catch(console.error);
   }, []);
 
   const handleShowSelect = async (show) => {
@@ -47,13 +46,14 @@ const WindowBooking = () => {
 
   const toggleSeat = (seat) => {
     if (seat.status !== "AVAILABLE") return;
-    setSelectedSeats((prev) =>
-      prev.includes(seat.id)
-        ? prev.filter((id) => id !== seat.id)
-        : prev.length >= 10
-        ? (toast.error("Max 10 seats per booking"), prev)
-        : [...prev, seat.id]
-    );
+    setSelectedSeats((prev) => {
+      if (prev.includes(seat.id)) return prev.filter((id) => id !== seat.id);
+      if (prev.length >= 10) {
+        toast.error("Max 10 seats per booking");
+        return prev;
+      }
+      return [...prev, seat.id];
+    });
   };
 
   const handleBook = async () => {
@@ -62,17 +62,16 @@ const WindowBooking = () => {
       return;
     }
     setBooking(true);
-    setBookingStatus(null);
     try {
       const res = await api.post("/admin/bookings", {
         showId: selectedShow.id,
         seatIds: selectedSeats,
         paymentType,
       });
-      setJobId(res.data.jobId);
+
       toast.success("Booking queued!");
 
-      // Poll for status
+      // SSE for booking status
       const eventSource = new EventSource(
         `${import.meta.env.VITE_API_URL}/bookings/status/${res.data.jobId}`,
         { withCredentials: true }
@@ -81,14 +80,12 @@ const WindowBooking = () => {
       eventSource.onmessage = (e) => {
         const data = JSON.parse(e.data);
         if (data.status === "success") {
-          setBookingStatus("success");
           toast.success("Booking confirmed! 🎉");
           setSelectedSeats([]);
           handleShowSelect(selectedShow);
           eventSource.close();
           setBooking(false);
         } else if (data.status === "failed") {
-          setBookingStatus("failed");
           toast.error(data.reason || "Booking failed");
           eventSource.close();
           setBooking(false);
@@ -115,7 +112,9 @@ const WindowBooking = () => {
   const totalAmount = selectedSeats.reduce((sum, seatId) => {
     const seat = seats.find((s) => s.id === seatId);
     if (!seat) return sum;
-    return sum + (seat.type === "GOLDEN" ? (selectedShow?.goldenPrice || 0) : (selectedShow?.regularPrice || 0));
+    return sum + (seat.type === "GOLDEN"
+      ? (selectedShow?.goldenPrice || 0)
+      : (selectedShow?.regularPrice || 0));
   }, 0);
 
   return (
@@ -143,7 +142,9 @@ const WindowBooking = () => {
                   key={show.id}
                   onClick={() => handleShowSelect(show)}
                   className={`bg-card border rounded-xl px-4 py-3 cursor-pointer transition
-                    ${selectedShow?.id === show.id ? "border-primary bg-primary/5" : "border-border hover:border-zinc-600"}`}
+                    ${selectedShow?.id === show.id
+                      ? "border-primary bg-primary/5"
+                      : "border-border hover:border-zinc-600"}`}
                 >
                   <p className="text-white text-sm font-medium">{show.movie?.title}</p>
                   <p className="text-muted text-xs mt-0.5">{show.theatre?.name} • {show.showType} • {show.startTime}</p>
@@ -186,11 +187,15 @@ const WindowBooking = () => {
                           onClick={() => toggleSeat(seat)}
                           disabled={seat.status !== "AVAILABLE"}
                           className={`w-8 h-8 rounded-lg text-xs font-medium transition
-                            ${seat.status === "BOOKED" ? "bg-zinc-700 text-zinc-500 cursor-not-allowed" :
-                              seat.status === "LOCKED" ? "bg-yellow-500/20 text-yellow-500 cursor-not-allowed" :
-                              selectedSeats.includes(seat.id) ? "bg-primary text-white" :
-                              seat.type === "GOLDEN" ? "bg-golden/10 text-golden border border-golden/30 hover:bg-golden/20" :
-                              "bg-zinc-800 text-zinc-300 hover:bg-zinc-700"
+                            ${seat.status === "BOOKED"
+                              ? "bg-zinc-700 text-zinc-500 cursor-not-allowed"
+                              : seat.status === "LOCKED"
+                              ? "bg-yellow-500/20 text-yellow-500 cursor-not-allowed"
+                              : selectedSeats.includes(seat.id)
+                              ? "bg-primary text-white"
+                              : seat.type === "GOLDEN"
+                              ? "bg-golden/10 text-golden border border-golden/30 hover:bg-golden/20"
+                              : "bg-zinc-800 text-zinc-300 hover:bg-zinc-700"
                             }`}
                         >
                           {seat.number}
@@ -225,7 +230,9 @@ const WindowBooking = () => {
                         key={type}
                         onClick={() => setPaymentType(type)}
                         className={`flex-1 py-2 rounded-xl text-sm font-medium transition border
-                          ${paymentType === type ? "bg-primary border-primary text-white" : "bg-dark border-border text-muted hover:text-white"}`}
+                          ${paymentType === type
+                            ? "bg-primary border-primary text-white"
+                            : "bg-dark border-border text-muted hover:text-white"}`}
                       >
                         {type === "CASH" ? "💵 Cash" : "💳 Card"}
                       </button>
