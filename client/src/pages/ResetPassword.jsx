@@ -1,13 +1,19 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate, useLocation, Link } from "react-router-dom";
-import { Eye, EyeOff, Film } from "lucide-react";
+import { Eye, EyeOff} from "lucide-react";
 import api from "../api/axios";
 import toast from "react-hot-toast";
+import AuthLayout from "../components/auth/AuthLayout";
 
 const ResetPassword = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { email, otp: otpFromState } = location.state || {};
+
+  // ← ADD THIS
+useEffect(() => {
+  if (!email || !otpFromState) navigate("/login");
+}, [email, otpFromState, navigate]);
 
   const [formData, setFormData] = useState({
     newPassword: "",
@@ -47,21 +53,7 @@ const ResetPassword = () => {
   };
 
   return (
-    <div className="min-h-screen bg-dark flex items-center justify-center px-4 py-8">
-      <div className="w-full max-w-md">
-
-        {/* Logo */}
-        <div className="text-center mb-8">
-          <div className="flex items-center justify-center gap-2 mb-2">
-            <Film className="text-primary" size={36} />
-            <h1 className="font-heading text-4xl font-bold text-white tracking-tight">
-              Cine<span className="text-primary">Book</span>
-            </h1>
-          </div>
-        </div>
-
-        {/* Card */}
-        <div className="bg-card border border-border rounded-2xl p-6 md:p-8 shadow-2xl">
+    <AuthLayout subtitle="">
           <div className="text-center mb-6">
             <div className="w-14 h-14 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
               <span className="text-2xl">🔐</span>
@@ -138,9 +130,7 @@ const ResetPassword = () => {
               ← Back to login
             </Link>
           </div>
-        </div>
-      </div>
-    </div>
+        </AuthLayout>
   );
 };
 

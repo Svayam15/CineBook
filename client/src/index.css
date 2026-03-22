@@ -10,6 +10,29 @@
 @tailwind utilities;
 
 @layer base {
+  :root {
+    /* shadcn CSS variables */
+    --background: #0D0D0D;
+    --foreground: #ffffff;
+    --card: #161616;
+    --card-foreground: #ffffff;
+    --border: #27272A;
+    --input: #27272A;
+    --primary: #7C3AED;
+    --primary-foreground: #ffffff;
+    --secondary: #161616;
+    --secondary-foreground: #ffffff;
+    --muted: #71717A;
+    --muted-foreground: #71717A;
+    --destructive: #ef4444;
+    --destructive-foreground: #ffffff;
+    --ring: #7C3AED;
+    --radius: 0.75rem;
+    --radius-md: 0.75rem;
+    --radius-lg: 1rem;
+    --radius-xl: 1.25rem;
+  }
+
   body {
     font-family: "DM Sans", sans-serif;
     background-color: #0D0D0D;

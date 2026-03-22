@@ -18,9 +18,20 @@ const useAuthStore = create(
       clearAuth: () => set({ user: null, isAuthenticated: false }),
     }),
     {
-      name: "auth-storage", // stored in localStorage
+      name: "auth-storage",
     }
   )
 );
+
+// 🔄 Multi-tab logout sync
+window.addEventListener("storage", (e) => {
+  if (e.key === "auth-storage") {
+    const newValue = e.newValue ? JSON.parse(e.newValue) : null;
+    if (!newValue?.state?.isAuthenticated) {
+      useAuthStore.getState().clearAuth();
+      window.location.href = "/login";
+    }
+  }
+});
 
 export default useAuthStore;

@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { Eye, EyeOff, Film } from "lucide-react";
+import { Eye, EyeOff } from "lucide-react";
+import AuthLayout from "../components/auth/AuthLayout";
+import Spinner from "../components/common/Spinner"; // ← ADD THIS
 import api from "../api/axios";
 import toast from "react-hot-toast";
 
@@ -47,23 +49,8 @@ const Login = () => {
     }
   };
 
-  return (
-    <div className="min-h-screen bg-dark flex items-center justify-center px-4 py-8">
-      <div className="w-full max-w-md">
-
-        {/* Logo */}
-        <div className="text-center mb-8">
-          <div className="flex items-center justify-center gap-2 mb-2">
-            <Film className="text-primary" size={36} />
-            <h1 className="font-heading text-4xl font-bold text-white tracking-tight">
-              Cine<span className="text-primary">Book</span>
-            </h1>
-          </div>
-          <p className="text-muted text-sm">Your ultimate movie booking experience</p>
-        </div>
-
-        {/* Card */}
-        <div className="bg-card border border-border rounded-2xl p-6 md:p-8 shadow-2xl">
+         return (
+    <AuthLayout subtitle="Your ultimate movie booking experience">
           <h2 className="font-heading text-xl font-semibold text-white mb-6">
             Welcome back! Please login.
 
@@ -143,17 +130,7 @@ const Login = () => {
               disabled={loading}
               className="w-full bg-primary hover:bg-primary-dark text-white font-semibold py-3 rounded-xl transition duration-200 disabled:opacity-50 disabled:cursor-not-allowed text-sm mt-2"
             >
-              {loading ? (
-                <span className="flex items-center justify-center gap-2">
-                  <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
-                  </svg>
-                  Sending OTP...
-                </span>
-              ) : (
-                "Continue"
-              )}
+              {loading ? <Spinner text="Sending OTP..." /> : "Continue" }
             </button>
           </form>
 
@@ -174,14 +151,7 @@ const Login = () => {
               Create account
             </Link>
           </p>
-        </div>
-
-        {/* Footer */}
-        <p className="text-center text-zinc-700 text-xs mt-6">
-          © 2026 CineBook. All rights reserved. Made by Svayam Shanishwara
-        </p>
-      </div>
-    </div>
+       </AuthLayout>
   );
 };
 
