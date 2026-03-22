@@ -35,18 +35,18 @@ function App() {
   const [authChecked, setAuthChecked] = useState(false);
 
   useEffect(() => {
-    const verifyAuth = async () => {
-      try {
-        const res = await api.get("/users/me");
-        setUser(res.data);
-      } catch {
-        clearAuth();
-      } finally {
-        setAuthChecked(true);
-      }
-    };
-    verifyAuth();
-  }, []);
+  const verifyAuth = async () => {
+    try {
+      const res = await api.get("/users/me");
+      setUser(res.data);
+    } catch {
+      clearAuth();
+    } finally {
+      setAuthChecked(true);
+    }
+  };
+  verifyAuth().catch(console.error);
+}, [setUser, clearAuth]);
 
   if (!authChecked) {
     return (

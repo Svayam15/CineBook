@@ -9,7 +9,7 @@ export const bookingQueue = new Queue("bookingQueue", {
       type: "exponential",
       delay: 2000,
     },
-    removeOnComplete: true,
+    removeOnComplete: false,
     removeOnFail: false,
   },
 });

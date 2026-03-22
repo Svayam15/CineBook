@@ -8,6 +8,11 @@ const ProtectedRoute = ({ children, adminOnly = false }) => {
     return <Navigate to="/login" />;
   }
 
+   // Wait for user data to load
+  if (adminOnly && !user) {
+    return null; // ← wait, don't redirect yet
+  }
+
   if (adminOnly && user?.role !== "ADMIN") {
     return <Navigate to="/" />;
   }
