@@ -19,6 +19,8 @@ import logger from "./config/logger.js";
 
 const app = express();
 
+app.set("trust proxy", 1);
+
 // 🔒 Helmet
 app.use(helmet());
 
