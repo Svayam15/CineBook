@@ -1,5 +1,6 @@
-/// <reference types="vite/client" />
 import axios from "axios";
+
+/// <reference types="vite/client" />
 
 const PUBLIC_ROUTES = [
   "/auth/login",
@@ -9,7 +10,7 @@ const PUBLIC_ROUTES = [
   "/auth/forgot-password",
   "/auth/reset-password",
   "/auth/resend-otp",
-    "/users/me"
+  "/users/me",
 ];
 
 const api = axios.create({
@@ -20,24 +21,24 @@ const api = axios.create({
   },
 });
 
-// Response interceptor — handle errors globally
 api.interceptors.response.use(
   (response) => response,
-  (error) => {
+  async (error) => {
     const isPublicRoute = PUBLIC_ROUTES.some((route) =>
       error.config?.url?.includes(route)
     );
 
-    // Auto logout on 401 — only for protected routes
     if (error.response?.status === 401 && !isPublicRoute) {
-      import("../store/authStore").then(({ default: useAuthStore }) => {
-        useAuthStore.getState().clearAuth();
-      });
-      window.location.href = "/login";
+      const { default: useAuthStore } = await import("../store/authStore");
+      useAuthStore.getState().clearAuth();
+      // Don't hard redirect here — let ProtectedRoute handle it
+      // clearAuth sets isAuthenticated: false, ProtectedRoute will navigate to /login
     }
 
     const data = error.response?.data;
-    const message = data?.message || (data?.errors ? Object.values(data.errors)[0] : "Something went wrong");
+    const message =
+      data?.message ||
+      (data?.errors ? Object.values(data.errors)[0] : "Something went wrong");
     return Promise.reject({ message, status: error.response?.status });
   }
 );
