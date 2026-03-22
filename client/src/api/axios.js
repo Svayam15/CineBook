@@ -9,6 +9,7 @@ const PUBLIC_ROUTES = [
   "/auth/forgot-password",
   "/auth/reset-password",
   "/auth/resend-otp",
+    "/users/me"
 ];
 
 const api = axios.create({
