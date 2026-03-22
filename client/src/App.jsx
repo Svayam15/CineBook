@@ -31,7 +31,7 @@ import WindowBooking from "./pages/admin/WindowBooking";
 import ProtectedRoute from "./components/common/ProtectedRoute";
 
 function App() {
-  const { clearAuth, setUser, isAuthenticated } = useAuthStore();
+  const { clearAuth, setUser, isAuthenticated, user } = useAuthStore();
   const [authChecked, setAuthChecked] = useState(false);
 
   useEffect(() => {
@@ -72,7 +72,8 @@ function App() {
       <Route path="/reset-password" element={<ResetPassword />} />
 
       {/* Root — Landing for non-logged in, Home for logged in */}
-      <Route path="/" element={isAuthenticated ? <Home /> : <LandingPage />} />
+      <Route path="/" element={isAuthenticated ? <LandingPage />: user?.role === "ADMIN" ? <Navigate to="/admin" /> :
+  <Home /> } />
 
       {/* Show details — accessible to all but booking requires login */}
       <Route path="/shows/:id" element={<ShowDetails />} />
