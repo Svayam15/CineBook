@@ -38,6 +38,10 @@ import ProtectedRoute from "./components/common/ProtectedRoute";
 
         useEffect(() => {
             const verifyAuth = async () => {
+                 if (isAuthenticated) {
+      setAuthChecked(true);
+      return;
+    }
                 try {
                     const res = await api.get("/users/me");
                     setUser(res.data);
