@@ -3,7 +3,7 @@ import rateLimit from "express-rate-limit";
 // 🌐 Global limiter — all routes
 export const globalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100,
+  max: 500,
   message: { message: "Too many requests, please try again later." },
   standardHeaders: true,
   legacyHeaders: false,
