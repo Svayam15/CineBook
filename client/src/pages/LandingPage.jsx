@@ -12,7 +12,7 @@ const LandingPage = () => {
   const [search, setSearch] = useState("");
   const [activeTab, setActiveTab] = useState("shows");
 
-  useEffect(() => {
+  useEffect(() =>{
     const fetchData = async () => {
       try {
         const [moviesRes, showsRes] = await Promise.all([

@@ -71,6 +71,8 @@ const WindowBooking = () => {
 
       toast.success("Booking queued!");
 
+      await new Promise((resolve) => setTimeout(resolve, 500));
+
       // SSE for booking status
       const eventSource = new EventSource(
         `${import.meta.env.VITE_API_URL}/bookings/status/${res.data.jobId}`,
