@@ -14,7 +14,8 @@ const setAuthCookie = (res, token, stayLoggedIn = false) => {
   res.cookie("token", token, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
+    sameSite: "none",
+    domain: ".svayam.dev",
     maxAge: stayLoggedIn
       ? 30 * 24 * 60 * 60 * 1000  // 30 days
       : 24 * 60 * 60 * 1000,       // 1 day
@@ -308,7 +309,12 @@ export const resendOTP = async (req, res) => {
 
 // 🚪 LOGOUT
 export const logout = (req, res) => {
-  res.clearCookie("token");
+  res.clearCookie("token", {
+    httpOnly: true,
+    secure: true,
+    sameSite: "none",
+    domain: ".svayam.dev",
+  });
   res.json({ message: "Logged out successfully" });
 };
 
