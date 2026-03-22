@@ -73,7 +73,10 @@ const WindowBooking = () => {
 
       const jobId = res.data.jobId;
       let attempts = 0;
-      const maxAttempts = 15;
+      const maxAttempts = 30;
+
+      // Add delay before starting poll:
+await new Promise((resolve) => setTimeout(resolve, 2000)); // ← 2 second delay
 
       const pollInterval = setInterval(async () => {
         attempts++;
