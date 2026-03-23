@@ -301,7 +301,7 @@ export const adminCancelBooking = asyncHandler(async (req, res) => {
   });
 });
 
-// ❌ ADMIN CANCEL MOVIE + ALL SHOWS
+// ADMIN CANCEL MOVIE + ALL SHOWS + REFUNDS
 export const adminCancelMovie = asyncHandler(async (req, res) => {
   const { id } = req.params;
 
@@ -316,12 +316,7 @@ export const adminCancelMovie = asyncHandler(async (req, res) => {
     throw error;
   }
 
-  if (movie.shows.length === 0) {
-    const error = new Error("No active shows for this movie");
-    error.statusCode = 400;
-    throw error;
-  }
-
+  // Cancel all active shows first
   for (const show of movie.shows) {
     const bookings = await prisma.booking.findMany({
       where: { showId: show.id, status: "PAID" },
@@ -362,10 +357,15 @@ export const adminCancelMovie = asyncHandler(async (req, res) => {
     }
   }
 
-  logger.info(`Movie ${id} cancelled. ${movie.shows.length} shows cancelled.`);
+  // ✅ Always delete the movie itself
+  await prisma.movie.delete({
+    where: { id: parseInt(id) },
+  });
+
+  logger.info(`Movie ${id} deleted. ${movie.shows.length} shows cancelled.`);
 
   res.json({
-    message: `Movie cancelled. ${movie.shows.length} shows cancelled.`,
+    message: `Movie deleted successfully. ${movie.shows.length} shows cancelled.`,
     cancelledShows: movie.shows.length,
   });
 });

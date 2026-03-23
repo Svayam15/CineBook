@@ -59,7 +59,7 @@ export const deleteTheatre = asyncHandler(async (req, res) => {
   const theatre = await prisma.theatre.findUnique({
     where: { id: parseInt(id) },
     include: {
-      shows: { where: { isActive: true } },
+      shows: true, // include ALL shows, not just active
     },
   });
 
@@ -69,13 +69,41 @@ export const deleteTheatre = asyncHandler(async (req, res) => {
     throw error;
   }
 
-  if (theatre.shows.length > 0) {
+  if (theatre.shows.some((s) => s.isActive)) {
     const error = new Error("Cannot delete theatre with active shows. Cancel all shows first.");
     error.statusCode = 400;
     throw error;
   }
 
-  await prisma.theatre.delete({ where: { id: parseInt(id) } });
+  // Delete everything in order to avoid FK constraint errors
+  await prisma.$transaction(async (tx) => {
+    for (const show of theatre.shows) {
+      // Delete booking seats first
+      await tx.bookingSeat.deleteMany({
+        where: { showSeat: { showId: show.id } },
+      });
+
+      // Delete bookings
+      await tx.booking.deleteMany({
+        where: { showId: show.id },
+      });
+
+      // Delete show seats
+      await tx.showSeat.deleteMany({
+        where: { showId: show.id },
+      });
+
+      // Delete show
+      await tx.show.delete({
+        where: { id: show.id },
+      });
+    }
+
+    // Now delete the theatre
+    await tx.theatre.delete({
+      where: { id: parseInt(id) },
+    });
+  });
 
   logger.info(`Theatre deleted: ${theatre.name}`);
   res.json({ message: "Theatre deleted successfully" });
