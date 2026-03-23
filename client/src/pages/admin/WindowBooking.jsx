@@ -215,13 +215,13 @@ const WindowBooking = () => {
                 {Object.entries(seatsByRow).map(([row, rowSeats]) => (
                   <div key={row} className="flex items-center gap-2">
                     <span className="text-muted text-xs w-4">{row}</span>
-                    <div className="flex gap-1 md:gap-1.5 flex-wrap">
+                    <div className="grid grid-cols-10">
                       {rowSeats.map((seat) => (
                         <button
                           key={seat.id}
                           onClick={() => toggleSeat(seat)}
                           disabled={seat.status !== "AVAILABLE"}
-                          className={`w-6 h-6 md:w-8 md:h-8 rounded-md md:rounded-lg text-[10px] md:text-xs font-medium transition
+                          className={`w-full aspect-square rounded-md md:rounded-lg text-[10px] md:text-xs font-medium transition
                             ${seat.status === "BOOKED"
                               ? "bg-zinc-700 text-zinc-500 cursor-not-allowed"
                               : seat.status === "LOCKED"
