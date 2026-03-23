@@ -61,6 +61,24 @@ export const releaseExpiredLocks = async () => {
 export const createBooking = async ({ userId, showId, seatIds, paymentType }) => {
   await releaseExpiredLocks();
 
+  // 🚫 Check if show exists and has already started
+  const show = await prisma.show.findUnique({
+    where: { id: showId },
+    select: { startTime: true },
+  });
+
+  if (!show) {
+    const error = new Error("Show not found");
+    error.statusCode = 404;
+    throw error;
+  }
+
+  if (new Date(show.startTime) <= new Date()) {
+    const error = new Error("Show has already started. Booking is not allowed.");
+    error.statusCode = 400;
+    throw error;
+  }
+
   const job = await bookingQueue.add(
     "bookSeats",
     { userId, showId, seatIds, paymentType },
@@ -90,10 +108,10 @@ export const calculateRefund = (totalAmount, showStartTime, cancelledByAdmin = f
   const hoursBeforeShow = (showTime - now) / (1000 * 60 * 60);
 
   if (hoursBeforeShow > CANCELLATION_HOURS_THRESHOLD) {
-    // More than 3 hours before show → full refund
+    // More than threshold hours before show → full refund
     return totalAmount;
   } else {
-    // Less than 3 hours → 10% fee deducted
+    // Less than threshold hours → cancellation fee deducted
     const cancellationFee = totalAmount * (CANCELLATION_FEE_PERCENT / 100);
     return totalAmount - cancellationFee;
   }

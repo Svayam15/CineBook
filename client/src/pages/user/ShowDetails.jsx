@@ -34,8 +34,12 @@ const ShowDetails = () => {
     fetchShow().catch(console.error);
   }, [id]);
 
+  // Check if show has already started
+  const isShowStarted = show?.startTime ? new Date(show.startTime) <= new Date() : false;
+
   const toggleSeat = (seat) => {
     if (seat.status !== "AVAILABLE") return;
+    if (isShowStarted) return;
     setSelectedSeats((prev) =>
       prev.find((s) => s.id === seat.id)
         ? prev.filter((s) => s.id !== seat.id)
@@ -49,36 +53,41 @@ const ShowDetails = () => {
     return sum + (price || 0);
   }, 0);
 
-// Update handleProceed:
-const handleProceed = async () => {
-  if (selectedSeats.length === 0) return;
+  const handleProceed = async () => {
+    if (selectedSeats.length === 0) return;
 
-  // If not logged in → redirect to login with redirect back
-  if (!isAuthenticated) {
-    navigate("/login", {
-      state: { redirect: `/shows/${id}` },
-    });
-    return;
-  }
+    // 🚫 Check if show has already started
+    if (isShowStarted) {
+      toast.error("Show has already started. Booking is not allowed.");
+      return;
+    }
 
-  try {
-    const res = await api.post("/bookings", {
-      showId: parseInt(id),
-      seatIds: selectedSeats.map((s) => s.id),
-    });
-    navigate("/payment", {
-      state: {
-        jobId: res.data.jobId,
+    // If not logged in → redirect to login with redirect back
+    if (!isAuthenticated) {
+      navigate("/login", {
+        state: { redirect: `/shows/${id}` },
+      });
+      return;
+    }
+
+    try {
+      const res = await api.post("/bookings", {
         showId: parseInt(id),
-        selectedSeats: selectedSeats.map((s) => s.id),
-        totalAmount,
-        show,
-      },
-    });
-  } catch (err) {
-    toast.error(err.message);
-  }
-};
+        seatIds: selectedSeats.map((s) => s.id),
+      });
+      navigate("/payment", {
+        state: {
+          jobId: res.data.jobId,
+          showId: parseInt(id),
+          selectedSeats: selectedSeats.map((s) => s.id),
+          totalAmount,
+          show,
+        },
+      });
+    } catch (err) {
+      toast.error(err.message);
+    }
+  };
 
   // Group seats by row
   const seatsByRow = seats.reduce((acc, seat) => {
@@ -152,6 +161,13 @@ const handleProceed = async () => {
         </div>
       </div>
 
+      {/* Show Started Banner */}
+      {isShowStarted && (
+        <div style={styles.startedBanner}>
+          ⚠️ This show has already started. Booking is no longer available.
+        </div>
+      )}
+
       {/* Pricing */}
       <div style={styles.pricingRow}>
         <div style={styles.priceCard}>
@@ -191,7 +207,8 @@ const handleProceed = async () => {
                   const isLocked = seat.status === "LOCKED";
 
                   let seatStyle = { ...styles.seat };
-                  if (isBooked) seatStyle = { ...seatStyle, ...styles.seatBooked };
+                  if (isShowStarted) seatStyle = { ...seatStyle, ...styles.seatBooked };
+                  else if (isBooked) seatStyle = { ...seatStyle, ...styles.seatBooked };
                   else if (isLocked) seatStyle = { ...seatStyle, ...styles.seatLocked };
                   else if (isSelected && isGolden) seatStyle = { ...seatStyle, ...styles.seatSelectedGolden };
                   else if (isSelected) seatStyle = { ...seatStyle, ...styles.seatSelected };
@@ -203,8 +220,12 @@ const handleProceed = async () => {
                       key={seat.id}
                       style={seatStyle}
                       onClick={() => toggleSeat(seat)}
-                      title={`${seat.row}${seat.number} — ${seat.type} — ${seat.status}`}
-                      disabled={isBooked || isLocked}
+                      title={
+                        isShowStarted
+                          ? "Show has already started"
+                          : `${seat.row}${seat.number} — ${seat.type} — ${seat.status}`
+                      }
+                      disabled={isBooked || isLocked || isShowStarted}
                     >
                       {seat.number}
                     </button>
@@ -231,8 +252,8 @@ const handleProceed = async () => {
         ))}
       </div>
 
-      {/* Sticky Bottom Bar */}
-      {selectedSeats.length > 0 && (
+      {/* Sticky Bottom Bar — hidden if show has started */}
+      {selectedSeats.length > 0 && !isShowStarted && (
         <div style={styles.bottomBar}>
           <div style={styles.bottomInfo}>
             <span style={styles.bottomSeats}>
@@ -403,6 +424,20 @@ const styles = {
     width: "1px",
     background: "rgba(255,255,255,0.06)",
     margin: "12px 0",
+  },
+  startedBanner: {
+    position: "relative",
+    zIndex: 1,
+    margin: "0 40px 24px",
+    padding: "14px 20px",
+    background: "rgba(239,68,68,0.08)",
+    border: "1px solid rgba(239,68,68,0.3)",
+    borderRadius: "10px",
+    color: "#ef4444",
+    fontSize: "14px",
+    fontWeight: "500",
+    textAlign: "center",
+    letterSpacing: "0.02em",
   },
   pricingRow: {
     position: "relative",

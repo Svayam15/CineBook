@@ -31,6 +31,9 @@ const WindowBooking = () => {
   }, []);
 
   const handleShowSelect = async (show) => {
+    // 🚫 Don't allow selecting a started show
+    if (new Date(show.startTime) <= new Date()) return;
+
     setSelectedShow(show);
     setSelectedSeats([]);
     setLoadingSeats(true);
@@ -56,11 +59,18 @@ const WindowBooking = () => {
     });
   };
 
-    const handleBook = async () => {
+  const handleBook = async () => {
     if (!selectedShow || selectedSeats.length === 0) {
       toast.error("Select a show and at least one seat");
       return;
     }
+
+    // 🚫 Double check show hasn't started
+    if (new Date(selectedShow.startTime) <= new Date()) {
+      toast.error("Show has already started. Booking is not allowed.");
+      return;
+    }
+
     setBooking(true);
     try {
       const res = await api.post("/admin/bookings", {
@@ -75,8 +85,8 @@ const WindowBooking = () => {
       let attempts = 0;
       const maxAttempts = 30;
 
-      // Add delay before starting poll:
-await new Promise((resolve) => setTimeout(resolve, 2000)); // ← 2 second delay
+      // Add delay before starting poll
+      await new Promise((resolve) => setTimeout(resolve, 2000));
 
       const pollInterval = setInterval(async () => {
         attempts++;
@@ -105,7 +115,6 @@ await new Promise((resolve) => setTimeout(resolve, 2000)); // ← 2 second delay
           setBooking(false);
         }
       }, 1000);
-
     } catch (err) {
       toast.error(err.message);
       setBooking(false);
@@ -122,9 +131,12 @@ await new Promise((resolve) => setTimeout(resolve, 2000)); // ← 2 second delay
   const totalAmount = selectedSeats.reduce((sum, seatId) => {
     const seat = seats.find((s) => s.id === seatId);
     if (!seat) return sum;
-    return sum + (seat.type === "GOLDEN"
-      ? (selectedShow?.goldenPrice || 0)
-      : (selectedShow?.regularPrice || 0));
+    return (
+      sum +
+      (seat.type === "GOLDEN"
+        ? selectedShow?.goldenPrice || 0
+        : selectedShow?.regularPrice || 0)
+    );
   }, 0);
 
   return (
@@ -147,20 +159,33 @@ await new Promise((resolve) => setTimeout(resolve, 2000)); // ← 2 second delay
             </div>
           ) : (
             <div className="space-y-2 max-h-[500px] overflow-y-auto pr-1">
-              {shows.map((show) => (
-                <div
-                  key={show.id}
-                  onClick={() => handleShowSelect(show)}
-                  className={`bg-card border rounded-xl px-4 py-3 cursor-pointer transition
-                    ${selectedShow?.id === show.id
-                      ? "border-primary bg-primary/5"
-                      : "border-border hover:border-zinc-600"}`}
-                >
-                  <p className="text-white text-sm font-medium">{show.movie?.title}</p>
-                  <p className="text-muted text-xs mt-0.5">{show.theatre?.name} • {show.showType} • {show.startTime}</p>
-                  <p className="text-primary text-xs mt-0.5">₹{show.regularPrice} regular</p>
-                </div>
-              ))}
+              {shows.map((show) => {
+                const hasStarted = new Date(show.startTime) <= new Date();
+                return (
+                  <div
+                    key={show.id}
+                    onClick={() => handleShowSelect(show)}
+                    className={`bg-card border rounded-xl px-4 py-3 transition
+                      ${hasStarted
+                        ? "border-border opacity-40 cursor-not-allowed"
+                        : selectedShow?.id === show.id
+                        ? "border-primary bg-primary/5 cursor-pointer"
+                        : "border-border hover:border-zinc-600 cursor-pointer"
+                      }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <p className="text-white text-sm font-medium">{show.movie?.title}</p>
+                      {hasStarted && (
+                        <span className="text-xs text-red-400 font-medium">Started</span>
+                      )}
+                    </div>
+                    <p className="text-muted text-xs mt-0.5">
+                      {show.theatre?.name} • {show.showType} • {show.startTime}
+                    </p>
+                    <p className="text-primary text-xs mt-0.5">₹{show.regularPrice} regular</p>
+                  </div>
+                );
+              })}
             </div>
           )}
         </div>
@@ -218,11 +243,21 @@ await new Promise((resolve) => setTimeout(resolve, 2000)); // ← 2 second delay
 
               {/* Legend */}
               <div className="flex flex-wrap gap-4 mb-6 text-xs text-muted">
-                <span className="flex items-center gap-1.5"><span className="w-4 h-4 rounded bg-zinc-800 inline-block" />Available</span>
-                <span className="flex items-center gap-1.5"><span className="w-4 h-4 rounded bg-primary inline-block" />Selected</span>
-                <span className="flex items-center gap-1.5"><span className="w-4 h-4 rounded bg-golden/10 border border-golden/30 inline-block" />Golden</span>
-                <span className="flex items-center gap-1.5"><span className="w-4 h-4 rounded bg-zinc-700 inline-block" />Booked</span>
-                <span className="flex items-center gap-1.5"><span className="w-4 h-4 rounded bg-yellow-500/20 inline-block" />Locked</span>
+                <span className="flex items-center gap-1.5">
+                  <span className="w-4 h-4 rounded bg-zinc-800 inline-block" />Available
+                </span>
+                <span className="flex items-center gap-1.5">
+                  <span className="w-4 h-4 rounded bg-primary inline-block" />Selected
+                </span>
+                <span className="flex items-center gap-1.5">
+                  <span className="w-4 h-4 rounded bg-golden/10 border border-golden/30 inline-block" />Golden
+                </span>
+                <span className="flex items-center gap-1.5">
+                  <span className="w-4 h-4 rounded bg-zinc-700 inline-block" />Booked
+                </span>
+                <span className="flex items-center gap-1.5">
+                  <span className="w-4 h-4 rounded bg-yellow-500/20 inline-block" />Locked
+                </span>
               </div>
 
               {/* Booking Summary */}
