@@ -139,43 +139,85 @@ const Home = () => {
             </div>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {filteredShows.map((show) => (
-                <div
-                  key={show.id}
-                  onClick={() => navigate(`/shows/${show.id}`)}
-                  className="bg-card border border-border rounded-2xl p-5 cursor-pointer hover:border-primary/50 transition group"
-                >
-                  <div className="flex items-start justify-between mb-3">
-                    <h3 className="text-white font-semibold font-heading group-hover:text-primary transition">
-                      {show.movie?.title}
-                    </h3>
-                    <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full shrink-0 ml-2">
-                      {show.showType}
-                    </span>
-                  </div>
-                  <div className="space-y-1.5">
-                    <p className="text-muted text-sm flex items-center gap-1.5">
-                      <MapPin size={13} />
-                      {show.theatre?.name}, {show.theatre?.location}
-                    </p>
-                    <p className="text-muted text-sm flex items-center gap-1.5">
-                      <Clock size={13} />
-                      {show.startTime}
-                    </p>
-                  </div>
-                  <div className="flex items-center justify-between mt-4 pt-3 border-t border-border">
-                    <div>
-                      <p className="text-white font-semibold">₹{show.regularPrice}</p>
-                      {show.hasGoldenSeats && (
-                        <p className="text-golden text-xs">Golden: ₹{show.goldenPrice}</p>
+              {filteredShows.map((show) => {
+                const hasStarted = new Date(show.startTime) <= new Date();
+
+                return (
+                  <div
+                    key={show.id}
+                    onClick={() => !hasStarted && navigate(`/shows/${show.id}`)}
+                    className={`bg-card border rounded-2xl p-5 transition group
+                      ${hasStarted
+                        ? "border-border opacity-60 cursor-not-allowed"
+                        : "border-border hover:border-primary/50 cursor-pointer"
+                      }`}
+                  >
+                    <div className="flex items-start justify-between mb-3">
+                      <h3 className={`font-semibold font-heading transition
+                        ${hasStarted ? "text-zinc-500" : "text-white group-hover:text-primary"}`}>
+                        {show.movie?.title}
+                      </h3>
+                      <div className="flex items-center gap-1.5 shrink-0 ml-2">
+                        {hasStarted && (
+                          <span className="text-xs bg-red-500/10 text-red-400 border border-red-500/20 px-2 py-0.5 rounded-full">
+                            Started
+                          </span>
+                        )}
+                        <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full">
+                          {show.showType}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <p className="text-muted text-sm flex items-center gap-1.5">
+                        <MapPin size={13} />
+                        {show.theatre?.name}, {show.theatre?.location}
+                      </p>
+                      <p className="text-muted text-sm flex items-center gap-1.5">
+                        <Clock size={13} />
+                        {show.startTime}
+                      </p>
+                    </div>
+
+                    <div className="flex items-center justify-between mt-4 pt-3 border-t border-border">
+                      <div>
+                        <p className={`font-semibold ${hasStarted ? "text-zinc-500" : "text-white"}`}>
+                          ₹{show.regularPrice}
+                        </p>
+                        {show.hasGoldenSeats && (
+                          <p className={`text-xs ${hasStarted ? "text-zinc-600" : "text-golden"}`}>
+                            Golden: ₹{show.goldenPrice}
+                          </p>
+                        )}
+                      </div>
+
+                      {hasStarted ? (
+                        <button
+                          disabled
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            toast.error("Show has already started. Booking is not allowed.");
+                          }}
+                          className="bg-zinc-800 text-zinc-500 text-xs px-4 py-2 rounded-xl cursor-not-allowed border border-zinc-700"
+                        >
+                          Show Started
+                        </button>
+                      ) : (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            navigate(`/shows/${show.id}`);
+                          }}
+                          className="bg-primary hover:bg-primary-dark text-white text-xs px-4 py-2 rounded-xl transition"
+                        >
+                          Book Now
+                        </button>
                       )}
                     </div>
-                    <button className="bg-primary hover:bg-primary-dark text-white text-xs px-4 py-2 rounded-xl transition">
-                      Book Now
-                    </button>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )
         )}
