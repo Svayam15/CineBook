@@ -7,7 +7,7 @@ import { SEAT_STATUS, BOOKING_STATUS } from "../utils/constants.js";
 const worker = new Worker(
   "bookingQueue",
   async (job) => {
-    const { userId, showId, seatIds, paymentType } = job.data;
+    const { userId, showId, seatIds, paymentType, isWindowBooking } = job.data;
 
     return prisma.$transaction(async (tx) => {
 
@@ -70,7 +70,7 @@ const worker = new Worker(
       }
 
       // 7️⃣ If CASH payment → mark as PAID immediately
-      if (paymentType === "CASH") {
+      if (paymentType === "CASH" || isWindowBooking) {
         await tx.showSeat.updateMany({
           where: { pendingBookingId: booking.id },
           data: {

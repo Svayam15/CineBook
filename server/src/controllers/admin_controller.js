@@ -134,7 +134,7 @@ export const adminCreateBooking = asyncHandler(async (req, res) => {
 
   const job = await bookingQueue.add(
     "bookSeats",
-    { userId: adminId, showId, seatIds, paymentType },
+    { userId: adminId, showId, seatIds, paymentType, isWindowBooking: true },
     { attempts: 3, backoff: { type: "exponential", delay: 2000 } }
   );
 
