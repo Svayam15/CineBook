@@ -31,9 +31,7 @@ const WindowBooking = () => {
   }, []);
 
   const handleShowSelect = async (show) => {
-    // 🚫 Don't allow selecting a started show
     if (new Date(show.rawStartTime) <= new Date()) return;
-
     setSelectedShow(show);
     setSelectedSeats([]);
     setLoadingSeats(true);
@@ -65,7 +63,6 @@ const WindowBooking = () => {
       return;
     }
 
-    // 🚫 Double check show hasn't started
     if (new Date(selectedShow.rawStartTime) <= new Date()) {
       toast.error("Show has already started. Booking is not allowed.");
       return;
@@ -85,7 +82,6 @@ const WindowBooking = () => {
       let attempts = 0;
       const maxAttempts = 30;
 
-      // Add delay before starting poll
       await new Promise((resolve) => setTimeout(resolve, 2000));
 
       const pollInterval = setInterval(async () => {
@@ -121,7 +117,6 @@ const WindowBooking = () => {
     }
   };
 
-  // Group seats by row
   const seatsByRow = seats.reduce((acc, seat) => {
     if (!acc[seat.row]) acc[seat.row] = [];
     acc[seat.row].push(seat);
@@ -210,19 +205,18 @@ const WindowBooking = () => {
                 🎬 SCREEN
               </div>
 
-              {/* Seats */}
-              <div className="space-y-2 mb-6">
+              {/* Seats — centered so any gap is symmetric on both sides */}
+              <div className="space-y-2 mb-6 flex flex-col items-center">
                 {Object.entries(seatsByRow).map(([row, rowSeats]) => (
                   <div key={row} className="flex items-center gap-2">
                     <span className="text-muted text-xs w-4">{row}</span>
-                    <div className="flex gap-1 md:gap-1.5 flex-wrap">
+                    <div className="flex gap-1 md:gap-1.5">
                       {rowSeats.map((seat) => (
                         <button
                           key={seat.id}
                           onClick={() => toggleSeat(seat)}
                           disabled={seat.status !== "AVAILABLE"}
-                          // seat button — revert to:
-                            className={`w-6 h-6 md:w-8 md:h-8 rounded-md md:rounded-lg text-[10px] md:text-xs font-medium transition
+                          className={`w-6 h-6 md:w-8 md:h-8 rounded-md md:rounded-lg text-[10px] md:text-xs font-medium transition
                             ${seat.status === "BOOKED"
                               ? "bg-zinc-700 text-zinc-500 cursor-not-allowed"
                               : seat.status === "LOCKED"
