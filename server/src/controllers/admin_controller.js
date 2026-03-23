@@ -323,6 +323,17 @@ export const adminCancelMovie = asyncHandler(async (req, res) => {
     throw error;
   }
 
+  // 🚫 Block deletion if any show is currently running
+const runningShow = movie.shows.find(
+  (s) => new Date(s.startTime) <= new Date()
+);
+
+  if (runningShow) {
+  const error = new Error("A show is currently running for this movie. Please wait for it to finish before deleting.");
+  error.statusCode = 400;
+  throw error;
+}
+
   // Cancel all active shows first
   for (const show of movie.shows) {
     const bookings = await prisma.booking.findMany({
