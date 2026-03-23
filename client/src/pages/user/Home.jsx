@@ -12,6 +12,7 @@ const Home = () => {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [activeTab, setActiveTab] = useState("movies");
+  const [selectedMovie, setSelectedMovie] = useState(null);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -35,10 +36,13 @@ const Home = () => {
     m.title.toLowerCase().includes(search.toLowerCase())
   );
 
-  const filteredShows = shows.filter((s) =>
-    s.movie?.title.toLowerCase().includes(search.toLowerCase()) ||
-    s.theatre?.name.toLowerCase().includes(search.toLowerCase())
-  );
+  const filteredShows = shows.filter((s) => {
+    const matchesSearch =
+      s.movie?.title.toLowerCase().includes(search.toLowerCase()) ||
+      s.theatre?.name.toLowerCase().includes(search.toLowerCase());
+    const matchesMovie = selectedMovie ? s.movie?.id === selectedMovie.id : true;
+    return matchesSearch && matchesMovie;
+  });
 
   return (
     <div className="min-h-screen bg-dark">
@@ -81,7 +85,10 @@ const Home = () => {
             Movies ({filteredMovies.length})
           </button>
           <button
-            onClick={() => setActiveTab("shows")}
+            onClick={() => {
+              setActiveTab("shows");
+              setSelectedMovie(null);
+            }}
             className={`flex items-center gap-2 px-5 py-2 rounded-xl text-sm font-medium transition
               ${activeTab === "shows" ? "bg-primary text-white" : "bg-card border border-border text-muted hover:text-white"}`}
           >
@@ -89,6 +96,22 @@ const Home = () => {
             Shows ({filteredShows.length})
           </button>
         </div>
+
+        {/* Active movie filter pill */}
+        {activeTab === "shows" && selectedMovie && (
+          <div className="flex items-center gap-2 mb-4">
+            <span className="text-muted text-sm">Showing shows for:</span>
+            <span className="bg-primary/10 text-primary border border-primary/20 text-xs px-3 py-1 rounded-full font-medium">
+              {selectedMovie.title}
+            </span>
+            <button
+              onClick={() => setSelectedMovie(null)}
+              className="text-muted text-xs hover:text-white transition"
+            >
+              ✕ Clear
+            </button>
+          </div>
+        )}
 
         {/* Loading */}
         {loading ? (
@@ -110,7 +133,10 @@ const Home = () => {
               {filteredMovies.map((movie) => (
                 <div
                   key={movie.id}
-                  onClick={() => setActiveTab("shows")}
+                  onClick={() => {
+                    setSelectedMovie(movie);
+                    setActiveTab("shows");
+                  }}
                   className="bg-card border border-border rounded-2xl p-5 cursor-pointer hover:border-primary/50 transition group"
                 >
                   <div className="w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center mb-4 group-hover:bg-primary/20 transition">
@@ -135,7 +161,11 @@ const Home = () => {
           filteredShows.length === 0 ? (
             <div className="text-center py-16">
               <Tv size={40} className="text-muted mx-auto mb-3" />
-              <p className="text-muted">No shows found</p>
+              <p className="text-muted">
+                {selectedMovie
+                  ? `No shows available for ${selectedMovie.title}`
+                  : "No shows found"}
+              </p>
             </div>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
