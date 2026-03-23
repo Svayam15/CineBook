@@ -1,3 +1,4 @@
+
 /// <reference types="vite/client" />
 import { useEffect, useState } from "react";
 import AdminLayout from "../../components/admin/AdminLayout";
@@ -31,7 +32,6 @@ const WindowBooking = () => {
   }, []);
 
   const handleShowSelect = async (show) => {
-    // 🚫 Don't allow selecting a started show
     if (new Date(show.rawStartTime) <= new Date()) return;
 
     setSelectedShow(show);
@@ -65,7 +65,6 @@ const WindowBooking = () => {
       return;
     }
 
-    // 🚫 Double check show hasn't started
     if (new Date(selectedShow.rawStartTime) <= new Date()) {
       toast.error("Show has already started. Booking is not allowed.");
       return;
@@ -85,7 +84,6 @@ const WindowBooking = () => {
       let attempts = 0;
       const maxAttempts = 30;
 
-      // Add delay before starting poll
       await new Promise((resolve) => setTimeout(resolve, 2000));
 
       const pollInterval = setInterval(async () => {
@@ -121,7 +119,6 @@ const WindowBooking = () => {
     }
   };
 
-  // Group seats by row
   const seatsByRow = seats.reduce((acc, seat) => {
     if (!acc[seat.row]) acc[seat.row] = [];
     acc[seat.row].push(seat);
@@ -148,7 +145,6 @@ const WindowBooking = () => {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
-        {/* Show Selection */}
         <div className="lg:col-span-1">
           <h2 className="text-white font-semibold mb-3">Select Show</h2>
           {loadingShows ? (
@@ -190,7 +186,6 @@ const WindowBooking = () => {
           )}
         </div>
 
-        {/* Seat Selection */}
         <div className="lg:col-span-2">
           {!selectedShow ? (
             <div className="flex items-center justify-center h-64 bg-card border border-border rounded-2xl">
@@ -205,24 +200,21 @@ const WindowBooking = () => {
             </div>
           ) : (
             <div className="bg-card border border-border rounded-2xl p-5">
-              {/* Screen */}
               <div className="w-full bg-primary/10 border border-primary/20 rounded-lg py-2 text-center text-primary text-xs font-medium mb-6">
                 🎬 SCREEN
               </div>
 
-              {/* Seats */}
-              <div className="space-y-2 mb-6">
+              <div className="space-y-2 mb-6 overflow-x-auto">
                 {Object.entries(seatsByRow).map(([row, rowSeats]) => (
-                  <div key={row} className="flex items-center gap-2">
-                    <span className="text-muted text-xs w-4">{row}</span>
-                    <div className="flex gap-1 md:gap-1.5 flex-wrap">
+                  <div key={row} className="flex items-center gap-2 min-w-max">
+                    <span className="text-muted text-xs w-5 text-center shrink-0">{row}</span>
+                    <div className="flex gap-1 md:gap-1.5">
                       {rowSeats.map((seat) => (
                         <button
                           key={seat.id}
                           onClick={() => toggleSeat(seat)}
                           disabled={seat.status !== "AVAILABLE"}
-                          // seat button — revert to:
-                            className={`w-6 h-6 md:w-8 md:h-8 rounded-md md:rounded-lg text-[10px] md:text-xs font-medium transition
+                          className={`w-6 h-6 md:w-8 md:h-8 rounded-md md:rounded-lg text-[10px] md:text-xs font-medium transition
                             ${seat.status === "BOOKED"
                               ? "bg-zinc-700 text-zinc-500 cursor-not-allowed"
                               : seat.status === "LOCKED"
@@ -242,7 +234,6 @@ const WindowBooking = () => {
                 ))}
               </div>
 
-              {/* Legend */}
               <div className="flex flex-wrap gap-4 mb-6 text-xs text-muted">
                 <span className="flex items-center gap-1.5">
                   <span className="w-4 h-4 rounded bg-zinc-800 inline-block" />Available
@@ -261,7 +252,6 @@ const WindowBooking = () => {
                 </span>
               </div>
 
-              {/* Booking Summary */}
               {selectedSeats.length > 0 && (
                 <div className="border-t border-border pt-4">
                   <div className="flex items-center justify-between mb-3">
@@ -269,7 +259,6 @@ const WindowBooking = () => {
                     <p className="text-white font-bold">₹{totalAmount}</p>
                   </div>
 
-                  {/* Payment Type */}
                   <div className="flex gap-3 mb-4">
                     {["CASH", "CARD"].map((type) => (
                       <button
