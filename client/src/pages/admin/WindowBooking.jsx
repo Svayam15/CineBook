@@ -32,7 +32,7 @@ const WindowBooking = () => {
 
   const handleShowSelect = async (show) => {
     // 🚫 Don't allow selecting a started show
-    if (new Date(show.startTime) <= new Date()) return;
+    if (new Date(show.rawStartTime) <= new Date()) return;
 
     setSelectedShow(show);
     setSelectedSeats([]);
@@ -66,7 +66,7 @@ const WindowBooking = () => {
     }
 
     // 🚫 Double check show hasn't started
-    if (new Date(selectedShow.startTime) <= new Date()) {
+    if (new Date(selectedShow.rawStartTime) <= new Date()) {
       toast.error("Show has already started. Booking is not allowed.");
       return;
     }
@@ -160,7 +160,7 @@ const WindowBooking = () => {
           ) : (
             <div className="space-y-2 max-h-[500px] overflow-y-auto pr-1">
               {shows.map((show) => {
-                const hasStarted = new Date(show.startTime) <= new Date();
+                const hasStarted = new Date(show.rawStartTime) <= new Date();
                 return (
                   <div
                     key={show.id}

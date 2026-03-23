@@ -35,7 +35,7 @@ const ShowDetails = () => {
   }, [id]);
 
   // Check if show has already started
-  const isShowStarted = show?.startTime ? new Date(show.startTime) <= new Date() : false;
+  const isShowStarted = show?.rawStartTime ? new Date(show.rawStartTime) <= new Date() : false;
 
   const toggleSeat = (seat) => {
     if (seat.status !== "AVAILABLE") return;

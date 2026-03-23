@@ -140,7 +140,7 @@ const Home = () => {
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {filteredShows.map((show) => {
-                const hasStarted = new Date(show.startTime) <= new Date();
+                const hasStarted = new Date(show.rawStartTime) <= new Date();
 
                 return (
                   <div

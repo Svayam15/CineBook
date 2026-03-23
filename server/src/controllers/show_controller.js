@@ -30,6 +30,7 @@ const formatShow = (show) => {
   const endTime = getEndTime(show.startTime, show.movie?.duration || 0);
   return {
     ...show,
+    rawStartTime: show.startTime,
     startTime: formatToIST(show.startTime),
     endTime: formatToIST(endTime),
     createdAt: formatToIST(show.createdAt),
