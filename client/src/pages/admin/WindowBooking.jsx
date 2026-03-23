@@ -213,31 +213,33 @@ const WindowBooking = () => {
               {/* Seats */}
               <div className="space-y-2 mb-6">
                 {Object.entries(seatsByRow).map(([row, rowSeats]) => (
-                  <div key={row} className="flex items-center gap-2">
-                    <span className="text-muted text-xs w-4">{row}</span>
-                    <div className="grid grid-cols-10">
-                      {rowSeats.map((seat) => (
-                        <button
-                          key={seat.id}
-                          onClick={() => toggleSeat(seat)}
-                          disabled={seat.status !== "AVAILABLE"}
-                          className={`w-full aspect-square rounded-md md:rounded-lg text-[10px] md:text-xs font-medium transition
-                            ${seat.status === "BOOKED"
-                              ? "bg-zinc-700 text-zinc-500 cursor-not-allowed"
-                              : seat.status === "LOCKED"
-                              ? "bg-yellow-500/20 text-yellow-500 cursor-not-allowed"
-                              : selectedSeats.includes(seat.id)
-                              ? "bg-primary text-white"
-                              : seat.type === "GOLDEN"
-                              ? "bg-golden/10 text-golden border border-golden/30 hover:bg-golden/20"
-                              : "bg-zinc-800 text-zinc-300 hover:bg-zinc-700"
-                            }`}
-                        >
-                          {seat.number}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
+                  // change the row container:
+<div className="flex items-center gap-1">
+  <span className="text-muted text-[10px] w-4 shrink-0">{row}</span>
+  <div className="flex flex-1 gap-0.5">
+    {rowSeats.map((seat) => (
+      <button
+        key={seat.id}
+        onClick={() => toggleSeat(seat)}
+        disabled={seat.status !== "AVAILABLE"}
+        style={{ width: "calc((100% - 20px) / 10)", aspectRatio: "1" }}
+        className={`shrink-0 rounded text-[8px] md:text-xs font-medium transition
+          ${seat.status === "BOOKED"
+            ? "bg-zinc-700 text-zinc-500 cursor-not-allowed"
+            : seat.status === "LOCKED"
+            ? "bg-yellow-500/20 text-yellow-500 cursor-not-allowed"
+            : selectedSeats.includes(seat.id)
+            ? "bg-primary text-white"
+            : seat.type === "GOLDEN"
+            ? "bg-golden/10 text-golden border border-golden/30 hover:bg-golden/20"
+            : "bg-zinc-800 text-zinc-300 hover:bg-zinc-700"
+          }`}
+      >
+        {seat.number}
+      </button>
+    ))}
+  </div>
+</div>
                 ))}
               </div>
 
