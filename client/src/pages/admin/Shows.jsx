@@ -5,7 +5,7 @@ import toast from "react-hot-toast";
 import { Plus, Trash2, Tv } from "lucide-react";
 import Spinner from "../../components/common/Spinner";
 
-const SEAT_COUNTS = [120, 150, 180, 200, 250, 300];
+const SEAT_COUNTS = [120, 180, 240, 300]; // ← updated
 const SHOW_TYPES = ["2D", "3D", "4D"];
 
 const Shows = () => {
@@ -51,7 +51,6 @@ const Shows = () => {
     e.preventDefault();
     setAdding(true);
     try {
-      // Convert datetime-local to IST format
       const date = new Date(form.startTime);
       const istOffset = 5.5 * 60 * 60 * 1000;
       const istDate = new Date(date.getTime() + istOffset);
@@ -276,30 +275,46 @@ const Shows = () => {
         </div>
       ) : (
         <div className="space-y-3">
-          {shows.map((show) => (
-            <div key={show.id} className="bg-card border border-border rounded-2xl px-5 py-4 flex items-center justify-between">
-              <div>
-                <div className="flex items-center gap-2">
-                  <p className="text-white font-medium">{show.movie?.title}</p>
-                  <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full">{show.showType}</span>
-                  {show.hasGoldenSeats && (
-                    <span className="text-xs bg-golden/10 text-golden px-2 py-0.5 rounded-full">Golden</span>
-                  )}
-                </div>
-                <p className="text-muted text-sm mt-0.5">
-                  🏛️ {show.theatre?.name} • 🕐 {show.startTime} • 💺 {show.totalSeats} seats • ₹{show.regularPrice}
-                </p>
-              </div>
-              <button
-                onClick={() => handleCancel(show.id)}
-                disabled={cancelling === show.id}
-                className="flex items-center gap-2 text-red-400 hover:text-red-300 text-sm transition disabled:opacity-50"
+          {shows.map((show) => {
+            const hasStarted = new Date(show.rawStartTime) <= new Date();
+            return (
+              <div
+                key={show.id}
+                className="bg-card border border-border rounded-2xl px-5 py-4 flex items-center justify-between gap-4"
               >
-                {cancelling === show.id ? <Spinner /> : <Trash2 size={16} />}
-                Cancel
-              </button>
-            </div>
-          ))}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <p className="text-white font-medium">{show.movie?.title}</p>
+                    <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full">{show.showType}</span>
+                    {show.hasGoldenSeats && (
+                      <span className="text-xs bg-golden/10 text-golden px-2 py-0.5 rounded-full">Golden</span>
+                    )}
+                    {hasStarted && (
+                      <span className="text-xs bg-red-500/10 text-red-400 border border-red-500/20 px-2 py-0.5 rounded-full">
+                        Started
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-muted text-sm mt-0.5 truncate">
+                    🏛️ {show.theatre?.name} • 🕐 {show.startTime} • 💺 {show.totalSeats} seats • ₹{show.regularPrice}
+                  </p>
+                </div>
+
+                {hasStarted ? (
+                  <span className="text-zinc-600 text-xs shrink-0">Cannot cancel</span>
+                ) : (
+                  <button
+                    onClick={() => handleCancel(show.id)}
+                    disabled={cancelling === show.id}
+                    className="flex items-center gap-2 text-red-400 hover:text-red-300 text-sm transition disabled:opacity-50 shrink-0"
+                  >
+                    {cancelling === show.id ? <Spinner /> : <Trash2 size={16} />}
+                    Cancel
+                  </button>
+                )}
+              </div>
+            );
+          })}
         </div>
       )}
     </AdminLayout>

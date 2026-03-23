@@ -177,6 +177,13 @@ export const adminCancelShow = asyncHandler(async (req, res) => {
     throw error;
   }
 
+  // 🚫 Cannot cancel a show that has already started
+if (new Date(show.startTime) <= new Date()) {
+  const error = new Error("Cannot cancel a show that has already started");
+  error.statusCode = 400;
+  throw error;
+}
+
   await prisma.$transaction(async (tx) => {
     await tx.showSeat.updateMany({
       where: { showId: parseInt(id) },

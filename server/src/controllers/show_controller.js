@@ -193,7 +193,7 @@ export const getShowById = async (req, res) => {
 // GET SEATS FOR A SHOW (PUBLIC)
 export const getShowSeats = async (req, res) => {
   try {
-    const { id } = req.params;
+    const{id} = req.params;
 
     const show = await prisma.show.findUnique({
       where: { id: parseInt(id) },
@@ -235,6 +235,11 @@ export const deleteShow = async (req, res) => {
 
     if (!show) return res.status(404).json({ message: "Show not found" });
     if (!show.isActive) return res.status(400).json({ message: "Show already cancelled" });
+
+    // 🚫 Cannot cancel a show that has already started
+if (new Date(show.startTime) <= new Date()) {
+  return res.status(400).json({ message: "Cannot cancel a show that has already started" });
+}
 
     await prisma.$transaction(async (tx) => {
       await tx.showSeat.updateMany({
