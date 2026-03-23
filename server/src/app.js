@@ -78,6 +78,10 @@ app.get("/", (req, res) => {
   res.json({ status: "ok", message: "API is running 🚀" });
 });
 
+app.get("/health", (req, res) => {
+  res.status(200).json({ status: "ok" });
+});
+
 // ❌ 404 handler
 app.use((req, res) => {
   res.status(404).json({ message: "Route not found" });
