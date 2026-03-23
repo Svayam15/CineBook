@@ -215,7 +215,6 @@ const WindowBooking = () => {
                 {Object.entries(seatsByRow).map(([row, rowSeats]) => (
                   <div key={row} className="flex items-center gap-2">
                     <span className="text-muted text-xs w-4">{row}</span>
-                    // gap — revert to:
                     <div className="flex gap-1 md:gap-1.5 flex-wrap">
                       {rowSeats.map((seat) => (
                         <button
