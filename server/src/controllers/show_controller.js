@@ -65,7 +65,7 @@ export const createShow = async (req, res) => {
     // Validate totalSeats
     if (!ALLOWED_SEAT_COUNTS.includes(totalSeats)) {
       return res.status(400).json({
-        message: "Total seats must be one of: 120, 150, 180, 200, 250, 300",
+        message: "Total seats must be one of: 120, 180, 240, 300",
       });
     }
 
