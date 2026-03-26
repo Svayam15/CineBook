@@ -1,5 +1,5 @@
 import express from "express";
-import { createMovie, getMovies, getMovieById } from "../controllers/movie_controller.js";
+import { createMovie, getMovies, getMovieById, deleteMovie } from "../controllers/movie_controller.js";
 import { authMiddleware } from "../middlewares/auth_middleware.js";
 import { requireAdmin } from "../middlewares/role_middleware.js";
 
@@ -13,5 +13,7 @@ router.get("/", getMovies);
 
 //Public
 router.get("/:id", getMovieById);
+
+router.delete("/:id", deleteMovie);
 
 export default router;

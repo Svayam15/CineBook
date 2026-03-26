@@ -10,6 +10,7 @@ const Movies = () => {
   const [loading, setLoading] = useState(true);
   const [adding, setAdding] = useState(false);
   const [cancelling, setCancelling] = useState(null);
+  const [deleting, setDeleting] = useState(null); // ✅ NEW
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({ title: "", duration: "" });
 
@@ -18,7 +19,7 @@ const Movies = () => {
       const res = await api.get("/movies");
       setMovies(res.data);
     } catch (err) {
-      toast.error(err.message);
+      toast.error(err.response?.data?.message || err.message);
     } finally {
       setLoading(false);
     }
@@ -36,7 +37,7 @@ const Movies = () => {
       setShowForm(false);
       await fetchMovies();
     } catch (err) {
-      toast.error(err.message);
+      toast.error(err.response?.data?.message || err.message);
     } finally {
       setAdding(false);
     }
@@ -50,9 +51,26 @@ const Movies = () => {
       toast.success("Movie cancelled!");
       await fetchMovies();
     } catch (err) {
-      toast.error(err.message);
+      toast.error(err.response?.data?.message || err.message);
     } finally {
       setCancelling(null);
+    }
+  };
+
+  // 🔥 NEW DELETE HANDLER
+  const handleDelete = async (id) => {
+    if (!confirm("Are you sure you want to delete this movie?")) return;
+
+    setDeleting(id);
+    try {
+      await api.delete(`/movies/${id}`); // your delete API
+      toast.success("Movie deleted successfully");
+      await fetchMovies(); // refresh list
+    } catch (err) {
+      // show backend message (important)
+      toast.error(err.response?.data?.message || err.message);
+    } finally {
+      setDeleting(null);
     }
   };
 
@@ -72,7 +90,6 @@ const Movies = () => {
         </button>
       </div>
 
-      {/* Add Form */}
       {showForm && (
         <div className="bg-card border border-border rounded-2xl p-5 mb-6">
           <h2 className="font-heading text-lg font-semibold text-white mb-4">Add New Movie</h2>
@@ -105,7 +122,6 @@ const Movies = () => {
         </div>
       )}
 
-      {/* Movies List */}
       {loading ? (
         <div className="space-y-3">
           {[...Array(5)].map((_, i) => (
@@ -123,16 +139,32 @@ const Movies = () => {
             <div key={movie.id} className="bg-card border border-border rounded-2xl px-5 py-4 flex items-center justify-between">
               <div>
                 <p className="text-white font-medium">{movie.title}</p>
-                <p className="text-muted text-sm">{movie.duration} mins • {movie.shows?.length || 0} shows</p>
+                <p className="text-muted text-sm">
+                  {movie.duration} mins • {movie.shows?.length || 0} shows
+                </p>
               </div>
-              <button
-                onClick={() => handleCancel(movie.id)}
-                disabled={cancelling === movie.id}
-                className="flex items-center gap-2 text-red-400 hover:text-red-300 text-sm transition disabled:opacity-50"
-              >
-                {cancelling === movie.id ? <Spinner /> : <Trash2 size={16} />}
-                Cancel
-              </button>
+
+              <div className="flex gap-3">
+                {/* Cancel */}
+                <button
+                  onClick={() => handleCancel(movie.id)}
+                  disabled={cancelling === movie.id}
+                  className="flex items-center gap-2 text-yellow-400 hover:text-yellow-300 text-sm"
+                >
+                  {cancelling === movie.id ? <Spinner /> : <Trash2 size={16} />}
+                  Cancel
+                </button>
+
+                {/* Delete */}
+                <button
+                  onClick={() => handleDelete(movie.id)}
+                  disabled={deleting === movie.id}
+                  className="flex items-center gap-2 text-red-400 hover:text-red-300 text-sm"
+                >
+                  {deleting === movie.id ? <Spinner /> : <Trash2 size={16} />}
+                  Delete
+                </button>
+              </div>
             </div>
           ))}
         </div>

@@ -92,6 +92,7 @@ model Movie {
   title     String
   duration  Int
   createdAt DateTime @default(now())
+  isDeleted Boolean  @default(false)
 
   shows Show[]
 }
