@@ -10,7 +10,7 @@ export const bookingQueue = new Queue("bookingQueue", {
     // ❌ Removed backoff (not needed for booking)
 
     // ✅ Clean jobs automatically
-    removeOnComplete: true,
-    removeOnFail: true,
+    removeOnComplete: { age:60 },
+    removeOnFail: {age: 300},
   },
 });
