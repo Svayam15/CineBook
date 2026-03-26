@@ -119,8 +119,9 @@ model Show {
   isActive       Boolean  @default(true)
   createdAt      DateTime @default(now())
 
-  movie   Movie   @relation(fields: [movieId], references: [id])
-  theatre Theatre @relation(fields: [theatreId], references: [id])
+  // ✅ Cascade: deleting Movie or Theatre deletes their Shows
+  movie   Movie   @relation(fields: [movieId], references: [id], onDelete: Cascade)
+  theatre Theatre @relation(fields: [theatreId], references: [id], onDelete: Cascade)
 
   seats    ShowSeat[]
   bookings Booking[]
@@ -136,13 +137,14 @@ model ShowSeat {
   lockedAt         DateTime?
   pendingBookingId Int?
 
-  show         Show          @relation(fields: [showId], references: [id])
+  // ✅ Cascade: deleting Show deletes its seats
+  show         Show          @relation(fields: [showId], references: [id], onDelete: Cascade)
   bookingSeats BookingSeat[]
 
   @@unique([showId, row, number])
-  @@index([showId, status]) // ← ADD
-  @@index([pendingBookingId]) // ← ADD
-  @@index([lockedAt]) // ← ADD
+  @@index([showId, status])
+  @@index([pendingBookingId])
+  @@index([lockedAt])
 }
 
 model Booking {
@@ -158,12 +160,14 @@ model Booking {
   cancelledAt  DateTime?
   createdAt    DateTime      @default(now())
 
-  user  User          @relation(fields: [userId], references: [id])
-  show  Show          @relation(fields: [showId], references: [id])
+  // ✅ Cascade: deleting User deletes their bookings
+  user  User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  // ✅ Cascade: deleting Show deletes its bookings
+  show  Show          @relation(fields: [showId], references: [id], onDelete: Cascade)
   seats BookingSeat[]
 
-  @@index([userId]) // ← ADD
-  @@index([showId, status]) // ← ADD
+  @@index([userId])
+  @@index([showId, status])
 }
 
 model BookingSeat {
@@ -173,8 +177,9 @@ model BookingSeat {
   seatType   SeatType
   seatPrice  Float
 
-  booking  Booking  @relation(fields: [bookingId], references: [id])
-  showSeat ShowSeat @relation(fields: [showSeatId], references: [id])
+  // ✅ Cascade: deleting Booking or ShowSeat deletes BookingSeat
+  booking  Booking  @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  showSeat ShowSeat @relation(fields: [showSeatId], references: [id], onDelete: Cascade)
 
   @@unique([bookingId, showSeatId])
 }

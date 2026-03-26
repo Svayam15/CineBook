@@ -19,12 +19,12 @@ const formatToIST = (date) => {
   });
 };
 
-// ⏰ Helper — calculate end time
+// ⏰ Helper — calculate end time from startTime + duration in minutes
 const getEndTime = (startTime, durationMinutes) => {
   return new Date(new Date(startTime).getTime() + durationMinutes * 60 * 1000);
 };
 
-// ⏰ Helper — format full show response
+// ⏰ Helper — format full show response with IST times
 const formatShow = (show) => {
   if (!show.startTime) return show;
   const endTime = getEndTime(show.startTime, show.movie?.duration || 0);
@@ -37,7 +37,13 @@ const formatShow = (show) => {
   };
 };
 
-// CREATE SHOW (ADMIN)
+// ✅ Helper — check if show has ended
+const hasShowEnded = (show) => {
+  const endTime = getEndTime(show.startTime, show.movie?.duration || 0);
+  return new Date() > endTime;
+};
+
+// 🎬 CREATE SHOW (ADMIN)
 export const createShow = async (req, res) => {
   try {
     const {
@@ -69,13 +75,14 @@ export const createShow = async (req, res) => {
       });
     }
 
+    // Validate IST format
     if (!startTime.includes("+05:30")) {
       return res.status(400).json({
         message: "startTime must be in IST format (e.g. 2026-04-01T18:00:00+05:30)",
       });
     }
 
-    // Validate startTime
+    // Validate startTime is in the future
     if (new Date(startTime) <= new Date()) {
       return res.status(400).json({ message: "Start time must be in the future" });
     }
@@ -85,20 +92,17 @@ export const createShow = async (req, res) => {
       return res.status(400).json({ message: "Regular price must be greater than 0" });
     }
 
-    // Validate golden seats
+    // Validate golden seats if enabled
     if (hasGoldenSeats) {
       if (!goldenSeats || !goldenPrice) {
         return res.status(400).json({ message: "Golden seats count and price are required" });
       }
-
       if (goldenSeats < 30) {
         return res.status(400).json({ message: "Golden seats must be at least 30" });
       }
-
       if (goldenSeats > totalSeats) {
         return res.status(400).json({ message: "Golden seats cannot exceed total seats" });
       }
-
       if (goldenPrice <= regularPrice) {
         return res.status(400).json({ message: "Golden price must be greater than regular price" });
       }
@@ -119,10 +123,8 @@ export const createShow = async (req, res) => {
       },
     });
 
-    // Generate seats
+    // Generate and insert seats
     const seats = generateSeats(totalSeats, hasGoldenSeats ? goldenSeats : 0);
-
-    // Insert seats
     await prisma.showSeat.createMany({
       data: seats.map((seat) => ({
         showId: show.id,
@@ -150,30 +152,32 @@ export const createShow = async (req, res) => {
   }
 };
 
-// GET ALL SHOWS (PUBLIC)
+// 🎬 GET ALL SHOWS (PUBLIC) — only upcoming active shows
 export const getShows = async (req, res) => {
   try {
     const shows = await prisma.show.findMany({
-      where: { isActive: true,
-      startTime: { gt: new Date(),}, },// ← only active shows
+      where: {
+        isActive: true,
+        startTime: { gt: new Date() }, // ✅ only future shows visible to users
+      },
       include: { movie: true, theatre: true },
       orderBy: { startTime: "asc" },
     });
-    res.json(shows.map((show) => formatShow(show))); // ← fix this line
+    res.json(shows.map((show) => formatShow(show)));
   } catch (err) {
     logger.error(`Get shows error: ${err.message}`);
     res.status(500).json({ message: "Failed to fetch shows" });
   }
 };
 
-// GET SHOW BY ID (PUBLIC)
+// 🎬 GET SHOW BY ID (PUBLIC)
 export const getShowById = async (req, res) => {
   try {
     const { id } = req.params;
 
     const show = await prisma.show.findUnique({
       where: { id: parseInt(id) },
-      include: { movie: true, theatre: true },
+      include: { movie: true, theatre: true }, // ✅ movie needed for duration check
     });
 
     if (!show) {
@@ -182,6 +186,11 @@ export const getShowById = async (req, res) => {
 
     if (!show.isActive) {
       return res.status(400).json({ message: "This show has been cancelled" });
+    }
+
+    // ✅ Block access if show has already ended
+    if (hasShowEnded(show)) {
+      return res.status(400).json({ message: "This show has already ended" });
     }
 
     res.json(formatShow(show));
@@ -191,13 +200,14 @@ export const getShowById = async (req, res) => {
   }
 };
 
-// GET SEATS FOR A SHOW (PUBLIC)
+// 🎬 GET SEATS FOR A SHOW (PUBLIC)
 export const getShowSeats = async (req, res) => {
   try {
-    const{id} = req.params;
+    const { id } = req.params;
 
     const show = await prisma.show.findUnique({
       where: { id: parseInt(id) },
+      include: { movie: true }, // ✅ needed for duration check
     });
 
     if (!show) {
@@ -206,6 +216,11 @@ export const getShowSeats = async (req, res) => {
 
     if (!show.isActive) {
       return res.status(400).json({ message: "This show has been cancelled" });
+    }
+
+    // ✅ Block if show has ended
+    if (hasShowEnded(show)) {
+      return res.status(400).json({ message: "This show has already ended" });
     }
 
     const seats = await seatService.getShowSeats(id);
@@ -216,8 +231,36 @@ export const getShowSeats = async (req, res) => {
   }
 };
 
-// DELETE SHOW (ADMIN) — cancels all bookings + refunds
-// DELETE SHOW (ADMIN) — replace the existing deleteShow function only
+// 🎬 GET AVAILABLE SEATS FOR A SHOW (PUBLIC)
+export const getAvailableSeats = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const show = await prisma.show.findUnique({
+      where: { id: parseInt(id) },
+      include: { movie: true }, // ✅ needed for duration check
+    });
+
+    if (!show) return res.status(404).json({ message: "Show not found" });
+
+    if (!show.isActive) {
+      return res.status(400).json({ message: "This show has been cancelled" });
+    }
+
+    // ✅ Block if show has ended
+    if (hasShowEnded(show)) {
+      return res.status(400).json({ message: "This show has already ended" });
+    }
+
+    const seats = await seatService.getAvailableSeats(id);
+    res.json(seats);
+  } catch (err) {
+    logger.error(`Get available seats error: ${err.message}`);
+    res.status(500).json({ message: "Failed to fetch available seats" });
+  }
+};
+
+// 🎬 DELETE SHOW (ADMIN) — soft cancel, refund all paid bookings
 export const deleteShow = async (req, res) => {
   try {
     const { id } = req.params;
@@ -237,31 +280,35 @@ export const deleteShow = async (req, res) => {
     if (!show) return res.status(404).json({ message: "Show not found" });
     if (!show.isActive) return res.status(400).json({ message: "Show already cancelled" });
 
-    // 🚫 Cannot cancel a show that has already started
-if (new Date(show.startTime) <= new Date()) {
-  return res.status(400).json({ message: "Cannot cancel a show that has already started" });
-}
+    // 🚫 Cannot cancel ongoing or completed shows
+    if (new Date(show.startTime) <= new Date()) {
+      return res.status(400).json({ message: "Cannot cancel a show that has already started or ended" });
+    }
 
     await prisma.$transaction(async (tx) => {
+      // Release all locked/booked seats
       await tx.showSeat.updateMany({
         where: { showId: parseInt(id) },
         data: { status: "AVAILABLE", lockedAt: null, pendingBookingId: null },
       });
 
+      // Cancel all pending and paid bookings
       await tx.booking.updateMany({
         where: { showId: parseInt(id), status: { in: ["PENDING", "PAID"] } },
         data: { status: "CANCELLED", cancelledAt: new Date() },
       });
 
+      // Soft delete the show
       await tx.show.update({
         where: { id: parseInt(id) },
         data: { isActive: false },
       });
     });
 
-    // ✅ NOW PROPERLY CALLS refunds & emails
+    // Process refunds for all paid bookings
     await processBulkRefunds(parseInt(id));
 
+    // Send cancellation emails
     for (const booking of show.bookings) {
       sendShowCancelledEmail({
         user: booking.user,
@@ -271,7 +318,7 @@ if (new Date(show.startTime) <= new Date()) {
       }).catch((err) => logger.error(`Delete show email error: ${err.message}`));
     }
 
-    logger.info(`Show ${id} deleted. Affected bookings: ${show.bookings.length}`);
+    logger.info(`Show ${id} cancelled. Affected bookings: ${show.bookings.length}`);
 
     res.json({
       message: "Show cancelled, all bookings cancelled",
@@ -280,25 +327,5 @@ if (new Date(show.startTime) <= new Date()) {
   } catch (err) {
     logger.error(`Delete show error: ${err.message}`);
     res.status(500).json({ message: "Failed to cancel show" });
-  }
-};
-
-// GET AVAILABLE SEATS FOR A SHOW (PUBLIC)
-export const getAvailableSeats = async (req, res) => {
-  try {
-    const { id } = req.params;
-
-    const show = await prisma.show.findUnique({
-      where: { id: parseInt(id) },
-    });
-
-    if (!show) return res.status(404).json({ message: "Show not found" });
-    if (!show.isActive) return res.status(400).json({ message: "This show has been cancelled" });
-
-    const seats = await seatService.getAvailableSeats(id);
-    res.json(seats);
-  } catch (err) {
-    logger.error(`Get available seats error: ${err.message}`);
-    res.status(500).json({ message: "Failed to fetch available seats" });
   }
 };
