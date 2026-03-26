@@ -11,7 +11,7 @@ const worker = new Worker(
 
     return prisma.$transaction(async (tx) => {
 
-      // 1️⃣ Check show
+      // 1️⃣ Check show exists and is active
       const show = await tx.show.findUnique({
         where: { id: showId },
       });
@@ -19,7 +19,7 @@ const worker = new Worker(
       if (!show) throw new Error("Show not found");
       if (!show.isActive) throw new Error("This show has been cancelled");
 
-      // 2️⃣ Validate seats
+      // 2️⃣ Validate seats exist and belong to show
       const seats = await tx.showSeat.findMany({
         where: {
           id: { in: seatIds },
@@ -31,14 +31,15 @@ const worker = new Worker(
         throw new Error("Some seats not found");
       }
 
-      // 3️⃣ Calculate price
+      // 3️⃣ Calculate total amount based on seat types
       const totalAmount = seats.reduce((sum, seat) => {
-        return sum + (seat.type === "GOLDEN"
-          ? (show.goldenPrice || 0)
-          : show.regularPrice);
+        if (seat.type === "GOLDEN") {
+          return sum + (show.goldenPrice || 0);
+        }
+        return sum + show.regularPrice;
       }, 0);
 
-      // 4️⃣ Create booking
+      // 4️⃣ Create PENDING booking
       const booking = await tx.booking.create({
         data: {
           userId,
@@ -49,7 +50,7 @@ const worker = new Worker(
         },
       });
 
-      // 5️⃣ Lock seats
+      // 5️⃣ Atomic lock with pendingBookingId
       const lockedSeats = await tx.showSeat.updateMany({
         where: {
           id: { in: seatIds },
@@ -68,7 +69,7 @@ const worker = new Worker(
         throw new Error("Seats just got booked by someone else");
       }
 
-      // 7️⃣ CASH / window booking
+      // 7️⃣ If CASH payment → mark as PAID immediately
       if (paymentType === "CASH" || isWindowBooking) {
         await tx.showSeat.updateMany({
           where: { pendingBookingId: booking.id },
@@ -84,10 +85,9 @@ const worker = new Worker(
             bookingId: booking.id,
             showSeatId: seat.id,
             seatType: seat.type,
-            seatPrice:
-              seat.type === "GOLDEN"
-                ? (show.goldenPrice || 0)
-                : show.regularPrice,
+            seatPrice: seat.type === "GOLDEN"
+              ? (show.goldenPrice || 0)
+              : show.regularPrice,
           })),
         });
 
@@ -99,45 +99,30 @@ const worker = new Worker(
         return { ...booking, status: "PAID", totalAmount };
       }
 
-      // 8️⃣ CARD booking
+      // 8️⃣ CARD payment → return booking, await payment
       return { ...booking, totalAmount };
     });
   },
-  {
-    connection,
-
-    // ✅ LIMIT concurrency (prevents Redis overload)
-    concurrency: 2,
-
-    // ✅ Smooth job processing (prevents spikes)
-    limiter: {
-      max: 10,
-      duration: 1000,
-    },
-  }
+  { connection }
 );
 
-// ✅ Logging (no Redis calls here)
 worker.on("completed", (job) => {
   logger.info(`✅ Seats reserved for job ${job.id}`);
 });
 
 worker.on("failed", (job, err) => {
-  logger.error(`❌ Booking failed for job ${job?.id}: ${err.message}`);
+  logger.error(`❌ Booking failed for job ${job.id}: ${err.message}`);
 });
 
 logger.info("🚀 Worker started...");
 
-// ❌ REMOVED aggressive heartbeat (major Redis saver)
-
-// ✅ Optional: very low-frequency health log (safe)
 if (process.env.NODE_ENV !== "production") {
-  setInterval(() => {
-    logger.info("💓 Worker alive");
-  }, 60000); // 1 min, NO Redis call
+  setInterval(async () => {
+    const isPaused = worker.isPaused();
+    logger.info(`💓 Worker alive | paused: ${isPaused}`);
+  }, 5000);
 }
 
-// ✅ Graceful shutdown
 process.on("SIGTERM", async () => {
   await worker.close();
   await prisma.$disconnect();
