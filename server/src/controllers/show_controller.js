@@ -154,7 +154,8 @@ export const createShow = async (req, res) => {
 export const getShows = async (req, res) => {
   try {
     const shows = await prisma.show.findMany({
-      where: { isActive: true }, // ← only active shows
+      where: { isActive: true },
+      startTime: { gt: new Date() },// ← only active shows
       include: { movie: true, theatre: true },
       orderBy: { startTime: "asc" },
     });

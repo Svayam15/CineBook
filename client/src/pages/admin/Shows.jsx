@@ -5,8 +5,18 @@ import toast from "react-hot-toast";
 import { Plus, Trash2, Tv } from "lucide-react";
 import Spinner from "../../components/common/Spinner";
 
-const SEAT_COUNTS = [120, 180, 240, 300]; // ← updated
+const SEAT_COUNTS = [120, 180, 240, 300];
 const SHOW_TYPES = ["2D", "3D", "4D"];
+const STATUS_TABS = ["ALL", "UPCOMING", "ONGOING", "COMPLETED"];
+
+const statusBadge = (status) => {
+  switch (status) {
+    case "UPCOMING":  return "bg-blue-500/10 text-blue-400 border border-blue-500/20";
+    case "ONGOING":   return "bg-green-500/10 text-green-400 border border-green-500/20";
+    case "COMPLETED": return "bg-zinc-500/10 text-zinc-400 border border-zinc-500/20";
+    default:          return "";
+  }
+};
 
 const Shows = () => {
   const [shows, setShows] = useState([]);
@@ -16,6 +26,7 @@ const Shows = () => {
   const [adding, setAdding] = useState(false);
   const [cancelling, setCancelling] = useState(null);
   const [showForm, setShowForm] = useState(false);
+  const [activeTab, setActiveTab] = useState("ALL");
   const [form, setForm] = useState({
     movieId: "",
     theatreId: "",
@@ -31,11 +42,11 @@ const Shows = () => {
   const fetchData = async () => {
     try {
       const [showsRes, moviesRes, theatresRes] = await Promise.all([
-        api.get("/shows"),
+        api.get("/admin/shows?limit=1000"),
         api.get("/movies"),
         api.get("/theatres"),
       ]);
-      setShows(showsRes.data);
+      setShows(showsRes.data.shows);
       setMovies(moviesRes.data);
       setTheatres(theatresRes.data);
     } catch (err) {
@@ -71,7 +82,7 @@ const Shows = () => {
       setShowForm(false);
       await fetchData();
     } catch (err) {
-      toast.error(err.message);
+      toast.error(err.response?.data?.message || err.message);
     } finally {
       setAdding(false);
     }
@@ -85,18 +96,22 @@ const Shows = () => {
       toast.success("Show cancelled!");
       await fetchData();
     } catch (err) {
-      toast.error(err.message);
+      toast.error(err.response?.data?.message || err.message);
     } finally {
       setCancelling(null);
     }
   };
+
+  const filteredShows = activeTab === "ALL"
+    ? shows
+    : shows.filter((s) => s.status === activeTab);
 
   return (
     <AdminLayout>
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="font-heading text-2xl font-bold text-white">Shows</h1>
-          <p className="text-muted text-sm mt-1">{shows.length} active shows</p>
+          <p className="text-muted text-sm mt-1">{shows.length} total shows</p>
         </div>
         <button
           onClick={() => setShowForm(!showForm)}
@@ -112,7 +127,6 @@ const Shows = () => {
         <div className="bg-card border border-border rounded-2xl p-5 mb-6">
           <h2 className="font-heading text-lg font-semibold text-white mb-4">Create New Show</h2>
           <form onSubmit={handleAdd} className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-
             <div>
               <label className="block text-sm text-muted mb-1.5">Movie</label>
               <select
@@ -193,7 +207,6 @@ const Shows = () => {
               />
             </div>
 
-            {/* Golden Seats Toggle */}
             <div className="sm:col-span-2">
               <div
                 className="flex items-center gap-2 cursor-pointer select-none"
@@ -261,6 +274,23 @@ const Shows = () => {
         </div>
       )}
 
+      {/* Status Tabs */}
+      <div className="flex gap-2 mb-4 flex-wrap">
+        {STATUS_TABS.map((tab) => (
+          <button
+            key={tab}
+            onClick={() => setActiveTab(tab)}
+            className={`px-4 py-1.5 rounded-full text-sm font-medium transition
+              ${activeTab === tab
+                ? "bg-primary text-white"
+                : "bg-card border border-border text-muted hover:text-white"
+              }`}
+          >
+            {tab === "ALL" ? `All (${shows.length})` : `${tab} (${shows.filter(s => s.status === tab).length})`}
+          </button>
+        ))}
+      </div>
+
       {/* Shows List */}
       {loading ? (
         <div className="space-y-3">
@@ -268,15 +298,15 @@ const Shows = () => {
             <div key={i} className="bg-card border border-border rounded-2xl h-20 animate-pulse" />
           ))}
         </div>
-      ) : shows.length === 0 ? (
+      ) : filteredShows.length === 0 ? (
         <div className="text-center py-16">
           <Tv size={40} className="text-muted mx-auto mb-3" />
-          <p className="text-muted">No active shows</p>
+          <p className="text-muted">No {activeTab !== "ALL" ? activeTab.toLowerCase() : ""} shows</p>
         </div>
       ) : (
         <div className="space-y-3">
-          {shows.map((show) => {
-            const hasStarted = new Date(show.rawStartTime) <= new Date();
+          {filteredShows.map((show) => {
+            const canCancel = show.status === "UPCOMING";
             return (
               <div
                 key={show.id}
@@ -289,20 +319,16 @@ const Shows = () => {
                     {show.hasGoldenSeats && (
                       <span className="text-xs bg-golden/10 text-golden px-2 py-0.5 rounded-full">Golden</span>
                     )}
-                    {hasStarted && (
-                      <span className="text-xs bg-red-500/10 text-red-400 border border-red-500/20 px-2 py-0.5 rounded-full">
-                        Started
-                      </span>
-                    )}
+                    <span className={`text-xs px-2 py-0.5 rounded-full ${statusBadge(show.status)}`}>
+                      {show.status}
+                    </span>
                   </div>
                   <p className="text-muted text-sm mt-0.5 truncate">
                     🏛️ {show.theatre?.name} • 🕐 {show.startTime} • 💺 {show.totalSeats} seats • ₹{show.regularPrice}
                   </p>
                 </div>
 
-                {hasStarted ? (
-                  <span className="text-zinc-600 text-xs shrink-0">Cannot cancel</span>
-                ) : (
+                {canCancel ? (
                   <button
                     onClick={() => handleCancel(show.id)}
                     disabled={cancelling === show.id}
@@ -311,6 +337,8 @@ const Shows = () => {
                     {cancelling === show.id ? <Spinner /> : <Trash2 size={16} />}
                     Cancel
                   </button>
+                ) : (
+                  <span className="text-zinc-600 text-xs shrink-0">Cannot cancel</span>
                 )}
               </div>
             );

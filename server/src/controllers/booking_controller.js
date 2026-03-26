@@ -16,10 +16,10 @@ export const createBooking = asyncHandler(async (req, res) => {
   }
 
   if (seatIds.length > MAX_SEATS_PER_BOOKING) {
-  const error = new Error(`Cannot book more than ${MAX_SEATS_PER_BOOKING} seats at once`);
-  error.statusCode = 400;
-  throw error;
-}
+    const error = new Error(`Cannot book more than ${MAX_SEATS_PER_BOOKING} seats at once`);
+    error.statusCode = 400;
+    throw error;
+  }
 
   const result = await bookingService.createBooking({
     userId,
@@ -30,14 +30,15 @@ export const createBooking = asyncHandler(async (req, res) => {
   res.status(202).json({
     success: true,
     message: "Booking request queued",
-    ...result,
+    jobId: result.jobId, // ✅ important
   });
 });
 
 
-// 📊 GET BOOKING STATUS REST (for admin polling)
+// 📊 GET BOOKING STATUS (REST)
 export const getBookingStatusRest = asyncHandler(async (req, res) => {
   const { jobId } = req.params;
+
   const job = await bookingQueue.getJob(jobId);
 
   if (!job) {
@@ -49,14 +50,16 @@ export const getBookingStatusRest = asyncHandler(async (req, res) => {
   if (state === "completed") {
     return res.json({ status: "success", booking: job.returnvalue });
   }
+
   if (state === "failed") {
     return res.json({ status: "failed", reason: job.failedReason });
   }
+
   return res.json({ status: state });
 });
 
 
-// 📊 GET BOOKING STATUS VIA SSE
+// 📡 SSE BOOKING STATUS (OPTIMIZED)
 export const getBookingStatus = asyncHandler(async (req, res) => {
   const { jobId } = req.params;
 
@@ -66,7 +69,6 @@ export const getBookingStatus = asyncHandler(async (req, res) => {
     throw error;
   }
 
-  // SSE headers
   res.setHeader("Content-Type", "text/event-stream");
   res.setHeader("Cache-Control", "no-cache");
   res.setHeader("Connection", "keep-alive");
@@ -76,7 +78,6 @@ export const getBookingStatus = asyncHandler(async (req, res) => {
     res.write(`data: ${JSON.stringify(data)}\n\n`);
   };
 
-  // Check job status every 1 second
   const interval = setInterval(async () => {
     try {
       const job = await bookingQueue.getJob(jobId);
@@ -84,8 +85,7 @@ export const getBookingStatus = asyncHandler(async (req, res) => {
       if (!job) {
         sendEvent({ status: "failed", reason: "Job not found" });
         clearInterval(interval);
-        res.end();
-        return;
+        return res.end();
       }
 
       const state = await job.getState();
@@ -93,18 +93,15 @@ export const getBookingStatus = asyncHandler(async (req, res) => {
       if (state === "completed") {
         sendEvent({ status: "success", booking: job.returnvalue });
         clearInterval(interval);
-        res.end();
-        return;
+        return res.end();
       }
 
       if (state === "failed") {
         sendEvent({ status: "failed", reason: job.failedReason });
         clearInterval(interval);
-        res.end();
-        return;
+        return res.end();
       }
 
-      // Still processing
       sendEvent({ status: state });
 
     } catch (err) {
@@ -112,21 +109,24 @@ export const getBookingStatus = asyncHandler(async (req, res) => {
       clearInterval(interval);
       res.end();
     }
-  }, 1000);
+  }, 3000); // ✅ reduced polling
 
-  // Cleanup if client disconnects
   req.on("close", () => {
     clearInterval(interval);
     res.end();
   });
 });
 
+
 // 📋 GET MY BOOKINGS
 export const getMyBookings = asyncHandler(async (req, res) => {
   const userId = req.user.userId;
 
   const bookings = await prisma.booking.findMany({
-    where: { userId , status: { notIn: ["CANCELLED", "FAILED"] },},
+    where: {
+      userId,
+      status: { notIn: ["CANCELLED", "FAILED"] },
+    },
     include: {
       show: {
         include: {
@@ -145,6 +145,7 @@ export const getMyBookings = asyncHandler(async (req, res) => {
 
   res.json({ success: true, bookings });
 });
+
 
 // ❌ CANCEL BOOKING
 export const cancelBooking = asyncHandler(async (req, res) => {
@@ -174,15 +175,11 @@ export const cancelBooking = asyncHandler(async (req, res) => {
     throw error;
   }
 
-  // Release seats back to AVAILABLE
   await prisma.showSeat.updateMany({
-    where: {
-      pendingBookingId: parseInt(id),
-    },
+    where: { pendingBookingId: parseInt(id) },
     data: { status: "AVAILABLE", lockedAt: null, pendingBookingId: null },
   });
 
-  // Update booking status
   await prisma.booking.update({
     where: { id: parseInt(id) },
     data: { status: "FAILED" },
@@ -190,4 +187,3 @@ export const cancelBooking = asyncHandler(async (req, res) => {
 
   res.json({ success: true, message: "Booking cancelled" });
 });
-

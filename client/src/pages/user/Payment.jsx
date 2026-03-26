@@ -13,9 +13,10 @@ import {
 } from "@stripe/react-stripe-js";
 import Spinner from "../../components/common/Spinner";
 
+// ✅ Safe env usage
 const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY);
 
-// Inner payment form component
+// ---------------- PAYMENT FORM ----------------
 const PaymentForm = ({ bookingId, totalAmount, onSuccess }) => {
   const stripe = useStripe();
   const elements = useElements();
@@ -23,7 +24,8 @@ const PaymentForm = ({ bookingId, totalAmount, onSuccess }) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!stripe || !elements) return;
+
+    if (!stripe || !elements || processing) return;
 
     setProcessing(true);
     try {
@@ -37,12 +39,12 @@ const PaymentForm = ({ bookingId, totalAmount, onSuccess }) => {
         return;
       }
 
-      if (paymentIntent.status === "succeeded") {
-        // Verify payment on server
+      if (paymentIntent?.status === "succeeded") {
         await api.post("/payment/verify", {
           paymentIntentId: paymentIntent.id,
           bookingId,
         });
+
         toast.success("Payment successful! 🎉");
         onSuccess();
       }
@@ -54,23 +56,34 @@ const PaymentForm = ({ bookingId, totalAmount, onSuccess }) => {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
+    <form
+      onSubmit={handleSubmit}
+      className={`space-y-4 ${processing ? "opacity-70 pointer-events-none" : ""}`}
+    >
       <PaymentElement />
+
       <button
         type="submit"
         disabled={!stripe || processing}
         className="w-full bg-primary hover:bg-primary-dark text-white font-semibold py-3 rounded-xl transition disabled:opacity-50 text-sm mt-2"
       >
-        {processing ? <Spinner text="Processing payment..." /> : `Pay ₹${totalAmount}`}
+        {processing ? (
+          <Spinner text="Processing payment..." />
+        ) : (
+          `Pay ₹${totalAmount}`
+        )}
       </button>
     </form>
   );
 };
 
+// ---------------- MAIN COMPONENT ----------------
 const Payment = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { jobId, showId, selectedSeats, totalAmount, show } = location.state || {};
+
+  const { jobId, showId, selectedSeats, totalAmount, show } =
+    location.state || {};
 
   const [clientSecret, setClientSecret] = useState(null);
   const [bookingId, setBookingId] = useState(null);
@@ -79,49 +92,53 @@ const Payment = () => {
   const [loadingIntent, setLoadingIntent] = useState(true);
   const [bookingReady, setBookingReady] = useState(false);
 
-  // Redirect if no state
+  // Redirect if invalid
   useEffect(() => {
     if (!jobId || !showId) navigate("/");
   }, [jobId, showId, navigate]);
 
-  // Wait for booking job to complete via SSE
+  // ---------------- SSE (FIXED) ----------------
   useEffect(() => {
-    if (!jobId) return;
+    if (!jobId || bookingReady) return;
 
     const eventSource = new EventSource(
-      `${import.meta.env.VITE_API_URL}/bookings/status/${jobId}`,
+      `${import.meta.env.VITE_API_URL || ""}/bookings/status/${jobId}`,
       { withCredentials: true }
     );
 
     eventSource.onmessage = (e) => {
       const data = JSON.parse(e.data);
+
       if (data.status === "success") {
         setBookingId(data.booking.id);
         setBookingReady(true);
         eventSource.close();
       } else if (data.status === "failed") {
-        toast.error(data.reason || "Booking failed. Please try again.");
-        navigate("/");
+        toast.error(data.reason || "Booking failed");
         eventSource.close();
+        navigate("/");
       }
     };
 
     eventSource.onerror = () => {
       eventSource.close();
-      toast.error("Connection error. Please try again.");
+      toast.error("Connection error");
       navigate("/");
     };
 
     return () => eventSource.close();
-  }, [jobId, navigate]);
+  }, [jobId, bookingReady, navigate]);
 
-  // Create payment intent once booking is ready
+  // ---------------- CREATE PAYMENT INTENT ----------------
   useEffect(() => {
     if (!bookingReady || !bookingId) return;
 
     const createIntent = async () => {
       try {
-        const res = await api.post("/payment/create-order", { bookingId });
+        const res = await api.post("/payment/create-order", {
+          bookingId,
+        });
+
         setClientSecret(res.data.clientSecret);
         setExpiresAt(res.data.expiresAt);
       } catch (err) {
@@ -131,21 +148,29 @@ const Payment = () => {
         setLoadingIntent(false);
       }
     };
+
     createIntent().catch(console.error);
   }, [bookingReady, bookingId, navigate]);
 
-  // Countdown timer
+  // ---------------- TIMER ----------------
   useEffect(() => {
     if (!expiresAt) return;
+
     const interval = setInterval(() => {
-      const left = Math.max(0, Math.floor((new Date(expiresAt) - new Date()) / 1000));
+      const left = Math.max(
+        0,
+        Math.floor((new Date(expiresAt) - new Date()) / 1000)
+      );
+
       setTimeLeft(left);
+
       if (left === 0) {
         clearInterval(interval);
         toast.error("Seat reservation expired. Please try again.");
         navigate("/");
       }
     }, 1000);
+
     return () => clearInterval(interval);
   }, [expiresAt, navigate]);
 
@@ -166,41 +191,63 @@ const Payment = () => {
       <Navbar />
 
       <div className="max-w-lg mx-auto px-6 py-8">
-        <h1 className="font-heading text-2xl font-bold text-white mb-2">Complete Payment</h1>
+        <h1 className="font-heading text-2xl font-bold text-white mb-2">
+          Complete Payment
+        </h1>
 
-        {/* Timer */}
+        {/* TIMER */}
         {timeLeft !== null && (
-          <div className={`flex items-center gap-2 mb-6 text-sm font-medium ${timeLeft < 60 ? "text-red-400" : "text-golden"}`}>
+          <div
+            className={`flex items-center gap-2 mb-6 text-sm font-medium ${
+              timeLeft < 60 ? "text-red-400" : "text-golden"
+            }`}
+          >
             ⏱️ Seats reserved for: {formatTime(timeLeft)}
           </div>
         )}
 
-        {/* Order Summary */}
+        {/* ORDER SUMMARY */}
         <div className="bg-card border border-border rounded-2xl p-5 mb-6">
-          <h2 className="font-heading text-lg font-semibold text-white mb-3">Order Summary</h2>
+          <h2 className="font-heading text-lg font-semibold text-white mb-3">
+            Order Summary
+          </h2>
+
           <div className="space-y-2 text-sm">
             <div className="flex justify-between">
               <span className="text-muted">Movie</span>
-              <span className="text-white">{show?.movie?.title}</span>
+              <span className="text-white">
+                {show?.movie?.title}
+              </span>
             </div>
+
             <div className="flex justify-between">
               <span className="text-muted">Theatre</span>
-              <span className="text-white">{show?.theatre?.name}</span>
+              <span className="text-white">
+                {show?.theatre?.name}
+              </span>
             </div>
+
             <div className="flex justify-between">
               <span className="text-muted">Seats</span>
-              <span className="text-white">{selectedSeats?.length} seat(s)</span>
+              <span className="text-white">
+                {selectedSeats?.length} seat(s)
+              </span>
             </div>
+
             <div className="flex justify-between border-t border-border pt-2 mt-2">
               <span className="text-white font-semibold">Total</span>
-              <span className="text-white font-bold text-lg">₹{totalAmount}</span>
+              <span className="text-white font-bold text-lg">
+                ₹{totalAmount}
+              </span>
             </div>
           </div>
         </div>
 
-        {/* Payment Form */}
+        {/* PAYMENT FORM */}
         <div className="bg-card border border-border rounded-2xl p-5">
-          <h2 className="font-heading text-lg font-semibold text-white mb-4">Payment Details</h2>
+          <h2 className="font-heading text-lg font-semibold text-white mb-4">
+            Payment Details
+          </h2>
 
           {loadingIntent || !clientSecret ? (
             <div className="flex items-center justify-center py-8">

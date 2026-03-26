@@ -7,6 +7,7 @@ import {
   adminCancelShow,
   adminCancelBooking,
   adminCancelMovie,
+  getAdminShows
 } from "../controllers/admin_controller.js";
 import { authMiddleware } from "../middlewares/auth_middleware.js";
 import { requireAdmin } from "../middlewares/role_middleware.js";
@@ -29,6 +30,7 @@ router.delete("/bookings/:bookingId", adminCancelBooking);
 router.delete("/movies/:id/cancel", adminCancelMovie);
 
 // 🎭 Show cancellation
+router.get("/shows", getAdminShows);
 router.delete("/shows/:id/cancel", adminCancelShow);
 
 export default router;

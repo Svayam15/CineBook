@@ -57,11 +57,11 @@ export const releaseExpiredLocks = async () => {
   }
 };
 
+
 // 🎟️ CREATE BOOKING
 export const createBooking = async ({ userId, showId, seatIds, paymentType }) => {
   await releaseExpiredLocks();
 
-  // 🚫 Check if show exists and has already started
   const show = await prisma.show.findUnique({
     where: { id: showId },
     select: { startTime: true },
@@ -83,11 +83,7 @@ export const createBooking = async ({ userId, showId, seatIds, paymentType }) =>
     "bookSeats",
     { userId, showId, seatIds, paymentType },
     {
-      attempts: 3,
-      backoff: {
-        type: "exponential",
-        delay: 2000,
-      },
+      jobId: `${userId}-${showId}-${seatIds.join(",")}`, // ✅ prevents duplicates
     }
   );
 
@@ -96,22 +92,18 @@ export const createBooking = async ({ userId, showId, seatIds, paymentType }) =>
   return { jobId: job.id };
 };
 
-// 💰 CALCULATE REFUND AMOUNT
+
+// 💰 CALCULATE REFUND
 export const calculateRefund = (totalAmount, showStartTime, cancelledByAdmin = false) => {
-  // Admin cancellation → always 100% refund
-  if (cancelledByAdmin) {
-    return totalAmount;
-  }
+  if (cancelledByAdmin) return totalAmount;
 
   const now = new Date();
   const showTime = new Date(showStartTime);
   const hoursBeforeShow = (showTime - now) / (1000 * 60 * 60);
 
   if (hoursBeforeShow > CANCELLATION_HOURS_THRESHOLD) {
-    // More than threshold hours before show → full refund
     return totalAmount;
   } else {
-    // Less than threshold hours → cancellation fee deducted
     const cancellationFee = totalAmount * (CANCELLATION_FEE_PERCENT / 100);
     return totalAmount - cancellationFee;
   }

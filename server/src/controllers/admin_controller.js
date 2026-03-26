@@ -179,7 +179,7 @@ export const adminCancelShow = asyncHandler(async (req, res) => {
 
   // 🚫 Cannot cancel a show that has already started
 if (new Date(show.startTime) <= new Date()) {
-  const error = new Error("Cannot cancel a show that has already started");
+  const error = new Error("Cannot cancel a show that has already started or ended");
   error.statusCode = 400;
   throw error;
 }
@@ -385,5 +385,53 @@ const runningShow = movie.shows.find(
   res.json({
     message: `Movie deleted successfully. ${movie.shows.length} shows cancelled.`,
     cancelledShows: movie.shows.length,
+  });
+});
+
+
+// 🎬 GET ALL SHOWS (ADMIN) — with computed status + pagination + filter
+export const getAdminShows = asyncHandler(async (req, res) => {
+  const page = parseInt(req.query.page) || 1;
+  const limit = parseInt(req.query.limit) || 20;
+  const skip = (page - 1) * limit;
+  const statusFilter = req.query.status?.toUpperCase(); // UPCOMING | ONGOING | COMPLETED
+
+  const shows = await prisma.show.findMany({
+    include: { movie: true, theatre: true },
+    orderBy: { startTime: "asc" },
+    skip,
+    take: limit,
+  });
+
+  const now = new Date();
+
+  const getStatus = (show) => {
+    const start = new Date(show.startTime);
+    const end = new Date(start.getTime() + (show.movie?.duration || 0) * 60 * 1000);
+    if (now < start) return "UPCOMING";
+    if (now >= start && now < end) return "ONGOING";
+    return "COMPLETED";
+  };
+
+  let enriched = shows.map((show) => ({
+    ...show,
+    status: getStatus(show),
+  }));
+
+  if (statusFilter && ["UPCOMING", "ONGOING", "COMPLETED"].includes(statusFilter)) {
+    enriched = enriched.filter((s) => s.status === statusFilter);
+  }
+
+  const total = await prisma.show.count();
+
+  res.json({
+    success: true,
+    shows: enriched,
+    pagination: {
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
+    },
   });
 });

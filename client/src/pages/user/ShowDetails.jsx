@@ -13,6 +13,10 @@ const ShowDetails = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [selectedSeats, setSelectedSeats] = useState([]);
+
+    // ✅ NEW: prevent duplicate bookings
+  const [bookingLoading, setBookingLoading] = useState(false);
+
   const { isAuthenticated } = useAuthStore();
 
   useEffect(() => {
@@ -40,6 +44,7 @@ const ShowDetails = () => {
   const toggleSeat = (seat) => {
     if (seat.status !== "AVAILABLE") return;
     if (isShowStarted) return;
+      if (bookingLoading) return;
     setSelectedSeats((prev) =>
       prev.find((s) => s.id === seat.id)
         ? prev.filter((s) => s.id !== seat.id)
@@ -71,6 +76,9 @@ const ShowDetails = () => {
     }
 
     try {
+
+      setBookingLoading(true); // ✅ prevent multiple clicks
+
       const res = await api.post("/bookings", {
         showId: parseInt(id),
         seatIds: selectedSeats.map((s) => s.id),
@@ -252,28 +260,39 @@ const ShowDetails = () => {
         ))}
       </div>
 
-      {/* Sticky Bottom Bar — hidden if show has started */}
-      {selectedSeats.length > 0 && !isShowStarted && (
-        <div style={styles.bottomBar}>
-          <div style={styles.bottomInfo}>
-            <span style={styles.bottomSeats}>
-              {selectedSeats.length} seat{selectedSeats.length > 1 ? "s" : ""} selected
-            </span>
-            <span style={styles.bottomSeatNames}>
-              {selectedSeats.map((s) => `${s.row}${s.number}`).join(", ")}
-            </span>
-          </div>
-          <div style={styles.bottomRight}>
-            <span style={styles.totalAmount}>₹{totalAmount}</span>
-            <button style={styles.proceedBtn} onClick={handleProceed}>
-              Proceed →
-            </button>
-          </div>
-        </div>
-      )}
+{/* Sticky Bottom Bar — hidden if show has started */}
+{selectedSeats.length > 0 && !isShowStarted && (
+  <div style={styles.bottomBar}>
+    <div style={styles.bottomInfo}>
+      <span style={styles.bottomSeats}>
+        {selectedSeats.length} seat{selectedSeats.length > 1 ? "s" : ""} selected
+      </span>
+      <span style={styles.bottomSeatNames}>
+        {selectedSeats.map((s) => `${s.row}${s.number}`).join(", ")}
+      </span>
+    </div>
+
+    <div style={styles.bottomRight}>
+      <span style={styles.totalAmount}>₹{totalAmount}</span>
+
+      <button
+        style={{
+          ...styles.proceedBtn,
+          opacity: bookingLoading ? 0.7 : 1,
+          cursor: bookingLoading ? "not-allowed" : "pointer",
+        }}
+        onClick={handleProceed}
+        disabled={bookingLoading}
+      >
+        {bookingLoading ? "Processing..." : "Proceed →"}
+      </button>
+    </div>
+  </div>
+)}
     </div>
   );
 };
+
 
 const styles = {
   page: {
