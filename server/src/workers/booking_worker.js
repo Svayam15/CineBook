@@ -10,36 +10,21 @@ const worker = new Worker(
     const { userId, showId, seatIds, paymentType, isWindowBooking } = job.data;
 
     return prisma.$transaction(async (tx) => {
-
-      // 1️⃣ Check show exists and is active
-      const show = await tx.show.findUnique({
-        where: { id: showId },
-      });
-
+      const show = await tx.show.findUnique({ where: { id: showId } });
       if (!show) throw new Error("Show not found");
       if (!show.isActive) throw new Error("This show has been cancelled");
 
-      // 2️⃣ Validate seats exist and belong to show
       const seats = await tx.showSeat.findMany({
-        where: {
-          id: { in: seatIds },
-          showId,
-        },
+        where: { id: { in: seatIds }, showId },
       });
 
-      if (seats.length !== seatIds.length) {
-        throw new Error("Some seats not found");
-      }
+      if (seats.length !== seatIds.length) throw new Error("Some seats not found");
 
-      // 3️⃣ Calculate total amount based on seat types
       const totalAmount = seats.reduce((sum, seat) => {
-        if (seat.type === "GOLDEN") {
-          return sum + (show.goldenPrice || 0);
-        }
+        if (seat.type === "GOLDEN") return sum + (show.goldenPrice || 0);
         return sum + show.regularPrice;
       }, 0);
 
-      // 4️⃣ Create PENDING booking
       const booking = await tx.booking.create({
         data: {
           userId,
@@ -50,12 +35,8 @@ const worker = new Worker(
         },
       });
 
-      // 5️⃣ Atomic lock with pendingBookingId
       const lockedSeats = await tx.showSeat.updateMany({
-        where: {
-          id: { in: seatIds },
-          status: SEAT_STATUS.AVAILABLE,
-        },
+        where: { id: { in: seatIds }, status: SEAT_STATUS.AVAILABLE },
         data: {
           status: SEAT_STATUS.LOCKED,
           lockedAt: new Date(),
@@ -63,21 +44,15 @@ const worker = new Worker(
         },
       });
 
-      // 6️⃣ Race condition check
       if (lockedSeats.count !== seatIds.length) {
         await tx.booking.delete({ where: { id: booking.id } });
         throw new Error("Seats just got booked by someone else");
       }
 
-      // 7️⃣ If CASH payment → mark as PAID immediately
       if (paymentType === "CASH" || isWindowBooking) {
         await tx.showSeat.updateMany({
           where: { pendingBookingId: booking.id },
-          data: {
-            status: SEAT_STATUS.BOOKED,
-            lockedAt: null,
-            pendingBookingId: null,
-          },
+          data: { status: SEAT_STATUS.BOOKED, lockedAt: null, pendingBookingId: null },
         });
 
         await tx.bookingSeat.createMany({
@@ -85,9 +60,7 @@ const worker = new Worker(
             bookingId: booking.id,
             showSeatId: seat.id,
             seatType: seat.type,
-            seatPrice: seat.type === "GOLDEN"
-              ? (show.goldenPrice || 0)
-              : show.regularPrice,
+            seatPrice: seat.type === "GOLDEN" ? (show.goldenPrice || 0) : show.regularPrice,
           })),
         });
 
@@ -99,11 +72,15 @@ const worker = new Worker(
         return { ...booking, status: "PAID", totalAmount };
       }
 
-      // 8️⃣ CARD payment → return booking, await payment
       return { ...booking, totalAmount };
     });
   },
-  { connection }
+  {
+    connection,
+    stalledInterval: 60000,
+    lockDuration: 60000,
+    lockRenewTime: 30000,
+  }
 );
 
 worker.on("completed", (job) => {
@@ -115,13 +92,6 @@ worker.on("failed", (job, err) => {
 });
 
 logger.info("🚀 Worker started...");
-
-if (process.env.NODE_ENV !== "production") {
-  setInterval(async () => {
-    const isPaused = worker.isPaused();
-    logger.info(`💓 Worker alive | paused: ${isPaused}`);
-  }, 5000);
-}
 
 process.on("SIGTERM", async () => {
   await worker.close();

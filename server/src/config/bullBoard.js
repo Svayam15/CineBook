@@ -4,11 +4,13 @@ import { ExpressAdapter } from "@bull-board/express";
 import { bookingQueue } from "../queues/booking_queue.js";
 
 const serverAdapter = new ExpressAdapter();
-serverAdapter.setBasePath("/admin/queues");
 
-createBullBoard({
-  queues: [new BullMQAdapter(bookingQueue)],
-  serverAdapter,
-});
+if (process.env.NODE_ENV !== "production") {
+  serverAdapter.setBasePath("/admin/queues");
+  createBullBoard({
+    queues: [new BullMQAdapter(bookingQueue)],
+    serverAdapter,
+  });
+}
 
 export default serverAdapter;

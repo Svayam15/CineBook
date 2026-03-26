@@ -6,18 +6,15 @@ import {
   CANCELLATION_HOURS_THRESHOLD,
   CANCELLATION_FEE_PERCENT,
 } from "../utils/constants.js";
-
 import logger from "../config/logger.js";
 
-// ⏱️ RELEASE EXPIRED LOCKS
+// ⏱️ RELEASE EXPIRED LOCKS — called on a slow interval, not per request
 export const releaseExpiredLocks = async () => {
   try {
     const expiredSeats = await prisma.showSeat.findMany({
       where: {
         status: "LOCKED",
-        lockedAt: {
-          lt: new Date(Date.now() - LOCK_EXPIRY_TIME),
-        },
+        lockedAt: { lt: new Date(Date.now() - LOCK_EXPIRY_TIME) },
       },
     });
 
@@ -30,23 +27,14 @@ export const releaseExpiredLocks = async () => {
     await prisma.showSeat.updateMany({
       where: {
         status: "LOCKED",
-        lockedAt: {
-          lt: new Date(Date.now() - LOCK_EXPIRY_TIME),
-        },
+        lockedAt: { lt: new Date(Date.now() - LOCK_EXPIRY_TIME) },
       },
-      data: {
-        status: "AVAILABLE",
-        lockedAt: null,
-        pendingBookingId: null,
-      },
+      data: { status: "AVAILABLE", lockedAt: null, pendingBookingId: null },
     });
 
     if (expiredBookingIds.length > 0) {
       await prisma.booking.updateMany({
-        where: {
-          id: { in: expiredBookingIds },
-          status: BOOKING_STATUS.PENDING,
-        },
+        where: { id: { in: expiredBookingIds }, status: BOOKING_STATUS.PENDING },
         data: { status: BOOKING_STATUS.FAILED },
       });
     }
@@ -57,10 +45,9 @@ export const releaseExpiredLocks = async () => {
   }
 };
 
-
 // 🎟️ CREATE BOOKING
 export const createBooking = async ({ userId, showId, seatIds, paymentType }) => {
-  await releaseExpiredLocks();
+  // ✅ Removed releaseExpiredLocks() from here — no longer runs on every booking
 
   const show = await prisma.show.findUnique({
     where: { id: showId },
@@ -82,16 +69,12 @@ export const createBooking = async ({ userId, showId, seatIds, paymentType }) =>
   const job = await bookingQueue.add(
     "bookSeats",
     { userId, showId, seatIds, paymentType },
-    {
-      jobId: `${userId}-${showId}-${seatIds.join(",")}`, // ✅ prevents duplicates
-    }
+    { jobId: `${userId}-${showId}-${seatIds.join(",")}` }
   );
 
   logger.info(`📥 Booking job queued: ${job.id}`);
-
   return { jobId: job.id };
 };
-
 
 // 💰 CALCULATE REFUND
 export const calculateRefund = (totalAmount, showStartTime, cancelledByAdmin = false) => {

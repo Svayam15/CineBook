@@ -65,13 +65,15 @@ app.use("/payment", paymentRoutes);
 app.use("/theatres", theatreRoutes);
 app.use("/admin", adminRoutes);
 
-// 🐂 Bull Board — admin only
-app.use(
-  "/admin/queues",
-  authMiddleware,
-  requireAdmin,
-  serverAdapter.getRouter()
-);
+// 🐂 Bull Board — dev only, never in production
+if (process.env.NODE_ENV !== "production") {
+  app.use(
+    "/admin/queues",
+    authMiddleware,
+    requireAdmin,
+    serverAdapter.getRouter()
+  );
+}
 
 // ✅ Health check
 app.get("/", (req, res) => {
