@@ -80,6 +80,7 @@ const worker = new Worker(
     stalledInterval: 60000,
     lockDuration: 60000,
     lockRenewTime: 30000,
+    drainDelay: 30,
   }
 );
 
