@@ -36,7 +36,6 @@ export const getTheatreById = asyncHandler(async (req, res) => {
     where: { id: parseInt(id) },
     include: {
       shows: {
-        where: { isActive: true },
         include: { movie: true },
         orderBy: { startTime: "asc" },
       },
@@ -59,7 +58,7 @@ export const deleteTheatre = asyncHandler(async (req, res) => {
   const theatre = await prisma.theatre.findUnique({
     where: { id: parseInt(id) },
     include: {
-      shows: true, // include ALL shows, not just active
+      shows: true,
     },
   });
 
@@ -69,18 +68,29 @@ export const deleteTheatre = asyncHandler(async (req, res) => {
     throw error;
   }
 
-  if (theatre.shows.some((s) => s.isActive)) {
-    const error = new Error("Cannot delete theatre with active shows. Cancel all shows first.");
+  // ✅ NEW LOGIC: Check only upcoming shows
+  const now = new Date();
+
+  const hasUpcomingShows = theatre.shows.some(
+    (s) => new Date(s.startTime) > now
+  );
+
+  if (hasUpcomingShows) {
+    const error = new Error("Cannot delete theatre with upcoming shows.");
     error.statusCode = 400;
     throw error;
   }
 
-  // Delete everything in order to avoid FK constraint errors
+  // ✅ Safe deletion (completed shows allowed)
   await prisma.$transaction(async (tx) => {
     for (const show of theatre.shows) {
-      // Delete booking seats first
+      // Delete booking seats
       await tx.bookingSeat.deleteMany({
-        where: { showSeat: { showId: show.id } },
+        where: {
+          showSeat: {
+            showId: show.id,
+          },
+        },
       });
 
       // Delete bookings
@@ -88,7 +98,7 @@ export const deleteTheatre = asyncHandler(async (req, res) => {
         where: { showId: show.id },
       });
 
-      // Delete show seats
+      // Delete seats
       await tx.showSeat.deleteMany({
         where: { showId: show.id },
       });
@@ -99,7 +109,7 @@ export const deleteTheatre = asyncHandler(async (req, res) => {
       });
     }
 
-    // Now delete the theatre
+    // Delete theatre
     await tx.theatre.delete({
       where: { id: parseInt(id) },
     });
