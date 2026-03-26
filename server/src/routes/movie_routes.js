@@ -14,6 +14,6 @@ router.get("/", getMovies);
 //Public
 router.get("/:id", getMovieById);
 
-router.delete("/:id", deleteMovie);
+router.delete("/:id", authMiddleware, requireAdmin, deleteMovie);
 
 export default router;
