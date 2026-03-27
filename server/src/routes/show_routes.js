@@ -22,10 +22,10 @@ router.get("/:id/seats", getShowSeats);
 router.get("/:id/seats/available", getAvailableSeats);
 
 // Admin only
-router.get("/admin/all", authMiddleware, requireAdmin("ADMIN"), getAdminShows);
-router.post("/", authMiddleware, requireAdmin("ADMIN"), createShow);
-router.put("/:id", authMiddleware, requireAdmin("ADMIN"), updateShow);                        // ✅ NEW
-router.patch("/:id/reschedule", authMiddleware, requireAdmin("ADMIN"), rescheduleShow);       // ✅ NEW
-router.delete("/:id", authMiddleware, requireAdmin("ADMIN"), deleteShow);
+router.get("/admin/all", authMiddleware, requireAdmin, getAdminShows);
+router.post("/", authMiddleware, requireAdmin, createShow);
+router.put("/:id", authMiddleware, requireAdmin, updateShow);                        // ✅ NEW
+router.patch("/:id/reschedule", authMiddleware, requireAdmin, rescheduleShow);       // ✅ NEW
+router.delete("/:id", authMiddleware, requireAdmin, deleteShow);
 
 export default router;

@@ -17,9 +17,9 @@ router.get("/", getMovies);
 router.get("/:id", getMovieById);
 
 // Admin only
-router.post("/", authMiddleware, requireAdmin("ADMIN"), createMovie);
-router.put("/:id", authMiddleware, requireAdmin("ADMIN"), updateMovie);               // ✅ NEW
-router.patch("/:id/restore", authMiddleware, requireAdmin("ADMIN"), restoreMovie);    // ✅ NEW
-router.delete("/:id", authMiddleware, requireAdmin("ADMIN"), deleteMovie);
+router.post("/", authMiddleware, requireAdmin, createMovie);
+router.put("/:id", authMiddleware, requireAdmin, updateMovie);               // ✅ NEW
+router.patch("/:id/restore", authMiddleware, requireAdmin, restoreMovie);    // ✅ NEW
+router.delete("/:id", authMiddleware, requireAdmin, deleteMovie);
 
 export default router;

@@ -16,8 +16,8 @@ router.get("/", getTheatres);
 router.get("/:id", getTheatreById);
 
 // Admin only
-router.post("/", authMiddleware, requireAdmin("ADMIN"), createTheatre);
-router.put("/:id", authMiddleware, requireAdmin("ADMIN"), updateTheatre);       // ✅ NEW
-router.delete("/:id", authMiddleware, requireAdmin("ADMIN"), deleteTheatre);
+router.post("/", authMiddleware, requireAdmin, createTheatre);
+router.put("/:id", authMiddleware, requireAdmin, updateTheatre);       // ✅ NEW
+router.delete("/:id", authMiddleware, requireAdmin, deleteTheatre);
 
 export default router;
