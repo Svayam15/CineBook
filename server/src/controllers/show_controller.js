@@ -5,6 +5,7 @@ import { processBulkRefunds } from "../services/refund_service.js";
 import { sendShowCancelledEmail, sendShowRescheduledEmail } from "../services/email_service.js";
 import { ALLOWED_SEAT_COUNTS, SHOW_TYPE } from "../utils/constants.js";
 import logger from "../config/logger.js";
+import asyncHandler from "../utils/asyncHandler.js";
 
 // ⏰ Helper — format to 12hr IST
 const formatToIST = (date) => {
