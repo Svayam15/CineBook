@@ -141,3 +141,30 @@ export const sendPasswordResetSuccessEmail = async ({ user }) => {
     logger.error(`Email error (password reset success): ${err.message}`);
   }
 };
+
+// 📅 SHOW RESCHEDULED EMAIL
+export const sendShowRescheduledEmail = async ({ user, booking, show, oldStartTime }) => {
+  try {
+    await resend.emails.send({
+      from: process.env.FROM_EMAIL,
+      to: user.email,
+      subject: `Show Rescheduled — ${show.movie?.title}`,
+      html: `
+        <h2>Show Rescheduled</h2>
+        <p>Hi ${user.name},</p>
+        <p>The show you booked has been rescheduled.</p>
+        <table>
+          <tr><td><strong>Movie</strong></td><td>${show.movie?.title}</td></tr>
+          <tr><td><strong>Theatre</strong></td><td>${show.theatre?.name}, ${show.theatre?.location}</td></tr>
+          <tr><td><strong>Old Time</strong></td><td>${new Date(oldStartTime).toLocaleString("en-IN", { timeZone: "Asia/Kolkata", hour12: true })}</td></tr>
+          <tr><td><strong>New Time</strong></td><td>${new Date(show.startTime).toLocaleString("en-IN", { timeZone: "Asia/Kolkata", hour12: true })}</td></tr>
+          <tr><td><strong>Booking ID</strong></td><td>#${booking.id}</td></tr>
+        </table>
+        <p>Your seats remain confirmed. Sorry for the inconvenience.</p>
+        <p>— CineBook Team</p>
+      `,
+    });
+  } catch (err) {
+    logger.error(`Reschedule email failed: ${err.message}`);
+  }
+};

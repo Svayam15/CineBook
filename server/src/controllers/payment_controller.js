@@ -46,7 +46,7 @@ export const createOrder = async (req, res) => {
       bookingId,
       totalAmount: booking.totalAmount,
       expiresAt: lockedSeats[0].lockedAt
-        ? new Date(new Date(lockedSeats[0].lockedAt).getTime() + 10 * 60 * 1000)
+        ? new Date(new Date(lockedSeats[0].lockedAt).getTime() + 15 * 60 * 1000)
         : null,
     });
   } catch (err) {

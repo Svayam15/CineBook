@@ -18,6 +18,12 @@ export const createMovie = asyncHandler(async (req, res) => {
     throw error;
   }
 
+  if (duration > 600) {
+    const error = new Error("Duration cannot exceed 600 minutes");
+    error.statusCode = 400;
+    throw error;
+  }
+
   const movie = await prisma.movie.create({
     data: { title, duration },
   });
@@ -61,8 +67,102 @@ export const getMovieById = asyncHandler(async (req, res) => {
   res.json(movie);
 });
 
+// ✏️ UPDATE MOVIE (ADMIN)
+export const updateMovie = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const { title, duration } = req.body;
+
+  if (!title && !duration) {
+    const error = new Error("At least one field (title or duration) is required to update");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  if (duration !== undefined && duration <= 0) {
+    const error = new Error("Duration must be greater than 0");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  if (duration !== undefined && duration > 600) {
+    const error = new Error("Duration cannot exceed 600 minutes");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const movie = await prisma.movie.findUnique({
+    where: { id: parseInt(id) },
+  });
+
+  if (!movie) {
+    const error = new Error("Movie not found");
+    error.statusCode = 404;
+    throw error;
+  }
+
+  if (movie.isDeleted) {
+    const error = new Error("Cannot edit a deleted movie. Restore it first.");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  // 🚫 Block if any show has already started
+  const startedShow = await prisma.show.findFirst({
+    where: {
+      movieId: parseInt(id),
+      isActive: true,
+      startTime: { lte: new Date() },
+    },
+  });
+
+  if (startedShow) {
+    const error = new Error("Cannot edit a movie that already has started or ongoing shows.");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const updated = await prisma.movie.update({
+    where: { id: parseInt(id) },
+    data: {
+      ...(title && { title }),
+      ...(duration && { duration }),
+    },
+  });
+
+  logger.info(`Movie updated: ${updated.title}`);
+  res.json({ message: "Movie updated successfully", movie: updated });
+});
+
+// ♻️ RESTORE MOVIE (ADMIN)
+export const restoreMovie = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+
+  const movie = await prisma.movie.findUnique({
+    where: { id: parseInt(id) },
+  });
+
+  if (!movie) {
+    const error = new Error("Movie not found");
+    error.statusCode = 404;
+    throw error;
+  }
+
+  if (!movie.isDeleted) {
+    const error = new Error("Movie is not deleted. Nothing to restore.");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const restored = await prisma.movie.update({
+    where: { id: parseInt(id) },
+    data: { isDeleted: false },
+  });
+
+  logger.info(`Movie restored: ${restored.title}`);
+  res.json({ message: "Movie restored successfully", movie: restored });
+});
+
 // 🎬 DELETE MOVIE (ADMIN) — soft delete
-// For movies with upcoming shows, use /admin/movies/:id/cancel instead
 export const deleteMovie = asyncHandler(async (req, res) => {
   const movieId = parseInt(req.params.id);
 
@@ -97,7 +197,7 @@ export const deleteMovie = asyncHandler(async (req, res) => {
     throw error;
   }
 
-  // 🚫 Block if any ongoing show exists (started but not ended)
+  // 🚫 Block if any ongoing show exists
   const startedShows = await prisma.show.findMany({
     where: {
       movieId,
@@ -132,7 +232,7 @@ export const deleteMovie = asyncHandler(async (req, res) => {
     throw error;
   }
 
-  // ✅ Soft delete — keeps all show and booking history intact
+  // ✅ Soft delete
   await prisma.movie.update({
     where: { id: movieId },
     data: { isDeleted: true },

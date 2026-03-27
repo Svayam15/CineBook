@@ -21,6 +21,21 @@ export const createBooking = asyncHandler(async (req, res) => {
     throw error;
   }
 
+  // 🛡️ GUARD: Duplicate Block
+  const existingActive = await prisma.booking.findFirst({
+    where: {
+      userId,
+      showId,
+      status: { in: ["PENDING", "PAID"] },
+    },
+  });
+
+  if (existingActive) {
+    const error = new Error("You already have an active booking for this show.");
+    error.statusCode = 400;
+    throw error;
+  }
+
   const result = await bookingService.createBooking({
     userId,
     showId,
@@ -30,160 +45,148 @@ export const createBooking = asyncHandler(async (req, res) => {
   res.status(202).json({
     success: true,
     message: "Booking request queued",
-    jobId: result.jobId, // ✅ important
+    jobId: result.jobId,
   });
 });
-
 
 // 📊 GET BOOKING STATUS (REST)
 export const getBookingStatusRest = asyncHandler(async (req, res) => {
   const { jobId } = req.params;
-
   const job = await bookingQueue.getJob(jobId);
 
-  if (!job) {
-    return res.json({ status: "failed", reason: "Job not found" });
-  }
+  if (!job) return res.status(404).json({ status: "failed", reason: "Job not found" });
 
   const state = await job.getState();
-
-  if (state === "completed") {
-    return res.json({ status: "success", booking: job.returnvalue });
-  }
-
-  if (state === "failed") {
-    return res.json({ status: "failed", reason: job.failedReason });
-  }
+  if (state === "completed") return res.json({ status: "success", booking: job.returnvalue });
+  if (state === "failed") return res.json({ status: "failed", reason: job.failedReason });
 
   return res.json({ status: state });
 });
 
-
-// 📡 SSE BOOKING STATUS (OPTIMIZED)
+// 📡 SSE BOOKING STATUS
 export const getBookingStatus = asyncHandler(async (req, res) => {
   const { jobId } = req.params;
-
-  if (!jobId) {
-    const error = new Error("jobId is required");
-    error.statusCode = 400;
-    throw error;
-  }
+  if (!jobId) throw new Error("jobId is required");
 
   res.setHeader("Content-Type", "text/event-stream");
   res.setHeader("Cache-Control", "no-cache");
   res.setHeader("Connection", "keep-alive");
   res.flushHeaders();
 
-  const sendEvent = (data) => {
-    res.write(`data: ${JSON.stringify(data)}\n\n`);
-  };
-
   const interval = setInterval(async () => {
     try {
       const job = await bookingQueue.getJob(jobId);
-
       if (!job) {
-        sendEvent({ status: "failed", reason: "Job not found" });
+        res.write(`data: ${JSON.stringify({ status: "failed", reason: "Job not found" })}\n\n`);
         clearInterval(interval);
         return res.end();
       }
 
       const state = await job.getState();
+      const data = { status: state };
+      if (state === "completed") data.booking = job.returnvalue;
+      if (state === "failed") data.reason = job.failedReason;
 
-      if (state === "completed") {
-        sendEvent({ status: "success", booking: job.returnvalue });
+      res.write(`data: ${JSON.stringify(data)}\n\n`);
+
+      if (state === "completed" || state === "failed") {
         clearInterval(interval);
-        return res.end();
+        res.end();
       }
-
-      if (state === "failed") {
-        sendEvent({ status: "failed", reason: job.failedReason });
-        clearInterval(interval);
-        return res.end();
-      }
-
-      sendEvent({ status: state });
-
     } catch (err) {
-      sendEvent({ status: "failed", reason: err.message });
       clearInterval(interval);
       res.end();
     }
-  }, 3000); // ✅ reduced polling
+  }, 2000);
 
-  req.on("close", () => {
-    clearInterval(interval);
-    res.end();
-  });
+  req.on("close", () => { clearInterval(interval); res.end(); });
 });
-
 
 // 📋 GET MY BOOKINGS
 export const getMyBookings = asyncHandler(async (req, res) => {
   const userId = req.user.userId;
-
   const bookings = await prisma.booking.findMany({
-    where: {
-      userId,
-      status: { notIn: ["CANCELLED", "FAILED"] },
-    },
+    where: { userId, status: { notIn: ["FAILED"] } },
     include: {
-      show: {
-        include: {
-          movie: true,
-          theatre: true,
-        },
-      },
-      seats: {
-        include: {
-          showSeat: true,
-        },
-      },
+      show: { include: { movie: true, theatre: true } },
+      seats: { include: { showSeat: true } },
     },
     orderBy: { createdAt: "desc" },
   });
-
   res.json({ success: true, bookings });
 });
-
 
 // ❌ CANCEL BOOKING
 export const cancelBooking = asyncHandler(async (req, res) => {
   const userId = req.user.userId;
   const { id } = req.params;
+  const bookingId = parseInt(id);
 
   const booking = await prisma.booking.findUnique({
-    where: { id: parseInt(id) },
-    include: { seats: true },
+    where: { id: bookingId },
+    include: { show: true },
   });
 
-  if (!booking) {
+  if (!booking || booking.userId !== userId) {
     const error = new Error("Booking not found");
     error.statusCode = 404;
     throw error;
   }
 
-  if (booking.userId !== userId) {
-    const error = new Error("Unauthorized");
-    error.statusCode = 403;
-    throw error;
-  }
+  const now = new Date();
+  const showTime = new Date(booking.show.startTime);
+  const hoursRemaining = (showTime - now) / (1000 * 60 * 60);
 
   if (booking.status === "PAID") {
-    const error = new Error("Cannot cancel a paid booking");
-    error.statusCode = 400;
-    throw error;
+    if (hoursRemaining < 0) {
+      const error = new Error("Cannot cancel a show that has already started.");
+      error.statusCode = 400;
+      throw error;
+    }
+
+    let refundAmount;
+    let message;
+
+    if (hoursRemaining >= 24) {
+      refundAmount = booking.totalAmount; // ✅ Matches schema.prisma
+      message = "Booking cancelled. 100% refund initiated.";
+    } else if (hoursRemaining >= 4) {
+      refundAmount = (booking.totalAmount || 0) * 0.5; // ✅ Matches schema.prisma
+      message = "Booking cancelled. 50% refund initiated.";
+    } else {
+      refundAmount = 0;
+      message = "Booking cancelled. No refund issued (under 4h), seats released.";
+    }
+
+    await prisma.$transaction([
+      prisma.showSeat.updateMany({
+        where: { pendingBookingId: bookingId },
+        data: { status: "AVAILABLE", lockedAt: null, pendingBookingId: null },
+      }),
+      prisma.booking.update({
+        where: { id: bookingId },
+        data: {
+          status: "CANCELLED",
+          refundAmount: refundAmount, // ✅ Matches schema.prisma
+          cancelledAt: new Date()      // ✅ Matches schema.prisma
+        },
+      }),
+    ]);
+
+    return res.json({ success: true, message, refundAmount });
   }
 
-  await prisma.showSeat.updateMany({
-    where: { pendingBookingId: parseInt(id) },
-    data: { status: "AVAILABLE", lockedAt: null, pendingBookingId: null },
-  });
+  // PENDING Logic
+  await prisma.$transaction([
+    prisma.showSeat.updateMany({
+      where: { pendingBookingId: bookingId },
+      data: { status: "AVAILABLE", lockedAt: null, pendingBookingId: null },
+    }),
+    prisma.booking.update({
+      where: { id: bookingId },
+      data: { status: "CANCELLED" },
+    }),
+  ]);
 
-  await prisma.booking.update({
-    where: { id: parseInt(id) },
-    data: { status: "FAILED" },
-  });
-
-  res.json({ success: true, message: "Booking cancelled" });
+  res.json({ success: true, message: "Pending booking cancelled and seats released." });
 });

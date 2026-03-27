@@ -51,7 +51,40 @@ export const getTheatreById = asyncHandler(async (req, res) => {
   res.json(theatre);
 });
 
-// 🏛️ DELETE THEATRE (ADMIN)
+// ✏️ UPDATE THEATRE (ADMIN)
+export const updateTheatre = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const { name, location } = req.body;
+
+  if (!name && !location) {
+    const error = new Error("At least one field (name or location) is required to update");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const theatre = await prisma.theatre.findUnique({
+    where: { id: parseInt(id) },
+  });
+
+  if (!theatre) {
+    const error = new Error("Theatre not found");
+    error.statusCode = 404;
+    throw error;
+  }
+
+  const updated = await prisma.theatre.update({
+    where: { id: parseInt(id) },
+    data: {
+      ...(name && { name }),
+      ...(location && { location }),
+    },
+  });
+
+  logger.info(`Theatre updated: ${updated.name}`);
+  res.json({ message: "Theatre updated successfully", theatre: updated });
+});
+
+// 🏛️ DELETE THEATRE (ADMIN) — fixed rule
 export const deleteTheatre = asyncHandler(async (req, res) => {
   const { id } = req.params;
 
@@ -59,7 +92,7 @@ export const deleteTheatre = asyncHandler(async (req, res) => {
     where: { id: parseInt(id) },
     include: {
       shows: {
-        include: { movie: true }, // ✅ needed for ongoing duration check
+        include: { movie: true },
       },
     },
   });
@@ -97,7 +130,7 @@ export const deleteTheatre = asyncHandler(async (req, res) => {
     throw error;
   }
 
-  // 🚫 Block if any pending bookings exist
+  // 🚫 Block if any PENDING bookings exist
   const pendingBooking = await prisma.booking.findFirst({
     where: {
       status: "PENDING",
@@ -111,31 +144,33 @@ export const deleteTheatre = asyncHandler(async (req, res) => {
     throw error;
   }
 
-  // 🚫 Block if any completed shows have paid booking history
-  // We never delete financial records
-  const paidBooking = await prisma.booking.findFirst({
+  // 🚫 Block if any PAID booking exists for an upcoming/active show
+  // ✅ FIXED: only block for active upcoming paid bookings
+  // NOT for old completed show paid history
+  const activePaidBooking = await prisma.booking.findFirst({
     where: {
       status: "PAID",
-      show: { theatreId: parseInt(id) },
+      show: {
+        theatreId: parseInt(id),
+        isActive: true,
+        startTime: { gt: now },
+      },
     },
   });
 
-  if (paidBooking) {
-    const error = new Error("Cannot delete theatre with booking history. This theatre has completed paid bookings on record.");
+  if (activePaidBooking) {
+    const error = new Error("Cannot delete theatre with active paid bookings. Cancel all upcoming shows first.");
     error.statusCode = 400;
     throw error;
   }
 
-  // ✅ Safe to hard delete — no booking history exists
-  // Manually clean up in order to avoid FK constraint errors
+  // ✅ Safe to delete — no active financial obligations
+  // Clean up in order to avoid FK constraint errors
   await prisma.$transaction(async (tx) => {
     for (const show of theatre.shows) {
-      // Delete show seats first
       await tx.showSeat.deleteMany({ where: { showId: show.id } });
-      // Delete show
       await tx.show.delete({ where: { id: show.id } });
     }
-    // Delete theatre
     await tx.theatre.delete({ where: { id: parseInt(id) } });
   });
 

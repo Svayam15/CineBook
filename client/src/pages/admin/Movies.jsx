@@ -1,176 +1,211 @@
 import { useEffect, useState } from "react";
-import AdminLayout from "../../components/admin/AdminLayout";
-import api from "../../api/axios";
-import toast from "react-hot-toast";
-import { Plus, Trash2, Film } from "lucide-react";
-import Spinner from "../../components/common/Spinner";
+import axios from "../../api/axios";
 
-const Movies = () => {
+export default function Movies() {
   const [movies, setMovies] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [adding, setAdding] = useState(false);
-  const [cancelling, setCancelling] = useState(null);
-  const [deleting, setDeleting] = useState(null); // ✅ NEW
-  const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({ title: "", duration: "" });
+  const [editMovie, setEditMovie] = useState(null);
+  const [editForm, setEditForm] = useState({ title: "", duration: "" });
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
 
   const fetchMovies = async () => {
     try {
-      const res = await api.get("/movies");
+      const res = await axios.get("/movies");
       setMovies(res.data);
+    } catch {
+      setError("Failed to fetch movies");
+    }
+  };
+
+  useEffect(() => { fetchMovies() }, []);
+
+  const handleCreate = async (e) => {
+    e.preventDefault();
+    setError(""); setSuccess("");
+    try {
+      setLoading(true);
+      await axios.post("/movies", {
+        title: form.title,
+        duration: parseInt(form.duration),
+      });
+      setSuccess("Movie created successfully");
+      setForm({ title: "", duration: "" });
+      await fetchMovies();
     } catch (err) {
-      toast.error(err.response?.data?.message || err.message);
+      setError(err.response?.data?.message || "Failed to create movie");
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => { fetchMovies().catch(console.error); }, []);
-
-  const handleAdd = async (e) => {
+  const handleEdit = async (e) => {
     e.preventDefault();
-    setAdding(true);
+    setError(""); setSuccess("");
     try {
-      await api.post("/movies", { title: form.title, duration: parseInt(form.duration) });
-      toast.success("Movie added!");
-      setForm({ title: "", duration: "" });
-      setShowForm(false);
+      setLoading(true);
+      await axios.put(`/movies/${editMovie.id}`, {
+        title: editForm.title || undefined,
+        duration: editForm.duration ? parseInt(editForm.duration) : undefined,
+      });
+      setSuccess("Movie updated successfully");
+      setEditMovie(null);
       await fetchMovies();
     } catch (err) {
-      toast.error(err.response?.data?.message || err.message);
+      setError(err.response?.data?.message || "Failed to update movie");
     } finally {
-      setAdding(false);
+      setLoading(false);
     }
   };
 
-  const handleCancel = async (id) => {
-    if (!confirm("Cancel all shows for this movie? This will refund all bookings.")) return;
-    setCancelling(id);
-    try {
-      await api.delete(`/admin/movies/${id}/cancel`);
-      toast.success("Movie cancelled!");
-      await fetchMovies();
-    } catch (err) {
-      toast.error(err.response?.data?.message || err.message);
-    } finally {
-      setCancelling(null);
-    }
-  };
-
-  // 🔥 NEW DELETE HANDLER
   const handleDelete = async (id) => {
-    if (!confirm("Are you sure you want to delete this movie?")) return;
-
-    setDeleting(id);
+    if (!confirm("Soft delete this movie?")) return;
+    setError(""); setSuccess("");
     try {
-      await api.delete(`/movies/${id}`); // your delete API
-      toast.success("Movie deleted successfully");
-      await fetchMovies(); // refresh list
+      await axios.delete(`/movies/${id}`);
+      setSuccess("Movie deleted");
+      await fetchMovies();
     } catch (err) {
-      // show backend message (important)
-      toast.error(err.response?.data?.message || err.message);
-    } finally {
-      setDeleting(null);
+      setError(err.response?.data?.message || "Failed to delete movie");
+    }
+  };
+
+  const handleRestore = async (id) => {
+    setError(""); setSuccess("");
+    try {
+      await axios.patch(`/movies/${id}/restore`);
+      setSuccess("Movie restored");
+      await fetchMovies();
+    } catch (err) {
+      setError(err.response?.data?.message || "Failed to restore movie");
     }
   };
 
   return (
-    <AdminLayout>
-      <div className="flex items-center justify-between mb-6">
+    <div className="p-6 max-w-4xl mx-auto">
+      <h1 className="text-2xl font-bold mb-6">Movies</h1>
+
+      {error && <p className="text-red-500 mb-3">{error}</p>}
+      {success && <p className="text-green-500 mb-3">{success}</p>}
+
+      {/* Create Form */}
+      <form onSubmit={handleCreate} className="bg-white p-4 rounded shadow mb-8 flex gap-3 items-end">
         <div>
-          <h1 className="font-heading text-2xl font-bold text-white">Movies</h1>
-          <p className="text-muted text-sm mt-1">{movies.length} movies total</p>
+          <label className="block text-sm font-medium mb-1">Title</label>
+          <input
+            className="border rounded px-3 py-2 w-48"
+            value={form.title}
+            onChange={(e) => setForm({ ...form, title: e.target.value })}
+            placeholder="Movie title"
+            required
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium mb-1">Duration (mins)</label>
+          <input
+            className="border rounded px-3 py-2 w-36"
+            type="number"
+            value={form.duration}
+            onChange={(e) => setForm({ ...form, duration: e.target.value })}
+            placeholder="e.g. 150"
+            required
+          />
         </div>
         <button
-          onClick={() => setShowForm(!showForm)}
-          className="flex items-center gap-2 bg-primary hover:bg-primary-dark text-white px-4 py-2 rounded-xl text-sm font-medium transition"
+          type="submit"
+          disabled={loading}
+          className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
         >
-          <Plus size={16} />
-          Add Movie
+          {loading ? "Creating..." : "Create Movie"}
         </button>
-      </div>
+      </form>
 
-      {showForm && (
-        <div className="bg-card border border-border rounded-2xl p-5 mb-6">
-          <h2 className="font-heading text-lg font-semibold text-white mb-4">Add New Movie</h2>
-          <form onSubmit={handleAdd} className="flex flex-col sm:flex-row gap-3">
-            <input
-              type="text"
-              placeholder="Movie title"
-              value={form.title}
-              onChange={(e) => setForm({ ...form, title: e.target.value })}
-              required
-              className="flex-1 bg-dark border border-border text-white rounded-xl px-4 py-2.5 outline-none focus:border-primary text-sm"
-            />
-            <input
-              type="number"
-              placeholder="Duration (mins)"
-              value={form.duration}
-              onChange={(e) => setForm({ ...form, duration: e.target.value })}
-              required
-              min="1"
-              className="w-40 bg-dark border border-border text-white rounded-xl px-4 py-2.5 outline-none focus:border-primary text-sm"
-            />
-            <button
-              type="submit"
-              disabled={adding}
-              className="bg-primary hover:bg-primary-dark text-white px-5 py-2.5 rounded-xl text-sm font-medium transition disabled:opacity-50"
-            >
-              {adding ? <Spinner text="Adding..." /> : "Add Movie"}
-            </button>
-          </form>
-        </div>
-      )}
-
-      {loading ? (
-        <div className="space-y-3">
-          {[...Array(5)].map((_, i) => (
-            <div key={i} className="bg-card border border-border rounded-2xl h-16 animate-pulse" />
-          ))}
-        </div>
-      ) : movies.length === 0 ? (
-        <div className="text-center py-16">
-          <Film size={40} className="text-muted mx-auto mb-3" />
-          <p className="text-muted">No movies yet</p>
-        </div>
-      ) : (
-        <div className="space-y-3">
-          {movies.map((movie) => (
-            <div key={movie.id} className="bg-card border border-border rounded-2xl px-5 py-4 flex items-center justify-between">
+      {/* Edit Modal */}
+      {editMovie && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+          <div className="bg-white p-6 rounded shadow w-96">
+            <h2 className="text-lg font-bold mb-4">Edit Movie — {editMovie.title}</h2>
+            <form onSubmit={handleEdit} className="flex flex-col gap-3">
               <div>
-                <p className="text-white font-medium">{movie.title}</p>
-                <p className="text-muted text-sm">
-                  {movie.duration} mins • {movie.shows?.length || 0} shows
-                </p>
+                <label className="block text-sm font-medium mb-1">Title</label>
+                <input
+                  className="border rounded px-3 py-2 w-full"
+                  value={editForm.title}
+                  onChange={(e) => setEditForm({ ...editForm, title: e.target.value })}
+                  placeholder={editMovie.title}
+                />
               </div>
-
-              <div className="flex gap-3">
-                {/* Cancel */}
-                <button
-                  onClick={() => handleCancel(movie.id)}
-                  disabled={cancelling === movie.id}
-                  className="flex items-center gap-2 text-yellow-400 hover:text-yellow-300 text-sm"
-                >
-                  {cancelling === movie.id ? <Spinner /> : <Trash2 size={16} />}
+              <div>
+                <label className="block text-sm font-medium mb-1">Duration (mins)</label>
+                <input
+                  className="border rounded px-3 py-2 w-full"
+                  type="number"
+                  value={editForm.duration}
+                  onChange={(e) => setEditForm({ ...editForm, duration: e.target.value })}
+                  placeholder={editMovie.duration}
+                />
+              </div>
+              <div className="flex gap-2 mt-2">
+                <button type="submit" className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 flex-1">
+                  {loading ? "Saving..." : "Save Changes"}
+                </button>
+                <button type="button" onClick={() => setEditMovie(null)} className="bg-gray-200 px-4 py-2 rounded flex-1">
                   Cancel
                 </button>
-
-                {/* Delete */}
-                <button
-                  onClick={() => handleDelete(movie.id)}
-                  disabled={deleting === movie.id}
-                  className="flex items-center gap-2 text-red-400 hover:text-red-300 text-sm"
-                >
-                  {deleting === movie.id ? <Spinner /> : <Trash2 size={16} />}
-                  Delete
-                </button>
               </div>
-            </div>
-          ))}
+            </form>
+          </div>
         </div>
       )}
-    </AdminLayout>
-  );
-};
 
-export default Movies;
+      {/* Movies Table */}
+      <div className="bg-white rounded shadow overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead className="bg-gray-100 text-left">
+            <tr>
+              <th className="px-4 py-3">ID</th>
+              <th className="px-4 py-3">Title</th>
+              <th className="px-4 py-3">Duration</th>
+              <th className="px-4 py-3">Status</th>
+              <th className="px-4 py-3">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {movies.map((movie) => (
+              <tr key={movie.id} className="border-t hover:bg-gray-50">
+                <td className="px-4 py-3">{movie.id}</td>
+                <td className="px-4 py-3 font-medium">{movie.title}</td>
+                <td className="px-4 py-3">{movie.duration} mins</td>
+                <td className="px-4 py-3">
+                  <span className={`px-2 py-1 rounded text-xs font-medium ${movie.isDeleted ? "bg-red-100 text-red-600" : "bg-green-100 text-green-600"}`}>
+                    {movie.isDeleted ? "Deleted" : "Active"}
+                  </span>
+                </td>
+                <td className="px-4 py-3 flex gap-2">
+                  {!movie.isDeleted && (
+                    <button
+                      onClick={() => { setEditMovie(movie); setEditForm({ title: movie.title, duration: movie.duration }); }}
+                      className="text-blue-600 hover:underline text-xs"
+                    >
+                      Edit
+                    </button>
+                  )}
+                  {!movie.isDeleted ? (
+                    <button onClick={() => handleDelete(movie.id)} className="text-red-500 hover:underline text-xs">
+                      Delete
+                    </button>
+                  ) : (
+                    <button onClick={() => handleRestore(movie.id)} className="text-green-600 hover:underline text-xs">
+                      Restore
+                    </button>
+                  )}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}

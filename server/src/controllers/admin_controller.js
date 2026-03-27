@@ -3,7 +3,6 @@ import asyncHandler from "../utils/asyncHandler.js";
 import { bookingQueue } from "../queues/booking_queue.js";
 import { processRefund, processBulkRefunds } from "../services/refund_service.js";
 import { PAYMENT_TYPE } from "../utils/constants.js";
-
 import {
   sendShowCancelledEmail,
   sendBookingCancelledEmail,
@@ -178,11 +177,11 @@ export const adminCancelShow = asyncHandler(async (req, res) => {
   }
 
   // 🚫 Cannot cancel a show that has already started
-if (new Date(show.startTime) <= new Date()) {
-  const error = new Error("Cannot cancel a show that has already started or ended");
-  error.statusCode = 400;
-  throw error;
-}
+  if (new Date(show.startTime) <= new Date()) {
+    const error = new Error("Cannot cancel a show that has already started or ended");
+    error.statusCode = 400;
+    throw error;
+  }
 
   await prisma.$transaction(async (tx) => {
     await tx.showSeat.updateMany({
@@ -308,13 +307,19 @@ export const adminCancelBooking = asyncHandler(async (req, res) => {
   });
 });
 
-// ADMIN CANCEL MOVIE + ALL SHOWS + REFUNDS
+// 🎬 ADMIN CANCEL MOVIE + ALL SHOWS + REFUNDS
 export const adminCancelMovie = asyncHandler(async (req, res) => {
   const { id } = req.params;
+  const movieId = parseInt(id);
 
   const movie = await prisma.movie.findUnique({
-    where: { id: parseInt(id) },
-    include: { shows: { where: { isActive: true } } },
+    where: { id: movieId },
+    include: {
+      shows: {
+        where: { isActive: true },
+        include: { movie: true },
+      },
+    },
   });
 
   if (!movie) {
@@ -323,19 +328,31 @@ export const adminCancelMovie = asyncHandler(async (req, res) => {
     throw error;
   }
 
-  // 🚫 Block deletion if any show is currently running
-const runningShow = movie.shows.find(
-  (s) => new Date(s.startTime) <= new Date()
-);
+  if (movie.isDeleted) {
+    const error = new Error("Movie already deleted");
+    error.statusCode = 400;
+    throw error;
+  }
 
-  if (runningShow) {
-  const error = new Error("A show is currently running for this movie. Please wait for it to finish before deleting.");
-  error.statusCode = 400;
-  throw error;
-}
+  // 🚫 Block if any show is currently ONGOING
+  const hasOngoing = movie.shows.some((show) => {
+    const start = new Date(show.startTime).getTime();
+    const end = start + (show.movie?.duration || 0) * 60 * 1000;
+    return Date.now() >= start && Date.now() < end;
+  });
 
-  // Cancel all active shows first
-  for (const show of movie.shows) {
+  if (hasOngoing) {
+    const error = new Error("A show is currently running. Wait for it to finish before deleting.");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  // Cancel only FUTURE shows
+  const futureShows = movie.shows.filter(
+    (s) => new Date(s.startTime) > new Date()
+  );
+
+  for (const show of futureShows) {
     const bookings = await prisma.booking.findMany({
       where: { showId: show.id, status: "PAID" },
       include: { user: true, seats: true },
@@ -346,12 +363,10 @@ const runningShow = movie.shows.find(
         where: { showId: show.id },
         data: { status: "AVAILABLE", lockedAt: null, pendingBookingId: null },
       });
-
       await tx.booking.updateMany({
         where: { showId: show.id, status: { in: ["PENDING", "PAID"] } },
         data: { status: "CANCELLED", cancelledAt: new Date() },
       });
-
       await tx.show.update({
         where: { id: show.id },
         data: { isActive: false },
@@ -375,26 +390,26 @@ const runningShow = movie.shows.find(
     }
   }
 
-  // ✅ Always delete the movie itself
-  await prisma.movie.delete({
-    where: { id: parseInt(id) },
+  // ✅ Soft delete — keeps all booking/show history intact
+  await prisma.movie.update({
+    where: { id: movieId },
+    data: { isDeleted: true },
   });
 
-  logger.info(`Movie ${id} deleted. ${movie.shows.length} shows cancelled.`);
+  logger.info(`Movie ${movieId} soft-deleted. ${futureShows.length} future shows cancelled.`);
 
   res.json({
-    message: `Movie deleted successfully. ${movie.shows.length} shows cancelled.`,
-    cancelledShows: movie.shows.length,
+    message: `Movie deleted successfully. ${futureShows.length} upcoming shows cancelled.`,
+    cancelledShows: futureShows.length,
   });
 });
-
 
 // 🎬 GET ALL SHOWS (ADMIN) — with computed status + pagination + filter
 export const getAdminShows = asyncHandler(async (req, res) => {
   const page = parseInt(req.query.page) || 1;
   const limit = parseInt(req.query.limit) || 20;
   const skip = (page - 1) * limit;
-  const statusFilter = req.query.status?.toUpperCase(); // UPCOMING | ONGOING | COMPLETED
+  const statusFilter = req.query.status?.toUpperCase();
 
   const shows = await prisma.show.findMany({
     include: { movie: true, theatre: true },
