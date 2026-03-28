@@ -68,16 +68,20 @@ export const deleteUser = asyncHandler(async (req, res) => {
   res.json({ message: "User deleted successfully" });
 });
 
-// 📋 GET ALL BOOKINGS (with pagination)
+// 📋 GET ALL BOOKINGS (with pagination + optional user filter)
 export const getAllBookings = asyncHandler(async (req, res) => {
   const page = parseInt(req.query.page) || 1;
   const limit = parseInt(req.query.limit) || 20;
   const skip = (page - 1) * limit;
+  const userId = req.query.userId ? parseInt(req.query.userId) : undefined;
+
+  const where = userId ? { userId } : {};
 
   const [bookings, total] = await Promise.all([
     prisma.booking.findMany({
+      where,
       include: {
-        user: { select: { id: true, name: true, email: true, username: true } },
+        user: { select: { id: true, name: true, email: true, username: true,  surname: true, } },
         show: { include: { movie: true, theatre: true } },
         seats: { include: { showSeat: true } },
       },
@@ -85,20 +89,16 @@ export const getAllBookings = asyncHandler(async (req, res) => {
       skip,
       take: limit,
     }),
-    prisma.booking.count(),
+    prisma.booking.count({ where }),
   ]);
 
   res.json({
     success: true,
     bookings,
-    pagination: {
-      total,
-      page,
-      limit,
-      totalPages: Math.ceil(total / limit),
-    },
+    pagination: { total, page, limit, totalPages: Math.ceil(total / limit) },
   });
 });
+
 
 // 🎫 ADMIN WINDOW BOOKING
 export const adminCreateBooking = asyncHandler(async (req, res) => {

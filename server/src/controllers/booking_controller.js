@@ -3,6 +3,8 @@ import asyncHandler from "../utils/asyncHandler.js";
 import * as bookingService from "../services/booking_service.js";
 import { bookingQueue } from "../queues/booking_queue.js";
 import { MAX_SEATS_PER_BOOKING } from "../utils/constants.js";
+import logger from "../config/logger.js";
+import { processRefund } from "../services/refund_service.js"; // add this import at top
 
 // 🎟️ CREATE BOOKING
 export const createBooking = asyncHandler(async (req, res) => {
@@ -133,31 +135,20 @@ export const cancelBooking = asyncHandler(async (req, res) => {
     throw error;
   }
 
-  const now = new Date();
-  const showTime = new Date(booking.show.startTime);
-  const hoursRemaining = (showTime - now) / (1000 * 60 * 60);
+  if (booking.status === "CANCELLED") {
+    const error = new Error("Booking is already cancelled");
+    error.statusCode = 400;
+    throw error;
+  }
 
-  if (booking.status === "PAID") {
-    if (hoursRemaining < 0) {
-      const error = new Error("Cannot cancel a show that has already started.");
-      error.statusCode = 400;
-      throw error;
-    }
+  if (booking.status === "FAILED") {
+    const error = new Error("Cannot cancel a failed booking");
+    error.statusCode = 400;
+    throw error;
+  }
 
-    let refundAmount;
-    let message;
-
-    if (hoursRemaining >= 24) {
-      refundAmount = booking.totalAmount; // ✅ Matches schema.prisma
-      message = "Booking cancelled. 100% refund initiated.";
-    } else if (hoursRemaining >= 4) {
-      refundAmount = (booking.totalAmount || 0) * 0.5; // ✅ Matches schema.prisma
-      message = "Booking cancelled. 50% refund initiated.";
-    } else {
-      refundAmount = 0;
-      message = "Booking cancelled. No refund issued (under 4h), seats released.";
-    }
-
+  // ── PENDING cancel — no refund needed ──────────────────────────────────────
+  if (booking.status === "PENDING") {
     await prisma.$transaction([
       prisma.showSeat.updateMany({
         where: { pendingBookingId: bookingId },
@@ -165,18 +156,38 @@ export const cancelBooking = asyncHandler(async (req, res) => {
       }),
       prisma.booking.update({
         where: { id: bookingId },
-        data: {
-          status: "CANCELLED",
-          refundAmount: refundAmount, // ✅ Matches schema.prisma
-          cancelledAt: new Date()      // ✅ Matches schema.prisma
-        },
+        data: { status: "CANCELLED", cancelledAt: new Date() },
       }),
     ]);
-
-    return res.json({ success: true, message, refundAmount });
+    return res.json({ success: true, message: "Pending booking cancelled and seats released." });
   }
 
-  // PENDING Logic
+  // ── PAID cancel — time-based refund policy ─────────────────────────────────
+  const now = new Date();
+  const showTime = new Date(booking.show.startTime);
+  const hoursRemaining = (showTime - now) / (1000 * 60 * 60);
+
+  if (hoursRemaining < 0) {
+    const error = new Error("Cannot cancel a show that has already started.");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  let refundAmount;
+  let message;
+
+  if (hoursRemaining >= 24) {
+    refundAmount = booking.totalAmount;
+    message = "Booking cancelled. 100% refund initiated.";
+  } else if (hoursRemaining >= 4) {
+    refundAmount = Math.round((booking.totalAmount || 0) * 0.5 * 100) / 100;
+    message = "Booking cancelled. 50% refund initiated.";
+  } else {
+    refundAmount = 0;
+    message = "Booking cancelled. No refund (under 4 hours to show). Seats released.";
+  }
+
+  // ── Release seats + update booking in DB ───────────────────────────────────
   await prisma.$transaction([
     prisma.showSeat.updateMany({
       where: { pendingBookingId: bookingId },
@@ -184,9 +195,32 @@ export const cancelBooking = asyncHandler(async (req, res) => {
     }),
     prisma.booking.update({
       where: { id: bookingId },
-      data: { status: "CANCELLED" },
+      data: {
+        status: "CANCELLED",
+        cancelledAt: new Date(),
+        refundAmount,
+      },
     }),
   ]);
 
-  res.json({ success: true, message: "Pending booking cancelled and seats released." });
+  // ── Stripe refund (CARD only, only if refundAmount > 0) ────────────────────
+  if (booking.paymentType === "CARD" && booking.paymentId && refundAmount > 0) {
+    try {
+      await processRefund({
+        bookingId,
+        refundAmount,
+        paymentId: booking.paymentId,
+      });
+    } catch (err) {
+      // DB is already updated — log but don't fail the response
+      logger.error(`Stripe refund failed for booking ${bookingId}: ${err.message}`);
+      return res.json({
+        success: true,
+        message: `${message} (Note: Stripe refund failed — contact support)`,
+        refundAmount,
+      });
+    }
+  }
+
+  return res.json({ success: true, message, refundAmount });
 });
