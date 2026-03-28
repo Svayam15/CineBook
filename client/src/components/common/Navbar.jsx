@@ -71,7 +71,7 @@ const Navbar = () => {
 
       {/* ── Mobile Bottom Tab Bar ── */}
       <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-card border-t border-border">
-        <div className="grid grid-cols-2 h-16 divide-x divide-border">
+        <div className="grid grid-cols-2 h-16">
           <Link
             to="/"
             className={`flex flex-col items-center justify-center gap-1 text-xs transition
