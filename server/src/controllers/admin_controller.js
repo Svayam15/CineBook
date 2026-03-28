@@ -460,6 +460,8 @@ export const getAdminShows = asyncHandler(async (req, res) => {
 // 📊 DASHBOARD STATS
 export const getDashboardStats = asyncHandler(async (req, res) => {
   const now = new Date();
+  const startOfDay = new Date(now);
+  startOfDay.setHours(0, 0, 0, 0);
 
   const [
     totalMovies,
@@ -468,6 +470,8 @@ export const getDashboardStats = asyncHandler(async (req, res) => {
     totalBookings,
     paidBookings,
     allActiveShows,
+    todayBookings,
+    todayPaid,
   ] = await Promise.all([
     prisma.movie.count({ where: { isDeleted: false } }),
     prisma.theatre.count(),
@@ -480,14 +484,18 @@ export const getDashboardStats = asyncHandler(async (req, res) => {
     prisma.show.findMany({
       where: { isActive: true },
       include: { movie: { select: { duration: true } } },
-      select: {
-        startTime: true,
-        movie: { select: { duration: true } },
-      },
+    }),
+    prisma.booking.count({
+      where: { createdAt: { gte: startOfDay } },
+    }),
+    prisma.booking.findMany({
+      where: { status: "PAID", createdAt: { gte: startOfDay } },
+      select: { totalAmount: true },
     }),
   ]);
 
   const totalRevenue = paidBookings.reduce((sum, b) => sum + (b.totalAmount || 0), 0);
+  const todayRevenue = todayPaid.reduce((sum, b) => sum + (b.totalAmount || 0), 0);
 
   const upcomingShows = allActiveShows.filter((s) => new Date(s.startTime) > now).length;
   const ongoingShows = allActiveShows.filter((s) => {
@@ -500,20 +508,6 @@ export const getDashboardStats = asyncHandler(async (req, res) => {
     const end = new Date(start.getTime() + (s.movie?.duration || 0) * 60 * 1000);
     return now >= end;
   }).length;
-
-  // Today's bookings
-  const startOfDay = new Date(now);
-  startOfDay.setHours(0, 0, 0, 0);
-  const todayBookings = await prisma.booking.count({
-    where: { createdAt: { gte: startOfDay } },
-  });
-
-  // Today's revenue
-  const todayPaid = await prisma.booking.findMany({
-    where: { status: "PAID", createdAt: { gte: startOfDay } },
-    select: { totalAmount: true },
-  });
-  const todayRevenue = todayPaid.reduce((sum, b) => sum + (b.totalAmount || 0), 0);
 
   res.json({
     success: true,
