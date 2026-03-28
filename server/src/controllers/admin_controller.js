@@ -255,6 +255,14 @@ export const adminCancelBooking = asyncHandler(async (req, res) => {
     throw error;
   }
 
+  // 🚫 Cannot cancel after show has started
+const showStartTime = new Date(booking.show.startTime);
+if (new Date() >= showStartTime) {
+  const error = new Error("Cannot cancel a booking after the show has started");
+  error.statusCode = 400;
+  throw error;
+}
+
   const cancelledAmount = seatsToCancel.reduce((sum, bs) => sum + bs.seatPrice, 0);
   const refundAmount = cancelledAmount; // Admin always 100%
 

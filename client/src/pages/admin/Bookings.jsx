@@ -198,15 +198,22 @@ const Bookings = () => {
                   )}
                 </div>
 
-                {booking.status === "PAID" && (
-                  <button
-                    onClick={() => setConfirmModal(booking)}
-                    disabled={cancelling === booking.id}
-                    className="flex items-center gap-1.5 text-red-400 hover:text-red-300 border border-red-400/10 hover:border-red-400/30 px-3 py-1.5 rounded-xl text-sm transition disabled:opacity-50 shrink-0"
-                  >
-                    {cancelling === booking.id ? "Cancelling..." : "Cancel"}
-                  </button>
-                )}
+                {booking.status === "PAID" && (() => {
+  const showStarted = new Date() >= new Date(booking.show?.startTime);
+  return showStarted ? (
+    <span className="text-muted text-xs border border-border px-3 py-1.5 rounded-xl shrink-0 opacity-50">
+      Show started
+    </span>
+  ) : (
+    <button
+      onClick={() => setConfirmModal(booking)}
+      disabled={cancelling === booking.id}
+      className="flex items-center gap-1.5 text-red-400 hover:text-red-300 border border-red-400/10 hover:border-red-400/30 px-3 py-1.5 rounded-xl text-sm transition disabled:opacity-50 shrink-0"
+    >
+      {cancelling === booking.id ? "Cancelling..." : "Cancel"}
+    </button>
+
+  )})()}
               </div>
             ))}
           </div>
