@@ -49,14 +49,14 @@ const Bookings = () => {
   const [pagination, setPagination] = useState({});
   const [cancelling, setCancelling] = useState(null);
   const [confirmModal, setConfirmModal] = useState(null);
-  const [userIdFilter, setUserIdFilter] = useState("");
-  const [appliedFilter, setAppliedFilter] = useState("");
+  const [searchInput, setSearchInput] = useState("");
+  const [appliedSearch, setAppliedSearch] = useState("");
 
-  const fetchBookings = useCallback (async (p = 1, uid = appliedFilter) => {
+  const fetchBookings = useCallback(async (p = 1, search = appliedSearch) => {
     setLoading(true);
     try {
       const params = new URLSearchParams({ page: p, limit: 10 });
-      if (uid) params.append("userId", uid);
+      if (search) params.append("search", search);
       const res = await api.get(`/admin/bookings?${params}`);
       setBookings(res.data.bookings);
       setPagination(res.data.pagination);
@@ -65,22 +65,21 @@ const Bookings = () => {
     } finally {
       setLoading(false);
     }
-  },  [appliedFilter]);
+  }, [appliedSearch]);
 
-  useEffect(() => { fetchBookings(page).catch(console.error); }, [page, fetchBookings]);
+  useEffect(() => {
+    fetchBookings(page).catch(console.error);
+  }, [page, fetchBookings]);
 
-  const applyFilter = () => {
-    if (userIdFilter && isNaN(parseInt(userIdFilter))) {
-      return toast.error("User ID must be a number");
-    }
-    setAppliedFilter(userIdFilter);
+  const applySearch = () => {
+    setAppliedSearch(searchInput);
     setPage(1);
-    fetchBookings(1, userIdFilter).catch(console.error);
+    fetchBookings(1, searchInput).catch(console.error);
   };
 
-  const clearFilter = () => {
-    setUserIdFilter("");
-    setAppliedFilter("");
+  const clearSearch = () => {
+    setSearchInput("");
+    setAppliedSearch("");
     setPage(1);
     fetchBookings(1, "").catch(console.error);
   };
@@ -92,7 +91,7 @@ const Bookings = () => {
     try {
       await api.delete(`/admin/bookings/${booking.id}`);
       toast.success("Booking cancelled!");
-      await fetchBookings(page);
+      await fetchBookings(page).catch(console.error);
     } catch (err) {
       toast.error(err?.response?.data?.message || err.message);
     } finally {
@@ -115,33 +114,34 @@ const Bookings = () => {
         <div>
           <h1 className="font-heading text-2xl font-bold text-white">Bookings</h1>
           <p className="text-muted text-sm mt-1">
-            {pagination.total || 0} {appliedFilter ? `bookings for user #${appliedFilter}` : "total bookings"}
+            {pagination.total || 0}{" "}
+            {appliedSearch ? `result(s) for "${appliedSearch}"` : "total bookings"}
           </p>
         </div>
       </div>
 
-      {/* User ID Filter */}
-      <div className="flex gap-2 mb-6">
-        <div className="relative flex-1 max-w-xs">
+      {/* Smart Search */}
+      <div className="flex gap-2 mb-2">
+        <div className="relative flex-1 max-w-sm">
           <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted" />
           <input
-            type="number"
-            placeholder="Filter by User ID..."
-            value={userIdFilter}
-            onChange={(e) => setUserIdFilter(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && applyFilter()}
+            type="text"
+            placeholder="Search by booking ID, user ID, @username, or email..."
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && applySearch()}
             className="w-full bg-dark border border-border text-white rounded-xl pl-9 pr-4 py-2.5 outline-none focus:border-primary text-sm placeholder:text-muted"
           />
         </div>
         <button
-          onClick={applyFilter}
+          onClick={applySearch}
           className="bg-primary hover:bg-primary-dark text-white px-4 py-2.5 rounded-xl text-sm font-medium transition"
         >
-          Filter
+          Search
         </button>
-        {appliedFilter && (
+        {appliedSearch && (
           <button
-            onClick={clearFilter}
+            onClick={clearSearch}
             className="flex items-center gap-1.5 border border-border text-muted hover:text-white px-4 py-2.5 rounded-xl text-sm transition"
           >
             <X size={14} />
@@ -149,6 +149,11 @@ const Bookings = () => {
           </button>
         )}
       </div>
+
+      {/* Search hint */}
+      <p className="text-muted text-xs mb-5">
+        Tip: Use a number for booking/user ID, <span className="text-primary">@username</span> for username, or type an email address.
+      </p>
 
       {/* List */}
       {loading ? (
@@ -161,61 +166,65 @@ const Bookings = () => {
         <div className="text-center py-16">
           <BookOpen size={40} className="text-muted mx-auto mb-3" />
           <p className="text-muted text-sm">
-            {appliedFilter ? `No bookings found for user #${appliedFilter}` : "No bookings found"}
+            {appliedSearch ? `No bookings found for "${appliedSearch}"` : "No bookings found"}
           </p>
         </div>
       ) : (
         <>
           <div className="space-y-3">
-            {bookings.map((booking) => (
-              <div
-                key={booking.id}
-                className="bg-card border border-border rounded-2xl px-5 py-4 flex items-center justify-between gap-4"
-              >
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <p className="text-white font-medium text-sm">
-                      #{booking.id} — {booking.user?.name} {booking.user?.surname}
+            {bookings.map((booking) => {
+              const showStarted = new Date() >= new Date(booking.show?.startTime);
+              return (
+                <div
+                  key={booking.id}
+                  className="bg-card border border-border rounded-2xl px-5 py-4 flex items-center justify-between gap-4"
+                >
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <p className="text-white font-medium text-sm">
+                        #{booking.id} — {booking.user?.name} {booking.user?.surname}
+                      </p>
+                      <span className="text-muted text-xs">
+                        @{booking.user?.username} · ID: {booking.user?.id}
+                      </span>
+                      <span className={`text-xs px-2 py-0.5 rounded-full ${statusColors[booking.status]}`}>
+                        {booking.status}
+                      </span>
+                      <span className={`text-xs px-2 py-0.5 rounded-full ${paymentColors[booking.paymentType]}`}>
+                        {booking.paymentType}
+                      </span>
+                    </div>
+                    <p className="text-muted text-xs sm:text-sm mt-1 truncate">
+                      {booking.show?.movie?.title} &nbsp;·&nbsp;
+                      {booking.show?.theatre?.name} &nbsp;·&nbsp;
+                      {booking.seats?.length} seat{booking.seats?.length !== 1 ? "s" : ""} &nbsp;·&nbsp;
+                      ₹{booking.totalAmount ?? "—"}
                     </p>
-                    <span className="text-muted text-xs">@{booking.user?.username}</span>
-                    <span className={`text-xs px-2 py-0.5 rounded-full ${statusColors[booking.status]}`}>
-                      {booking.status}
-                    </span>
-                    <span className={`text-xs px-2 py-0.5 rounded-full ${paymentColors[booking.paymentType]}`}>
-                      {booking.paymentType}
-                    </span>
+                    {booking.refundAmount > 0 && (
+                      <p className="text-golden text-xs mt-0.5">
+                        Refunded: ₹{booking.refundAmount}
+                      </p>
+                    )}
                   </div>
-                  <p className="text-muted text-xs sm:text-sm mt-1 truncate">
-                    {booking.show?.movie?.title} &nbsp;·&nbsp;
-                    {booking.show?.theatre?.name} &nbsp;·&nbsp;
-                    {booking.seats?.length} seat{booking.seats?.length !== 1 ? "s" : ""} &nbsp;·&nbsp;
-                    ₹{booking.totalAmount ?? "—"}
-                  </p>
-                  {booking.refundAmount > 0 && (
-                    <p className="text-golden text-xs mt-0.5">
-                      Refunded: ₹{booking.refundAmount}
-                    </p>
+
+                  {booking.status === "PAID" && (
+                    showStarted ? (
+                      <span className="text-muted text-xs border border-border px-3 py-1.5 rounded-xl shrink-0 opacity-50">
+                        Show started
+                      </span>
+                    ) : (
+                      <button
+                        onClick={() => setConfirmModal(booking)}
+                        disabled={cancelling === booking.id}
+                        className="flex items-center gap-1.5 text-red-400 hover:text-red-300 border border-red-400/10 hover:border-red-400/30 px-3 py-1.5 rounded-xl text-sm transition disabled:opacity-50 shrink-0"
+                      >
+                        {cancelling === booking.id ? "Cancelling..." : "Cancel"}
+                      </button>
+                    )
                   )}
                 </div>
-
-                {booking.status === "PAID" && (() => {
-  const showStarted = new Date() >= new Date(booking.show?.startTime);
-  return showStarted ? (
-    <span className="text-muted text-xs border border-border px-3 py-1.5 rounded-xl shrink-0 opacity-50">
-      Show started
-    </span>
-  ) : (
-    <button
-      onClick={() => setConfirmModal(booking)}
-      disabled={cancelling === booking.id}
-      className="flex items-center gap-1.5 text-red-400 hover:text-red-300 border border-red-400/10 hover:border-red-400/30 px-3 py-1.5 rounded-xl text-sm transition disabled:opacity-50 shrink-0"
-    >
-      {cancelling === booking.id ? "Cancelling..." : "Cancel"}
-    </button>
-
-  )})()}
-              </div>
-            ))}
+              );
+            })}
           </div>
 
           {/* Pagination */}

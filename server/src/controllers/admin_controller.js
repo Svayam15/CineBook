@@ -68,20 +68,46 @@ export const deleteUser = asyncHandler(async (req, res) => {
   res.json({ message: "User deleted successfully" });
 });
 
-// 📋 GET ALL BOOKINGS (with pagination + optional user filter)
+// 📋 GET ALL BOOKINGS (with pagination + smart filter)
 export const getAllBookings = asyncHandler(async (req, res) => {
   const page = parseInt(req.query.page) || 1;
   const limit = parseInt(req.query.limit) || 20;
   const skip = (page - 1) * limit;
-  const userId = req.query.userId ? parseInt(req.query.userId) : undefined;
+  const search = req.query.search?.trim();
 
-  const where = userId ? { userId } : {};
+  let where = {};
+
+  if (search) {
+    const asNumber = parseInt(search);
+    const isNumber = !isNaN(asNumber);
+
+    if (isNumber) {
+      // Could be userId or bookingId
+      where = {
+        OR: [
+          { id: asNumber },
+          { userId: asNumber },
+        ],
+      };
+    } else if (search.includes("@") && search.indexOf("@") > 0) {
+      // Contains @ but not at start — treat as email
+      where = {
+        user: { email: { contains: search, mode: "insensitive" } },
+      };
+    } else {
+      // Treat as username (strip leading @ if present)
+      const username = search.startsWith("@") ? search.slice(1) : search;
+      where = {
+        user: { username: { contains: username, mode: "insensitive" } },
+      };
+    }
+  }
 
   const [bookings, total] = await Promise.all([
     prisma.booking.findMany({
       where,
       include: {
-        user: { select: { id: true, name: true, email: true, username: true,  surname: true, } },
+        user: { select: { id: true, name: true, email: true, username: true, surname: true } },
         show: { include: { movie: true, theatre: true } },
         seats: { include: { showSeat: true } },
       },
@@ -95,10 +121,14 @@ export const getAllBookings = asyncHandler(async (req, res) => {
   res.json({
     success: true,
     bookings,
-    pagination: { total, page, limit, totalPages: Math.ceil(total / limit) },
+    pagination: {
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
+    },
   });
 });
-
 
 // 🎫 ADMIN WINDOW BOOKING
 export const adminCreateBooking = asyncHandler(async (req, res) => {
