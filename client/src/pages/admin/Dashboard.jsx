@@ -1,72 +1,43 @@
 import { useEffect, useState } from "react";
 import AdminLayout from "../../components/admin/AdminLayout";
 import api from "../../api/axios";
-import { Film, Building2, Tv, BookOpen, Users, IndianRupee, Clock, CheckCircle } from "lucide-react";
+import {
+  Film, Building2, Tv, BookOpen, Users, IndianRupee,
+  Clock, CheckCircle, CalendarCheck, TrendingUp,
+} from "lucide-react";
 
-const StatCard = ({ icon, label, value, color }) => {
+const StatCard = ({ icon, label, value, color, sub }) => {
   const Icon = icon;
   return (
     <div className="bg-card border border-border rounded-2xl p-5 flex items-center gap-4">
-      <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${color}`}>
-        <Icon size={22} className="text-white" />
+      <div className={`w-11 h-11 rounded-xl flex items-center justify-center shrink-0 ${color}`}>
+        <Icon size={20} className="text-white" />
       </div>
-      <div>
-        <p className="text-muted text-sm">{label}</p>
-        <p className="text-white text-2xl font-bold font-heading">{value}</p>
+      <div className="min-w-0">
+        <p className="text-muted text-xs sm:text-sm truncate">{label}</p>
+        <p className="text-white text-xl sm:text-2xl font-bold font-heading leading-tight">{value}</p>
+        {sub && <p className="text-muted text-xs mt-0.5">{sub}</p>}
       </div>
     </div>
   );
 };
 
+const SectionLabel = ({ children }) => (
+  <p className="text-muted text-xs font-semibold uppercase tracking-widest mb-3 mt-6">{children}</p>
+);
+
 const Dashboard = () => {
-  const [stats, setStats] = useState({
-    movies: 0,
-    theatres: 0,
-    upcoming: 0,
-    ongoing: 0,
-    completed: 0,
-    bookings: 0,
-    users: 0,
-    revenue: 0,
-  });
+  const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchStats = async () => {
-      try {
-        const [movies, theatres, shows, bookings, users] = await Promise.all([
-          api.get("/movies"),
-          api.get("/theatres"),
-          api.get("/admin/shows?limit=1000"),
-          api.get("/admin/bookings?limit=1000"),
-          api.get("/admin/users?limit=1000"),
-        ]);
-
-        const allShows = shows.data.shows;
-
-        const totalRevenue = bookings.data.bookings
-          .filter((b) => b.status === "PAID")
-          .reduce((sum, b) => sum + (b.totalAmount || 0), 0);
-
-        setStats({
-          movies: movies.data.length,
-          theatres: theatres.data.length,
-          upcoming: allShows.filter((s) => s.status === "UPCOMING").length,
-          ongoing: allShows.filter((s) => s.status === "ONGOING").length,
-          completed: allShows.filter((s) => s.status === "COMPLETED").length,
-          bookings: bookings.data.pagination.total,
-          users: users.data.pagination.total,
-          revenue: totalRevenue,
-        });
-      } catch (err) {
-        console.error(err);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchStats().catch(console.error);
+    api.get("/admin/dashboard")
+      .then((res) => setStats(res.data.stats))
+      .catch(console.error)
+      .finally(() => setLoading(false));
   }, []);
+
+  const fmt = (n) => Number(n || 0).toLocaleString("en-IN");
 
   return (
     <AdminLayout>
@@ -76,22 +47,47 @@ const Dashboard = () => {
       </div>
 
       {loading ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {[...Array(8)].map((_, i) => (
+        <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
+          {[...Array(10)].map((_, i) => (
             <div key={i} className="bg-card border border-border rounded-2xl p-5 h-24 animate-pulse" />
           ))}
         </div>
+      ) : !stats ? (
+        <p className="text-muted text-sm">Failed to load stats.</p>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          <StatCard icon={Film}         label="Total Movies"       value={stats.movies}                                        color="bg-purple-600" />
-          <StatCard icon={Building2}    label="Total Theatres"     value={stats.theatres}                                      color="bg-blue-600" />
-          <StatCard icon={Tv}           label="Upcoming Shows"     value={stats.upcoming}                                      color="bg-green-600" />
-          <StatCard icon={Clock}        label="Ongoing Shows"      value={stats.ongoing}                                       color="bg-yellow-600" />
-          <StatCard icon={CheckCircle}  label="Completed Shows"    value={stats.completed}                                     color="bg-zinc-600" />
-          <StatCard icon={BookOpen}     label="Total Bookings"     value={stats.bookings}                                      color="bg-orange-600" />
-          <StatCard icon={Users}        label="Total Users"        value={stats.users}                                         color="bg-pink-600" />
-          <StatCard icon={IndianRupee}  label="Total Revenue"      value={`₹${stats.revenue.toLocaleString("en-IN")}`}        color="bg-golden" />
-        </div>
+        <>
+          <SectionLabel>Today</SectionLabel>
+          <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
+            <StatCard
+              icon={CalendarCheck}
+              label="Bookings Today"
+              value={fmt(stats.todayBookings)}
+              color="bg-primary"
+            />
+            <StatCard
+              icon={TrendingUp}
+              label="Revenue Today"
+              value={`₹${fmt(stats.todayRevenue)}`}
+              color="bg-green-600"
+            />
+          </div>
+
+          <SectionLabel>Overall</SectionLabel>
+          <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
+            <StatCard icon={Users}        label="Total Users"      value={fmt(stats.totalUsers)}                      color="bg-pink-600" />
+            <StatCard icon={BookOpen}     label="Total Bookings"   value={fmt(stats.totalBookings)}                   color="bg-orange-600" />
+            <StatCard icon={IndianRupee}  label="Total Revenue"    value={`₹${fmt(stats.totalRevenue)}`}             color="bg-yellow-600" />
+            <StatCard icon={Film}         label="Total Movies"     value={fmt(stats.totalMovies)}                     color="bg-purple-600" />
+            <StatCard icon={Building2}    label="Total Theatres"   value={fmt(stats.totalTheatres)}                   color="bg-blue-600" />
+          </div>
+
+          <SectionLabel>Shows</SectionLabel>
+          <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
+            <StatCard icon={Tv}           label="Upcoming"         value={fmt(stats.upcomingShows)}                   color="bg-blue-500" />
+            <StatCard icon={Clock}        label="Ongoing"          value={fmt(stats.ongoingShows)}                    color="bg-green-500" />
+            <StatCard icon={CheckCircle}  label="Completed"        value={fmt(stats.completedShows)}                  color="bg-zinc-500" />
+          </div>
+        </>
       )}
     </AdminLayout>
   );

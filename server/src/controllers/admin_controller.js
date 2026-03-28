@@ -404,21 +404,32 @@ export const adminCancelMovie = asyncHandler(async (req, res) => {
   });
 });
 
-// 🎬 GET ALL SHOWS (ADMIN) — with computed status + pagination + filter
+// 🎬 GET ALL SHOWS (ADMIN) — fixed pagination + status filter
 export const getAdminShows = asyncHandler(async (req, res) => {
   const page = parseInt(req.query.page) || 1;
   const limit = parseInt(req.query.limit) || 20;
   const skip = (page - 1) * limit;
   const statusFilter = req.query.status?.toUpperCase();
 
-  const shows = await prisma.show.findMany({
-    include: { movie: true, theatre: true },
-    orderBy: { startTime: "asc" },
-    skip,
-    take: limit,
-  });
-
   const now = new Date();
+
+  const whereClause =
+    statusFilter === "UPCOMING"
+      ? { startTime: { gt: now } }
+      : statusFilter === "COMPLETED"
+      ? { startTime: { lt: now } }
+      : {};
+
+  const [shows, total] = await Promise.all([
+    prisma.show.findMany({
+      where: whereClause,
+      include: { movie: true, theatre: true },
+      orderBy: { startTime: "asc" },
+      skip,
+      take: limit,
+    }),
+    prisma.show.count({ where: whereClause }),
+  ]);
 
   const getStatus = (show) => {
     const start = new Date(show.startTime);
@@ -428,16 +439,11 @@ export const getAdminShows = asyncHandler(async (req, res) => {
     return "COMPLETED";
   };
 
-  let enriched = shows.map((show) => ({
-    ...show,
-    status: getStatus(show),
-  }));
+  let enriched = shows.map((show) => ({ ...show, status: getStatus(show) }));
 
-  if (statusFilter && ["UPCOMING", "ONGOING", "COMPLETED"].includes(statusFilter)) {
-    enriched = enriched.filter((s) => s.status === statusFilter);
+  if (statusFilter === "ONGOING") {
+    enriched = enriched.filter((s) => s.status === "ONGOING");
   }
-
-  const total = await prisma.show.count();
 
   res.json({
     success: true,
@@ -447,6 +453,81 @@ export const getAdminShows = asyncHandler(async (req, res) => {
       page,
       limit,
       totalPages: Math.ceil(total / limit),
+    },
+  });
+});
+
+// 📊 DASHBOARD STATS
+export const getDashboardStats = asyncHandler(async (req, res) => {
+  const now = new Date();
+
+  const [
+    totalMovies,
+    totalTheatres,
+    totalUsers,
+    totalBookings,
+    paidBookings,
+    allActiveShows,
+  ] = await Promise.all([
+    prisma.movie.count({ where: { isDeleted: false } }),
+    prisma.theatre.count(),
+    prisma.user.count({ where: { role: "USER" } }),
+    prisma.booking.count(),
+    prisma.booking.findMany({
+      where: { status: "PAID" },
+      select: { totalAmount: true },
+    }),
+    prisma.show.findMany({
+      where: { isActive: true },
+      include: { movie: { select: { duration: true } } },
+      select: {
+        startTime: true,
+        movie: { select: { duration: true } },
+      },
+    }),
+  ]);
+
+  const totalRevenue = paidBookings.reduce((sum, b) => sum + (b.totalAmount || 0), 0);
+
+  const upcomingShows = allActiveShows.filter((s) => new Date(s.startTime) > now).length;
+  const ongoingShows = allActiveShows.filter((s) => {
+    const start = new Date(s.startTime);
+    const end = new Date(start.getTime() + (s.movie?.duration || 0) * 60 * 1000);
+    return now >= start && now < end;
+  }).length;
+  const completedShows = allActiveShows.filter((s) => {
+    const start = new Date(s.startTime);
+    const end = new Date(start.getTime() + (s.movie?.duration || 0) * 60 * 1000);
+    return now >= end;
+  }).length;
+
+  // Today's bookings
+  const startOfDay = new Date(now);
+  startOfDay.setHours(0, 0, 0, 0);
+  const todayBookings = await prisma.booking.count({
+    where: { createdAt: { gte: startOfDay } },
+  });
+
+  // Today's revenue
+  const todayPaid = await prisma.booking.findMany({
+    where: { status: "PAID", createdAt: { gte: startOfDay } },
+    select: { totalAmount: true },
+  });
+  const todayRevenue = todayPaid.reduce((sum, b) => sum + (b.totalAmount || 0), 0);
+
+  res.json({
+    success: true,
+    stats: {
+      totalMovies,
+      totalTheatres,
+      totalUsers,
+      totalBookings,
+      totalRevenue,
+      upcomingShows,
+      ongoingShows,
+      completedShows,
+      todayBookings,
+      todayRevenue,
     },
   });
 });
