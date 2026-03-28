@@ -52,11 +52,11 @@ const Navbar = () => {
             </Link>
           </nav>
 
-          {/* User Menu */}
+          {/* User + Logout (top bar, all screen sizes) */}
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-2 text-sm text-muted">
               <User size={15} />
-              <span className="hidden sm:block text-sm">{user?.name}</span>
+              <span className="hidden sm:block">{user?.name}</span>
             </div>
             <button
               onClick={handleLogout}
@@ -71,7 +71,7 @@ const Navbar = () => {
 
       {/* ── Mobile Bottom Tab Bar ── */}
       <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-card border-t border-border">
-        <div className="grid grid-cols-3 h-16">
+        <div className="grid grid-cols-2 h-16">
           <Link
             to="/"
             className={`flex flex-col items-center justify-center gap-1 text-xs transition
@@ -88,18 +88,8 @@ const Navbar = () => {
             <Ticket size={20} />
             <span>My Bookings</span>
           </Link>
-          <button
-            onClick={handleLogout}
-            className="flex flex-col items-center justify-center gap-1 text-xs text-muted hover:text-red-400 transition"
-          >
-            <LogOut size={20} />
-            <span>Logout</span>
-          </button>
         </div>
       </nav>
-
-      {/* Spacer so content isn't hidden behind bottom bar on mobile */}
-      <div className="md:hidden h-16" />
     </>
   );
 };

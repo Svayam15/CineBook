@@ -51,7 +51,7 @@ const Home = () => {
     ).length;
 
   return (
-    <div className="min-h-screen bg-dark">
+    <div className="min-h-screen bg-dark pb-20 md:pb-0">
       <Navbar />
 
       {/* Hero */}
