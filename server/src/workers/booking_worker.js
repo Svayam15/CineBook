@@ -7,24 +7,44 @@ import { SEAT_STATUS, BOOKING_STATUS } from "../utils/constants.js";
 const worker = new Worker(
   "bookingQueue",
   async (job) => {
-    const { userId, showId, seatIds, paymentType, isWindowBooking } = job.data;
+    const {
+      userId,
+      showId,
+      seatIds,
+      paymentType,
+      isWindowBooking,
+      totalAmount,      // ✅ pre-calculated in booking_service
+      seats,            // ✅ pre-fetched in booking_service
+      regularPrice,     // ✅ pre-fetched in booking_service
+      goldenPrice,      // ✅ pre-fetched in booking_service
+    } = job.data;
 
     return prisma.$transaction(async (tx) => {
-      const show = await tx.show.findUnique({ where: { id: showId } });
-      if (!show) throw new Error("Show not found");
-      if (!show.isActive) throw new Error("This show has been cancelled");
 
-      const seats = await tx.showSeat.findMany({
-        where: { id: { in: seatIds }, showId },
+      // ✅ REMOVED: show fetch — already validated in booking_service
+      // ✅ REMOVED: seats fetch — already passed in job.data
+      // ✅ REMOVED: totalAmount calculation — already done in booking_service
+      // Worker now starts directly at the critical section
+
+      // ✅ Step 1 — atomically lock all seats in ONE query
+      // This is the core concurrency check
+      const lockedSeats = await tx.showSeat.updateMany({
+        where: {
+          id: { in: seatIds },
+          status: SEAT_STATUS.AVAILABLE, // ✅ only locks if still available
+        },
+        data: {
+          status: SEAT_STATUS.LOCKED,
+          lockedAt: new Date(),
+        },
       });
 
-      if (seats.length !== seatIds.length) throw new Error("Some seats not found");
+      // ✅ Step 2 — if any seat was taken by someone else, abort immediately
+      if (lockedSeats.count !== seatIds.length) {
+        throw new Error("Seats just got booked by someone else");
+      }
 
-      const totalAmount = seats.reduce((sum, seat) => {
-        if (seat.type === "GOLDEN") return sum + (show.goldenPrice || 0);
-        return sum + show.regularPrice;
-      }, 0);
-
+      // ✅ Step 3 — create booking record
       const booking = await tx.booking.create({
         data: {
           userId,
@@ -35,32 +55,30 @@ const worker = new Worker(
         },
       });
 
-      const lockedSeats = await tx.showSeat.updateMany({
-        where: { id: { in: seatIds }, status: SEAT_STATUS.AVAILABLE },
-        data: {
-          status: SEAT_STATUS.LOCKED,
-          lockedAt: new Date(),
-          pendingBookingId: booking.id,
-        },
+      // ✅ Step 4 — attach booking id to locked seats
+      await tx.showSeat.updateMany({
+        where: { id: { in: seatIds }, status: SEAT_STATUS.LOCKED },
+        data: { pendingBookingId: booking.id },
       });
 
-      if (lockedSeats.count !== seatIds.length) {
-        await tx.booking.delete({ where: { id: booking.id } });
-        throw new Error("Seats just got booked by someone else");
-      }
-
+      // ✅ Step 5 — CASH or window booking: mark as PAID immediately, skip Stripe
       if (paymentType === "CASH" || isWindowBooking) {
         await tx.showSeat.updateMany({
           where: { pendingBookingId: booking.id },
-          data: { status: SEAT_STATUS.BOOKED, lockedAt: null, pendingBookingId: null },
+          data: {
+            status: SEAT_STATUS.BOOKED,
+            lockedAt: null,
+            pendingBookingId: null,
+          },
         });
 
+        // ✅ Use pre-fetched seats for bookingSeat creation — correct types + prices
         await tx.bookingSeat.createMany({
           data: seats.map((seat) => ({
             bookingId: booking.id,
             showSeatId: seat.id,
             seatType: seat.type,
-            seatPrice: seat.type === "GOLDEN" ? (show.goldenPrice || 0) : show.regularPrice,
+            seatPrice: seat.type === "GOLDEN" ? (goldenPrice || 0) : regularPrice,
           })),
         });
 
@@ -72,15 +90,16 @@ const worker = new Worker(
         return { ...booking, status: "PAID", totalAmount };
       }
 
+      // ✅ Step 5 (CARD) — return PENDING, frontend will handle Stripe
       return { ...booking, totalAmount };
     });
   },
   {
-  connection,
-  lockDuration: 30000,
-  lockRenewTime: 15000,
-  drainDelay: 300,
-}
+    connection,
+    lockDuration: 30000,
+    lockRenewTime: 15000,
+    drainDelay: 300,
+  }
 );
 
 worker.on("completed", (job) => {

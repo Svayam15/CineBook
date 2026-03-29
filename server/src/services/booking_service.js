@@ -47,14 +47,35 @@ export const releaseExpiredLocks = async () => {
 
 // 🎟️ CREATE BOOKING
 export const createBooking = async ({ userId, showId, seatIds, paymentType }) => {
-  const show = await prisma.show.findUnique({
-    where: { id: showId },
-    select: { startTime: true },
-  });
 
+  // ✅ Fetch show + seats + validate everything BEFORE queuing
+  // This saves 2 DB queries inside the worker transaction
+  const [show, seats] = await Promise.all([
+    prisma.show.findUnique({
+      where: { id: showId },
+      select: {
+        startTime: true,
+        isActive: true,
+        regularPrice: true,
+        goldenPrice: true,
+      },
+    }),
+    prisma.showSeat.findMany({
+      where: { id: { in: seatIds }, showId },
+      select: { id: true, type: true, status: true },
+    }),
+  ]);
+
+  // ✅ All validations done here — worker doesn't need to repeat them
   if (!show) {
     const error = new Error("Show not found");
     error.statusCode = 404;
+    throw error;
+  }
+
+  if (!show.isActive) {
+    const error = new Error("This show has been cancelled");
+    error.statusCode = 400;
     throw error;
   }
 
@@ -64,17 +85,45 @@ export const createBooking = async ({ userId, showId, seatIds, paymentType }) =>
     throw error;
   }
 
-  // ✅ Unique jobId — prevents silent BullMQ deduplication
+  if (seats.length !== seatIds.length) {
+    const error = new Error("Some seats not found");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  // ✅ Early availability check — fail fast before even queuing
+  const unavailableSeats = seats.filter((s) => s.status !== "AVAILABLE");
+  if (unavailableSeats.length > 0) {
+    const error = new Error("Some seats are no longer available");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  // ✅ Pre-calculate totalAmount — worker doesn't need to do this
+  const totalAmount = seats.reduce((sum, seat) => {
+    if (seat.type === "GOLDEN") return sum + (show.goldenPrice || 0);
+    return sum + show.regularPrice;
+  }, 0);
+
   const jobId = `booking-${userId}-${showId}-${Date.now()}`;
 
   const job = await bookingQueue.add(
     "bookSeats",
-    { userId, showId, seatIds, paymentType },
+    {
+      userId,
+      showId,
+      seatIds,
+      paymentType,
+      totalAmount,          // ✅ pre-calculated
+      seats,                // ✅ pre-fetched — includes type for bookingSeat
+      regularPrice: show.regularPrice,  // ✅ pre-fetched
+      goldenPrice: show.goldenPrice,    // ✅ pre-fetched
+    },
     {
       jobId,
       attempts: 1,
-      removeOnComplete: { age: 3600 }, // ✅ keep for 1 hour — enough for any SSE/REST poll
-      removeOnFail: { age: 3600 },     // ✅ keep failed jobs for 1 hour too
+      removeOnComplete: { age: 3600 },
+      removeOnFail: { age: 3600 },
     }
   );
 

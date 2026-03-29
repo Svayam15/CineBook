@@ -82,7 +82,6 @@ export const getAllBookings = asyncHandler(async (req, res) => {
     const isNumber = !isNaN(asNumber);
 
     if (isNumber) {
-      // Could be userId or bookingId
       where = {
         OR: [
           { id: asNumber },
@@ -90,12 +89,10 @@ export const getAllBookings = asyncHandler(async (req, res) => {
         ],
       };
     } else if (search.includes("@") && search.indexOf("@") > 0) {
-      // Contains @ but not at start — treat as email
       where = {
         user: { email: { contains: search, mode: "insensitive" } },
       };
     } else {
-      // Treat as username (strip leading @ if present)
       const username = search.startsWith("@") ? search.slice(1) : search;
       where = {
         user: { username: { contains: username, mode: "insensitive" } },
@@ -130,7 +127,7 @@ export const getAllBookings = asyncHandler(async (req, res) => {
   });
 });
 
-// 🎫 ADMIN WINDOW BOOKING
+// 🎫 ADMIN WINDOW BOOKING — updated to match new worker pattern
 export const adminCreateBooking = asyncHandler(async (req, res) => {
   const adminId = req.user.userId;
   const { showId, seatIds, paymentType } = req.body;
@@ -147,7 +144,22 @@ export const adminCreateBooking = asyncHandler(async (req, res) => {
     throw error;
   }
 
-  const show = await prisma.show.findUnique({ where: { id: showId } });
+  // ✅ Fetch show + seats together in parallel — same pattern as booking_service.js
+  const [show, seats] = await Promise.all([
+    prisma.show.findUnique({
+      where: { id: showId },
+      select: {
+        startTime: true,
+        isActive: true,
+        regularPrice: true,
+        goldenPrice: true,
+      },
+    }),
+    prisma.showSeat.findMany({
+      where: { id: { in: seatIds }, showId },
+      select: { id: true, type: true, status: true },
+    }),
+  ]);
 
   if (!show) {
     const error = new Error("Show not found");
@@ -161,10 +173,54 @@ export const adminCreateBooking = asyncHandler(async (req, res) => {
     throw error;
   }
 
+  if (new Date(show.startTime) <= new Date()) {
+    const error = new Error("Show has already started. Booking is not allowed.");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  if (seats.length !== seatIds.length) {
+    const error = new Error("Some seats not found");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  // ✅ Early availability check — fail fast before queuing
+  const unavailableSeats = seats.filter((s) => s.status !== "AVAILABLE");
+  if (unavailableSeats.length > 0) {
+    const error = new Error("Some seats are no longer available");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  // ✅ Pre-calculate totalAmount
+  const totalAmount = seats.reduce((sum, seat) => {
+    if (seat.type === "GOLDEN") return sum + (show.goldenPrice || 0);
+    return sum + show.regularPrice;
+  }, 0);
+
+  // ✅ Unique jobId — same pattern as booking_service.js
+  const jobId = `booking-${adminId}-${showId}-${Date.now()}`;
+
   const job = await bookingQueue.add(
     "bookSeats",
-    { userId: adminId, showId, seatIds, paymentType, isWindowBooking: true },
-    { attempts: 3, backoff: { type: "exponential", delay: 2000 } }
+    {
+      userId: adminId,
+      showId,
+      seatIds,
+      paymentType,
+      isWindowBooking: true,
+      totalAmount,            // ✅ pre-calculated
+      seats,                  // ✅ pre-fetched
+      regularPrice: show.regularPrice,  // ✅ pre-fetched
+      goldenPrice: show.goldenPrice,    // ✅ pre-fetched
+    },
+    {
+      jobId,
+      attempts: 1,
+      removeOnComplete: { age: 3600 },
+      removeOnFail: { age: 3600 },
+    }
   );
 
   logger.info(`Admin window booking queued: job ${job.id}`);
@@ -206,7 +262,6 @@ export const adminCancelShow = asyncHandler(async (req, res) => {
     throw error;
   }
 
-  // 🚫 Cannot cancel a show that has already started
   if (new Date(show.startTime) <= new Date()) {
     const error = new Error("Cannot cancel a show that has already started or ended");
     error.statusCode = 400;
@@ -285,16 +340,15 @@ export const adminCancelBooking = asyncHandler(async (req, res) => {
     throw error;
   }
 
-  // 🚫 Cannot cancel after show has started
-const showStartTime = new Date(booking.show.startTime);
-if (new Date() >= showStartTime) {
-  const error = new Error("Cannot cancel a booking after the show has started");
-  error.statusCode = 400;
-  throw error;
-}
+  const showStartTime = new Date(booking.show.startTime);
+  if (new Date() >= showStartTime) {
+    const error = new Error("Cannot cancel a booking after the show has started");
+    error.statusCode = 400;
+    throw error;
+  }
 
   const cancelledAmount = seatsToCancel.reduce((sum, bs) => sum + bs.seatPrice, 0);
-  const refundAmount = cancelledAmount; // Admin always 100%
+  const refundAmount = cancelledAmount;
 
   if (booking.paymentType === "CARD" && booking.paymentId) {
     await processRefund({ bookingId: booking.id, refundAmount, paymentId: booking.paymentId });
@@ -372,7 +426,6 @@ export const adminCancelMovie = asyncHandler(async (req, res) => {
     throw error;
   }
 
-  // 🚫 Block if any show is currently ONGOING
   const hasOngoing = movie.shows.some((show) => {
     const start = new Date(show.startTime).getTime();
     const end = start + (show.movie?.duration || 0) * 60 * 1000;
@@ -385,7 +438,6 @@ export const adminCancelMovie = asyncHandler(async (req, res) => {
     throw error;
   }
 
-  // Cancel only FUTURE shows
   const futureShows = movie.shows.filter(
     (s) => new Date(s.startTime) > new Date()
   );
@@ -428,7 +480,6 @@ export const adminCancelMovie = asyncHandler(async (req, res) => {
     }
   }
 
-  // ✅ Soft delete — keeps all booking/show history intact
   await prisma.movie.update({
     where: { id: movieId },
     data: { isDeleted: true },
@@ -442,7 +493,7 @@ export const adminCancelMovie = asyncHandler(async (req, res) => {
   });
 });
 
-// 🎬 GET ALL SHOWS (ADMIN) — fixed pagination + status filter
+// 🎬 GET ALL SHOWS (ADMIN)
 export const getAdminShows = asyncHandler(async (req, res) => {
   const page = parseInt(req.query.page) || 1;
   const limit = parseInt(req.query.limit) || 20;

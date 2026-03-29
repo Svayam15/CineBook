@@ -33,9 +33,9 @@ export const MAX_SEATS_PER_BOOKING = 15;
 
 export const ALLOWED_SEAT_COUNTS = [120, 180, 240, 300];
 
-export const CANCELLATION_HOURS_THRESHOLD = 3; // hours before show
+export const CANCELLATION_HOURS_FULL_REFUND = 24;   // 100% refund threshold
+export const CANCELLATION_HOURS_PARTIAL_REFUND = 4; // 50% refund threshold
 
-export const CANCELLATION_FEE_PERCENT = 10; // 10% fee
 
 export const OTP_TYPE = {
   SIGNUP: "SIGNUP",

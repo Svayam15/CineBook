@@ -2,7 +2,7 @@ import prisma from "../utils/prisma.js";
 import asyncHandler from "../utils/asyncHandler.js";
 import * as bookingService from "../services/booking_service.js";
 import { bookingQueue } from "../queues/booking_queue.js";
-import { MAX_SEATS_PER_BOOKING } from "../utils/constants.js";
+import { MAX_SEATS_PER_BOOKING, CANCELLATION_HOURS_PARTIAL_REFUND, CANCELLATION_HOURS_FULL_REFUND } from "../utils/constants.js";
 import logger from "../config/logger.js";
 import { processRefund } from "../services/refund_service.js";
 
@@ -198,16 +198,16 @@ export const cancelBooking = asyncHandler(async (req, res) => {
   let refundAmount;
   let message;
 
-  if (hoursRemaining >= 24) {
-    refundAmount = booking.totalAmount;
-    message = "Booking cancelled. 100% refund initiated.";
-  } else if (hoursRemaining >= 4) {
-    refundAmount = Math.round((booking.totalAmount || 0) * 0.5 * 100) / 100;
-    message = "Booking cancelled. 50% refund initiated.";
-  } else {
-    refundAmount = 0;
-    message = "Booking cancelled. No refund (under 4 hours to show). Seats released.";
-  }
+  if (hoursRemaining >= CANCELLATION_HOURS_FULL_REFUND) {
+  refundAmount = booking.totalAmount;
+  message = "Booking cancelled. 100% refund initiated.";
+} else if (hoursRemaining >= CANCELLATION_HOURS_PARTIAL_REFUND) {
+  refundAmount = Math.round((booking.totalAmount || 0) * 0.5 * 100) / 100;
+  message = "Booking cancelled. 50% refund initiated.";
+} else {
+  refundAmount = 0;
+  message = "Booking cancelled. No refund (under 4 hours to show). Seats released.";
+}
 
   await prisma.$transaction([
     prisma.showSeat.updateMany({

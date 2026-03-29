@@ -13,6 +13,111 @@ const statusColors = {
   FAILED:    "bg-zinc-500/10 text-zinc-400 border-zinc-500/20",
 };
 
+// ─── Refund Policy Helper ─────────────────────────────────────────────────────
+const getRefundPolicy = (showStartTime) => {
+  const now = new Date();
+  const showTime = new Date(showStartTime);
+  const hoursRemaining = (showTime - now) / (1000 * 60 * 60);
+
+  if (hoursRemaining < 0) return null; // show already started
+  if (hoursRemaining >= 24) return { percent: 100, label: "100% refund", color: "text-green-400" };
+  if (hoursRemaining >= 4)  return { percent: 50,  label: "50% refund",  color: "text-yellow-400" };
+  return { percent: 0, label: "No refund (under 4hrs)", color: "text-red-400" };
+};
+
+// ─── Cancel Confirm Modal ─────────────────────────────────────────────────────
+const CancelModal = ({ booking, onClose, onConfirm, cancelling }) => {
+  const policy = getRefundPolicy(booking.show?.rawStartTime || booking.show?.startTime);
+  const refundAmount = policy
+    ? Math.round((booking.totalAmount || 0) * (policy.percent / 100) * 100) / 100
+    : 0;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm px-4">
+      <div className="bg-card border border-border rounded-2xl w-full max-w-sm shadow-2xl overflow-hidden">
+
+        {/* Header */}
+        <div className="flex items-center justify-between px-5 py-4 border-b border-border">
+          <span className="font-heading font-semibold text-white">Cancel Booking</span>
+          <button onClick={onClose} className="text-muted hover:text-white transition">
+            <X size={18} />
+          </button>
+        </div>
+
+        {/* Body */}
+        <div className="p-5 space-y-4">
+          <p className="text-white text-sm">
+            Are you sure you want to cancel your booking for{" "}
+            <span className="font-semibold text-primary">
+              {booking.show?.movie?.title}
+            </span>?
+          </p>
+
+          {/* Refund Info */}
+          <div className="bg-dark rounded-xl px-4 py-3 space-y-2">
+            <p className="text-muted text-xs font-medium uppercase tracking-wide">
+              Refund Policy
+            </p>
+            {policy ? (
+              <>
+                <div className="flex justify-between items-center">
+                  <span className="text-muted text-sm">Refund</span>
+                  <span className={`text-sm font-semibold ${policy.color}`}>
+                    {policy.label}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-muted text-sm">Amount paid</span>
+                  <span className="text-white text-sm">₹{booking.totalAmount}</span>
+                </div>
+                {policy.percent > 0 && (
+                  <div className="flex justify-between items-center border-t border-border pt-2">
+                    <span className="text-white text-sm font-medium">You will get</span>
+                    <span className="text-green-400 text-sm font-bold">₹{refundAmount}</span>
+                  </div>
+                )}
+                {policy.percent === 0 && (
+                  <p className="text-red-400 text-xs pt-1">
+                    No refund as show starts in under 4 hours.
+                  </p>
+                )}
+                {booking.paymentType === "CASH" && policy.percent > 0 && (
+                  <p className="text-yellow-400 text-xs pt-1">
+                    Cash refund — collect ₹{refundAmount} from the theatre counter.
+                  </p>
+                )}
+              </>
+            ) : (
+              <p className="text-red-400 text-sm">
+                Cannot cancel — show has already started.
+              </p>
+            )}
+          </div>
+
+          {/* Buttons */}
+          <div className="flex gap-3 pt-1">
+            <button
+              onClick={onClose}
+              className="flex-1 py-2.5 rounded-xl border border-border text-muted hover:text-white text-sm transition"
+            >
+              Keep Booking
+            </button>
+            {policy && (
+              <button
+                onClick={onConfirm}
+                disabled={cancelling}
+                className="flex-1 py-2.5 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 text-sm font-medium transition disabled:opacity-50"
+              >
+                {cancelling ? "Cancelling..." : "Yes, Cancel"}
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 // ─── Ticket Modal ─────────────────────────────────────────────────────────────
 const TicketModal = ({ booking, onClose }) => {
   const qrValue = `CINEBOOK-${booking.id}-${booking.show?.id ?? ""}`;
@@ -132,29 +237,65 @@ const MyBookings = () => {
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedTicket, setSelectedTicket] = useState(null);
+  const [cancelTarget, setCancelTarget] = useState(null);   // ✅ booking to cancel
+  const [cancelling, setCancelling] = useState(false);
+
+  const fetchBookings = async () => {
+    try {
+      const res = await api.get("/bookings/my-bookings");
+      setBookings(res.data.bookings);
+    } catch (err) {
+      toast.error(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const fetchBookings = async () => {
-      try {
-        const res = await api.get("/bookings/my-bookings");
-        setBookings(res.data.bookings);
-      } catch (err) {
-        toast.error(err.message);
-      } finally {
-        setLoading(false);
-      }
-    };
     fetchBookings().catch(console.error);
   }, []);
+
+  const handleCancel = async () => {
+    if (!cancelTarget) return;
+    setCancelling(true);
+    try {
+      const res = await api.delete(`/bookings/${cancelTarget.id}`);
+      toast.success(res.data.message);
+      setCancelTarget(null);
+      await fetchBookings(); // ✅ refresh list //here
+    } catch (err) {
+      toast.error(err.response?.data?.message || err.message);
+    } finally {
+      setCancelling(false);
+    }
+  };
+
+  // ✅ Show cancel button only if show hasn't started yet
+  const canCancel = (booking) => {
+    if (booking.status !== "PAID" && booking.status !== "PENDING") return false;
+    const showTime = new Date(booking.show?.rawStartTime || booking.show?.startTime);
+    return showTime > new Date();
+  };
 
   return (
     <div className="min-h-screen bg-dark pb-20 md:pb-0">
       <Navbar />
 
+      {/* Ticket Modal */}
       {selectedTicket && (
         <TicketModal
           booking={selectedTicket}
           onClose={() => setSelectedTicket(null)}
+        />
+      )}
+
+      {/* Cancel Confirm Modal */}
+      {cancelTarget && (
+        <CancelModal
+          booking={cancelTarget}
+          onClose={() => setCancelTarget(null)}
+          onConfirm={handleCancel}
+          cancelling={cancelling}
         />
       )}
 
@@ -200,7 +341,9 @@ const MyBookings = () => {
                     <div className="space-y-1.5">
                       <p className="text-muted text-xs sm:text-sm flex items-center gap-1.5">
                         <MapPin size={12} className="shrink-0" />
-                        <span className="truncate">{booking.show?.theatre?.name}, {booking.show?.theatre?.location}</span>
+                        <span className="truncate">
+                          {booking.show?.theatre?.name}, {booking.show?.theatre?.location}
+                        </span>
                       </p>
                       <p className="text-muted text-xs sm:text-sm flex items-center gap-1.5">
                         <Clock size={12} className="shrink-0" />
@@ -242,6 +385,7 @@ const MyBookings = () => {
                     <p className="text-muted text-xs">{booking.paymentType}</p>
                     <p className="text-muted text-xs">#{booking.id}</p>
 
+                    {/* View Ticket — only for PAID */}
                     {booking.status === "PAID" && (
                       <button
                         onClick={() => setSelectedTicket(booking)}
@@ -249,6 +393,17 @@ const MyBookings = () => {
                       >
                         <QrCode size={13} />
                         View Ticket
+                      </button>
+                    )}
+
+                    {/* ✅ Cancel button — PAID or PENDING, show not started */}
+                    {canCancel(booking) && (
+                      <button
+                        onClick={() => setCancelTarget(booking)}
+                        className="flex items-center gap-1.5 bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 px-3 py-1.5 rounded-xl text-xs font-medium transition"
+                      >
+                        <X size={13} />
+                        Cancel
                       </button>
                     )}
                   </div>
