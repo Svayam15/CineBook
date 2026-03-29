@@ -3,11 +3,8 @@ import { bookingQueue } from "../queues/booking_queue.js";
 import {
   LOCK_EXPIRY_TIME,
   BOOKING_STATUS,
-  CANCELLATION_FEE_PARTIAL,
   CANCELLATION_HOURS_FULL_REFUND,
   CANCELLATION_HOURS_PARTIAL_REFUND,
-  CANCELLATION_FEE_FULL,
-  CANCELLATION_FEE_NONE
 } from "../utils/constants.js";
 import logger from "../config/logger.js";
 
@@ -51,8 +48,7 @@ export const releaseExpiredLocks = async () => {
 // 🎟️ CREATE BOOKING
 export const createBooking = async ({ userId, showId, seatIds, paymentType }) => {
 
-  // ✅ Fetch show + seats + validate everything BEFORE queuing
-  // This saves 2 DB queries inside the worker transaction
+  // ✅ Fetch show + seats together in parallel before queuing
   const [show, seats] = await Promise.all([
     prisma.show.findUnique({
       where: { id: showId },
@@ -69,7 +65,6 @@ export const createBooking = async ({ userId, showId, seatIds, paymentType }) =>
     }),
   ]);
 
-  // ✅ All validations done here — worker doesn't need to repeat them
   if (!show) {
     const error = new Error("Show not found");
     error.statusCode = 404;
@@ -94,7 +89,7 @@ export const createBooking = async ({ userId, showId, seatIds, paymentType }) =>
     throw error;
   }
 
-  // ✅ Early availability check — fail fast before even queuing
+  // ✅ Early availability check — fail fast before queuing
   const unavailableSeats = seats.filter((s) => s.status !== "AVAILABLE");
   if (unavailableSeats.length > 0) {
     const error = new Error("Some seats are no longer available");
@@ -102,7 +97,7 @@ export const createBooking = async ({ userId, showId, seatIds, paymentType }) =>
     throw error;
   }
 
-  // ✅ Pre-calculate totalAmount — worker doesn't need to do this
+  // ✅ Pre-calculate totalAmount
   const totalAmount = seats.reduce((sum, seat) => {
     if (seat.type === "GOLDEN") return sum + (show.goldenPrice || 0);
     return sum + show.regularPrice;
@@ -117,10 +112,10 @@ export const createBooking = async ({ userId, showId, seatIds, paymentType }) =>
       showId,
       seatIds,
       paymentType,
-      totalAmount,          // ✅ pre-calculated
-      seats,                // ✅ pre-fetched — includes type for bookingSeat
-      regularPrice: show.regularPrice,  // ✅ pre-fetched
-      goldenPrice: show.goldenPrice,    // ✅ pre-fetched
+      totalAmount,
+      seats,
+      regularPrice: show.regularPrice,
+      goldenPrice: show.goldenPrice,
     },
     {
       jobId,
@@ -136,22 +131,19 @@ export const createBooking = async ({ userId, showId, seatIds, paymentType }) =>
 
 // 💰 CALCULATE REFUND
 export const calculateRefund = (totalAmount, showStartTime, cancelledByAdmin = false) => {
+  // ✅ Admin always gets 100% refund — no policy applied
   if (cancelledByAdmin) return totalAmount;
 
   const now = new Date();
   const showTime = new Date(showStartTime);
   const hoursRemaining = (showTime - now) / (1000 * 60 * 60);
 
-  // 1. > 24 Hours: Use CANCELLATION_FEE_FULL (100)
+  // ✅ Uses constants — change policy in one place
   if (hoursRemaining >= CANCELLATION_HOURS_FULL_REFUND) {
-    return (totalAmount * CANCELLATION_FEE_FULL) / 100;
+    return totalAmount; // 100%
+  } else if (hoursRemaining >= CANCELLATION_HOURS_PARTIAL_REFUND) {
+    return Math.round(totalAmount * 0.5 * 100) / 100; // 50%
+  } else {
+    return 0; // 0%
   }
-
-  // 2. 4 - 24 Hours: Use CANCELLATION_FEE_PARTIAL (50)
-  if (hoursRemaining >= CANCELLATION_HOURS_PARTIAL_REFUND) {
-    return (totalAmount * CANCELLATION_FEE_PARTIAL) / 100;
-  }
-
-  // 3. < 4 Hours: Use CANCELLATION_FEE_NONE (0)
-  return (totalAmount * CANCELLATION_FEE_NONE) / 100;
 };
