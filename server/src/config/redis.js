@@ -1,16 +1,17 @@
 import "./env.js";
 import Redis from "ioredis";
 
+if (!process.env.REDIS_HOST || !process.env.REDIS_PORT || !process.env.REDIS_PASSWORD) {
+  throw new Error("Redis environment variables are not defined");
+}
+
 const connection = new Redis({
   host: process.env.REDIS_HOST,
   port: parseInt(process.env.REDIS_PORT),
   username: process.env.REDIS_USERNAME || "default",
   password: process.env.REDIS_PASSWORD,
-  tls: {
-    rejectUnauthorized: false,
-    servername: process.env.REDIS_HOST,
-  },
   maxRetriesPerRequest: null,
+  enableReadyCheck: false,
   connectTimeout: 30000,
   commandTimeout: 30000,
   socketTimeout: 30000,
