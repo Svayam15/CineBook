@@ -14,6 +14,20 @@ const statusColors = {
   FAILED:    "bg-zinc-500/10 text-zinc-400 border-zinc-500/20",
 };
 
+// ✅ Format UTC to IST readable string
+const formatIST = (dateStr) => {
+  if (!dateStr) return "";
+  return new Date(dateStr).toLocaleString("en-IN", {
+    timeZone: "Asia/Kolkata",
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+  });
+};
+
 // ─── Refund Policy Helper ─────────────────────────────────────────────────────
 const getRefundPolicy = (showStartTime) => {
   const now = new Date();
@@ -159,7 +173,8 @@ const TicketModal = ({ booking, onClose }) => {
             </div>
             <div className="flex items-center gap-2 text-muted">
               <Clock size={13} className="shrink-0 text-primary" />
-              <span>{booking.show?.startTime}</span>
+              {/* ✅ Fixed: format raw UTC to IST */}
+              <span>{formatIST(booking.show?.rawStartTime || booking.show?.startTime)}</span>
             </div>
             <div className="flex items-center gap-2 text-muted">
               <Calendar size={13} className="shrink-0 text-primary" />
@@ -256,7 +271,7 @@ const MyBookings = () => {
     }
   };
 
-  // ✅ Pay Now — only for PENDING bookings where show hasn't started
+  // ✅ Pay Now — PENDING only, show not started
   const canPayNow = (booking) => {
     if (booking.status !== "PENDING") return false;
     const showTime = new Date(booking.show?.rawStartTime || booking.show?.startTime);
@@ -270,11 +285,11 @@ const MyBookings = () => {
     return showTime > new Date();
   };
 
-  // ✅ Navigate to Payment page with existing bookingId — skips SSE
+  // ✅ Navigate to Payment with existing bookingId — skips SSE entirely
   const handlePayNow = (booking) => {
     navigate("/payment", {
       state: {
-        isRepay: true,                  // ✅ tells Payment.jsx to skip SSE
+        isRepay: true,
         bookingId: booking.id,
         showId: booking.showId,
         selectedSeats: booking.seats,
@@ -352,7 +367,8 @@ const MyBookings = () => {
                       </p>
                       <p className="text-muted text-xs sm:text-sm flex items-center gap-1.5">
                         <Clock size={12} className="shrink-0" />
-                        {booking.show?.startTime}
+                        {/* ✅ Fixed: format raw UTC to IST */}
+                        {formatIST(booking.show?.rawStartTime || booking.show?.startTime)}
                       </p>
                       <p className="text-muted text-xs sm:text-sm flex items-center gap-1.5">
                         <Calendar size={12} className="shrink-0" />

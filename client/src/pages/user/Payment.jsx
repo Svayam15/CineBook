@@ -15,8 +15,22 @@ import Spinner from "../../components/common/Spinner";
 
 const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY);
 
+// ✅ Format UTC to IST readable string
+const formatIST = (dateStr) => {
+  if (!dateStr) return "";
+  return new Date(dateStr).toLocaleString("en-IN", {
+    timeZone: "Asia/Kolkata",
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+  });
+};
+
 // ---------------- PAYMENT FORM ----------------
-const PaymentForm = ({ bookingId, totalAmount, onSuccess }) => {
+const PaymentForm = ({ bookingId, totalAmount, onSuccess, onPaymentStarted }) => {
   const stripe = useStripe();
   const elements = useElements();
   const [processing, setProcessing] = useState(false);
@@ -26,6 +40,8 @@ const PaymentForm = ({ bookingId, totalAmount, onSuccess }) => {
     if (!stripe || !elements || processing) return;
 
     setProcessing(true);
+    onPaymentStarted?.(); // ✅ stop timer immediately when user clicks Pay
+
     try {
       const { error, paymentIntent } = await stripe.confirmPayment({
         elements,
@@ -110,8 +126,8 @@ const Payment = () => {
     selectedSeats,
     totalAmount,
     show,
-    isRepay,        // ✅ flag from MyBookings Pay Now
-    bookingId: repayBookingId, // ✅ existing bookingId from MyBookings
+    isRepay,
+    bookingId: repayBookingId,
   } = location.state || {};
 
   const [clientSecret, setClientSecret] = useState(null);
@@ -119,15 +135,14 @@ const Payment = () => {
   const [expiresAt, setExpiresAt] = useState(null);
   const [timeLeft, setTimeLeft] = useState(null);
   const [loadingIntent, setLoadingIntent] = useState(true);
-  const [bookingReady, setBookingReady] = useState(isRepay || false); // ✅ skip SSE if repay
+  const [bookingReady, setBookingReady] = useState(isRepay || false);
+  const [paymentStarted, setPaymentStarted] = useState(false); // ✅ timer kill switch
 
   useEffect(() => {
-    // ✅ For repay — we already have bookingId, no need for jobId check
     if (!isRepay && (!jobId || !showId)) navigate("/");
   }, [isRepay, jobId, showId, navigate]);
 
   // ---------------- SSE + REST FALLBACK ----------------
-  // ✅ Skip entirely if isRepay — booking already exists
   useEffect(() => {
     if (isRepay || !jobId || bookingReady) return;
 
@@ -194,7 +209,6 @@ const Payment = () => {
         setExpiresAt(res.data.expiresAt);
       } catch (err) {
         toast.error(err.response?.data?.message || err.message);
-        // ✅ If repay and payment intent fails — go to MyBookings not home
         navigate(isRepay ? "/my-bookings" : "/");
       } finally {
         setLoadingIntent(false);
@@ -209,6 +223,12 @@ const Payment = () => {
     if (!expiresAt) return;
 
     const interval = setInterval(() => {
+      // ✅ Stop timer the moment user starts paying — prevents false expired toast
+      if (paymentStarted) {
+        clearInterval(interval);
+        return;
+      }
+
       const left = Math.max(0, Math.floor((new Date(expiresAt) - new Date()) / 1000));
       setTimeLeft(left);
 
@@ -220,7 +240,7 @@ const Payment = () => {
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [expiresAt, navigate, isRepay]);
+  }, [expiresAt, navigate, isRepay, paymentStarted]);
 
   const formatTime = (seconds) => {
     const m = Math.floor(seconds / 60);
@@ -234,7 +254,6 @@ const Payment = () => {
     });
   };
 
-  // ✅ Seat count — handle both fresh booking and repay
   const seatCount = selectedSeats?.length ?? 0;
 
   return (
@@ -254,12 +273,13 @@ const Payment = () => {
           </div>
         )}
 
-        {timeLeft !== null && (
+        {timeLeft !== null && !paymentStarted && (
           <div className={`flex items-center gap-2 mb-6 text-sm font-medium ${timeLeft < 60 ? "text-red-400" : "text-golden"}`}>
             ⏱️ Seats reserved for: {formatTime(timeLeft)}
           </div>
         )}
 
+        {/* Order Summary */}
         <div className="bg-card border border-border rounded-2xl p-5 mb-6">
           <h2 className="font-heading text-lg font-semibold text-white mb-3">Order Summary</h2>
           <div className="space-y-2 text-sm">
@@ -270,6 +290,13 @@ const Payment = () => {
             <div className="flex justify-between">
               <span className="text-muted">Theatre</span>
               <span className="text-white">{show?.theatre?.name}</span>
+            </div>
+            {/* ✅ Fixed: show formatted IST time instead of raw UTC */}
+            <div className="flex justify-between">
+              <span className="text-muted">Show Time</span>
+              <span className="text-white">
+                {formatIST(show?.rawStartTime || show?.startTime)}
+              </span>
             </div>
             <div className="flex justify-between">
               <span className="text-muted">Seats</span>
@@ -282,6 +309,7 @@ const Payment = () => {
           </div>
         </div>
 
+        {/* Payment Form */}
         <div className="bg-card border border-border rounded-2xl p-5">
           <h2 className="font-heading text-lg font-semibold text-white mb-4">Payment Details</h2>
 
@@ -310,6 +338,7 @@ const Payment = () => {
                 bookingId={bookingId}
                 totalAmount={totalAmount}
                 onSuccess={handleSuccess}
+                onPaymentStarted={() => setPaymentStarted(true)} // ✅ kills timer
               />
             </Elements>
           )}
