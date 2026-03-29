@@ -35,7 +35,9 @@ export const ALLOWED_SEAT_COUNTS = [120, 180, 240, 300];
 
 export const CANCELLATION_HOURS_FULL_REFUND = 24;   // 100% refund threshold
 export const CANCELLATION_HOURS_PARTIAL_REFUND = 4; // 50% refund threshold
-
+export const CANCELLATION_FEE_FULL = 100;             // 0% fee above 24hrs
+export const CANCELLATION_FEE_PARTIAL = 50;         // 50% fee between 4-24hrs
+export const CANCELLATION_FEE_NONE = 0;           // 100% fee under 4hrs
 
 export const OTP_TYPE = {
   SIGNUP: "SIGNUP",

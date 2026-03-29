@@ -3,8 +3,11 @@ import { bookingQueue } from "../queues/booking_queue.js";
 import {
   LOCK_EXPIRY_TIME,
   BOOKING_STATUS,
-  CANCELLATION_HOURS_THRESHOLD,
-  CANCELLATION_FEE_PERCENT,
+  CANCELLATION_FEE_PARTIAL,
+  CANCELLATION_HOURS_FULL_REFUND,
+  CANCELLATION_HOURS_PARTIAL_REFUND,
+  CANCELLATION_FEE_FULL,
+  CANCELLATION_FEE_NONE
 } from "../utils/constants.js";
 import logger from "../config/logger.js";
 
@@ -137,12 +140,18 @@ export const calculateRefund = (totalAmount, showStartTime, cancelledByAdmin = f
 
   const now = new Date();
   const showTime = new Date(showStartTime);
-  const hoursBeforeShow = (showTime - now) / (1000 * 60 * 60);
+  const hoursRemaining = (showTime - now) / (1000 * 60 * 60);
 
-  if (hoursBeforeShow > CANCELLATION_HOURS_THRESHOLD) {
-    return totalAmount;
-  } else {
-    const cancellationFee = totalAmount * (CANCELLATION_FEE_PERCENT / 100);
-    return totalAmount - cancellationFee;
+  // 1. > 24 Hours: Use CANCELLATION_FEE_FULL (100)
+  if (hoursRemaining >= CANCELLATION_HOURS_FULL_REFUND) {
+    return (totalAmount * CANCELLATION_FEE_FULL) / 100;
   }
+
+  // 2. 4 - 24 Hours: Use CANCELLATION_FEE_PARTIAL (50)
+  if (hoursRemaining >= CANCELLATION_HOURS_PARTIAL_REFUND) {
+    return (totalAmount * CANCELLATION_FEE_PARTIAL) / 100;
+  }
+
+  // 3. < 4 Hours: Use CANCELLATION_FEE_NONE (0)
+  return (totalAmount * CANCELLATION_FEE_NONE) / 100;
 };
