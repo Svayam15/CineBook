@@ -12,14 +12,18 @@ const connection = new Redis({
   password: process.env.REDIS_PASSWORD,
   maxRetriesPerRequest: null,
   enableReadyCheck: false,
-  connectTimeout: 30000,
-  commandTimeout: 30000,
-  socketTimeout: 30000,
-  keepAlive: 10000,
-  family: 0,
+  connectTimeout: 10000,
+  commandTimeout: 10000,
+  keepAlive: 30000,        // send keepalive every 30s to prevent socket from going stale
+  family: 4,               // force IPv4, more reliable on most cloud providers
   retryStrategy(times) {
-    if (times > 5) return null;
-    return Math.min(times * 500, 3000);
+    if (times > 20) return null;           // give it more attempts before giving up
+    return Math.min(times * 200, 5000);   // exponential backoff, max 5s between retries
+  },
+  reconnectOnError(err) {
+    // force reconnect on these common transient errors
+    const targetErrors = ["READONLY", "ECONNRESET", "ETIMEDOUT", "ECONNREFUSED"];
+    return targetErrors.some((e) => err.message.includes(e));
   },
 });
 
@@ -29,6 +33,10 @@ connection.on("error", (err) => {
 
 connection.on("connect", () => {
   console.log("Redis connected successfully");
+});
+
+connection.on("reconnecting", () => {
+  console.log("Redis reconnecting...");
 });
 
 export default connection;
