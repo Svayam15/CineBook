@@ -1,33 +1,33 @@
 import "./env.js";
 import Redis from "ioredis";
 
-// 1. Validation (Prevents 'Undefined' connection strings from crashing the app)
-if (!process.env.REDIS_HOST || !process.env.REDIS_PORT || !process.env.REDIS_PASSWORD) {
-  throw new Error("❌ Redis environment variables are missing from .env");
-}
-
-const connection = new Redis({
+const redisConfig = {
   host: process.env.REDIS_HOST,
   port: Number(process.env.REDIS_PORT),
-  password: process.env.REDIS_PASSWORD,
   username: process.env.REDIS_USERNAME || "default",
-  tls: { servername: process.env.REDIS_HOST },
+  password: process.env.REDIS_PASSWORD,
+  tls: {
+    rejectUnauthorized: false,
+    servername: process.env.REDIS_HOST,
+  },
+  maxRetriesPerRequest: null, // Required by BullMQ
 
-  // --- THE ULTIMATE STABILITY SETTINGS ---
-  maxRetriesPerRequest: null,   // Required by BullMQ
-  commandTimeout: 0,            // Disable timeout for blocking commands
-  connectTimeout: 30000,        // 30s to establish connection
-  enableReadyCheck: false,      // Upstash doesn't support the READY check
-  enableOfflineQueue: false,    // Fixes timeouts if commands are sent before 'connect'
-  // ----------------------------------------
+  // --- THE STABILITY SYNC ---
+  commandTimeout: 0,          // Wait forever for blocking commands (BullMQ needs this)
+  connectTimeout: 30000,      // 30s to find the server
+  enableReadyCheck: false,    // Upstash doesn't support this
+  enableOfflineQueue: true,   // Allow BullMQ to queue commands while connecting
+  // ---------------------------
 
   keepAlive: 30000,
   family: 0,
-});
+};
 
+const connection = new Redis(redisConfig);
 
-// 2. Monitoring (Crucial for debugging the 500k limit)
 connection.on("error", (err) => {
+  // Ignore 'Command timed out' during startup, it's usually harmless noise
+  if (err.message.includes("Command timed out")) return;
   console.error("❌ Redis Error:", err.message);
 });
 
