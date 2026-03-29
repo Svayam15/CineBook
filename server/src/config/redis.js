@@ -9,21 +9,22 @@ if (!process.env.REDIS_HOST || !process.env.REDIS_PORT || !process.env.REDIS_PAS
 const connection = new Redis({
   host: process.env.REDIS_HOST,
   port: Number(process.env.REDIS_PORT),
-  username: process.env.REDIS_USERNAME || "default",
   password: process.env.REDIS_PASSWORD,
-  tls: {
-    rejectUnauthorized: false,
-    servername: process.env.REDIS_HOST,
-  },
-  // --- MANDATORY FOR BULLMQ ---
-  maxRetriesPerRequest: null,
+  username: process.env.REDIS_USERNAME || "default",
+  tls: { servername: process.env.REDIS_HOST },
 
-  // --- NETWORK STABILITY ---
-  connectTimeout: 30000,
-  commandTimeout: 0,
-  keepAlive: 30000, // 30s is perfect: prevents Render idle-timeouts while saving quota
-  family: 0,        // Supports both IPv4 and IPv6
+  // --- THE ULTIMATE STABILITY SETTINGS ---
+  maxRetriesPerRequest: null,   // Required by BullMQ
+  commandTimeout: 0,            // Disable timeout for blocking commands
+  connectTimeout: 30000,        // 30s to establish connection
+  enableReadyCheck: false,      // Upstash doesn't support the READY check
+  enableOfflineQueue: false,    // Fixes timeouts if commands are sent before 'connect'
+  // ----------------------------------------
+
+  keepAlive: 30000,
+  family: 0,
 });
+
 
 // 2. Monitoring (Crucial for debugging the 500k limit)
 connection.on("error", (err) => {
