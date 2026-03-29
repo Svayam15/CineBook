@@ -77,11 +77,9 @@ const worker = new Worker(
   },
   {
   connection,
-  stalledInterval: 0,
   lockDuration: 30000,
   lockRenewTime: 15000,
   drainDelay: 300,
-  skipStalledCheck: true,
 }
 );
 
