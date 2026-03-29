@@ -76,12 +76,13 @@ const worker = new Worker(
     });
   },
   {
-    connection,
-    stalledInterval: 60000,
-    lockDuration: 60000,
-    lockRenewTime: 30000,
-    drainDelay: 30,
-  }
+  connection,
+  stalledInterval: 0,
+  lockDuration: 30000,
+  lockRenewTime: 15000,
+  drainDelay: 300,
+  skipStalledCheck: true,
+}
 );
 
 worker.on("completed", (job) => {
