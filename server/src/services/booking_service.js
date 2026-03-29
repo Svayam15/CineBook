@@ -64,13 +64,17 @@ export const createBooking = async ({ userId, showId, seatIds, paymentType }) =>
     throw error;
   }
 
+  // ✅ Unique jobId — prevents silent BullMQ deduplication
+  const jobId = `booking-${userId}-${showId}-${Date.now()}`;
+
   const job = await bookingQueue.add(
     "bookSeats",
     { userId, showId, seatIds, paymentType },
     {
+      jobId,
       attempts: 1,
-      removeOnComplete: { age: 300 }, // keep 5 mins
-      removeOnFail: { age: 600 },     // keep 10 mins
+      removeOnComplete: { age: 3600 }, // ✅ keep for 1 hour — enough for any SSE/REST poll
+      removeOnFail: { age: 3600 },     // ✅ keep failed jobs for 1 hour too
     }
   );
 

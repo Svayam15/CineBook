@@ -72,7 +72,7 @@ const PaymentForm = ({ bookingId, totalAmount, onSuccess }) => {
 // ---------------- REST FALLBACK POLL ----------------
 const startRestPoll = ({ jobId, onSuccess, onFail, apiInstance }) => {
   let attempts = 0;
-  const maxAttempts = 20; // 40 seconds total
+  const maxAttempts = 30; // ✅ 60 seconds total at 2s interval
 
   const poll = setInterval(async () => {
     attempts++;
@@ -133,7 +133,6 @@ const Payment = () => {
       navigate("/");
     };
 
-    // Try SSE first
     const eventSource = new EventSource(
       `${import.meta.env.VITE_API_URL}/bookings/status/${jobId}`,
       { withCredentials: true }
@@ -152,25 +151,22 @@ const Payment = () => {
           if (pollInterval) clearInterval(pollInterval);
           onFail(data.reason || "Booking failed");
         }
-        // for waiting/active states — do nothing, keep listening
       } catch {
         // ignore parse errors
       }
     };
 
-    // SSE error — fall back to REST polling silently
     eventSource.onerror = () => {
       eventSource.close();
       pollInterval = startRestPoll({ jobId, onSuccess, onFail, apiInstance: api });
     };
 
-    // Also start REST polling as a safety net after 5 seconds
-    // in case SSE connects but never fires onmessage
+    // ✅ Increased from 5s to 10s — gives Render worker more time to process
     const safetyTimer = setTimeout(() => {
       if (!bookingReady) {
         pollInterval = startRestPoll({ jobId, onSuccess, onFail, apiInstance: api });
       }
-    }, 5000);
+    }, 10000);
 
     return () => {
       eventSource.close();
@@ -189,7 +185,7 @@ const Payment = () => {
         setClientSecret(res.data.clientSecret);
         setExpiresAt(res.data.expiresAt);
       } catch (err) {
-        toast.error(err.message);
+        toast.error(err.response?.data?.message || err.message);
         navigate("/");
       } finally {
         setLoadingIntent(false);
@@ -232,7 +228,6 @@ const Payment = () => {
   return (
     <div className="min-h-screen bg-dark pb-20 md:pb-0">
       <Navbar />
-
       <div className="max-w-lg mx-auto px-4 sm:px-6 py-8">
         <h1 className="font-heading text-2xl font-bold text-white mb-2">
           Complete Payment
@@ -244,7 +239,6 @@ const Payment = () => {
           </div>
         )}
 
-        {/* Order Summary */}
         <div className="bg-card border border-border rounded-2xl p-5 mb-6">
           <h2 className="font-heading text-lg font-semibold text-white mb-3">Order Summary</h2>
           <div className="space-y-2 text-sm">
@@ -267,7 +261,6 @@ const Payment = () => {
           </div>
         </div>
 
-        {/* Payment Form */}
         <div className="bg-card border border-border rounded-2xl p-5">
           <h2 className="font-heading text-lg font-semibold text-white mb-4">Payment Details</h2>
 

@@ -78,14 +78,12 @@ const WindowBooking = () => {
 
       toast.success("Booking queued!");
 
-      const jobId = res.data.jobId;
-      let attempts = 0;
-      const maxAttempts = 30;
+const jobId = res.data.jobId;
+let attempts = 0;
+const maxAttempts = 60; // ✅ 60 seconds total
 
-      await new Promise((resolve) => setTimeout(resolve, 3000));
-
-      const pollInterval = setInterval(async () => {
-        attempts++;
+const pollInterval = setInterval(async () => {
+  attempts++;
         try {
           const statusRes = await api.get(`/bookings/status-rest/${jobId}`);
           const { status, reason } = statusRes.data;
