@@ -1,31 +1,23 @@
 import "./env.js";
 import Redis from "ioredis";
 
-if (!process.env.REDIS_HOST || !process.env.REDIS_PORT || !process.env.REDIS_PASSWORD) {
-  throw new Error("Redis environment variables are not defined");
+if (!process.env.REDIS_URL) {
+  throw new Error("REDIS_URL environment variable is not defined");
 }
 
-const connection = new Redis({
-  host: process.env.REDIS_HOST,
-  port: parseInt(process.env.REDIS_PORT),
-  username: process.env.REDIS_USERNAME || "default",
-  password: process.env.REDIS_PASSWORD,
-  tls: {
-    rejectUnauthorized: false,
-    servername: process.env.REDIS_HOST,
-  },
+const connection = new Redis(process.env.REDIS_URL, {
   maxRetriesPerRequest: null,
   connectTimeout: 30000,
   commandTimeout: 30000,
   socketTimeout: 30000,
   keepAlive: 10000,
   family: 0,
-  retryStrategy(times) {
-    if (times > 5) return null; // stop retrying after 5 attempts
-    return Math.min(times * 500, 3000);
+  tls: {
+    rejectUnauthorized: false,
   },
-  reconnectOnError(err) {
-    return err.message.includes("READONLY");
+  retryStrategy(times) {
+    if (times > 5) return null;
+    return Math.min(times * 500, 3000);
   },
 });
 
