@@ -16,7 +16,7 @@ const connection = new Redis({
   commandTimeout: 30000,
   socketTimeout: 30000,
   keepAlive: 10000,
-  family: 4,
+  family: 0,
   retryStrategy(times) {
     if (times > 5) return null;
     return Math.min(times * 500, 3000);
