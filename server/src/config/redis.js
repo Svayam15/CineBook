@@ -10,14 +10,18 @@ const redisConfig = {
     rejectUnauthorized: false,
     servername: process.env.REDIS_HOST,
   },
-  maxRetriesPerRequest: null, // Required by BullMQ
+  maxRetriesPerRequest: null,
 
-  // --- THE STABILITY SYNC ---
-  commandTimeout: 0,          // Wait forever for blocking commands (BullMQ needs this)
-  connectTimeout: 30000,      // 30s to find the server
-  enableReadyCheck: false,    // Upstash doesn't support this
-  enableOfflineQueue: true,   // Allow BullMQ to queue commands while connecting
-  // ---------------------------
+  // --- THE SURGICAL FIX ---
+  commandTimeout: 0,           // 0 means no timeout at all
+  connectTimeout: 40000,       // Increase slightly for Singapore TLS handshake
+  enableReadyCheck: false,     // Upstash doesn't like this
+  enableOfflineQueue: true,    // Keep this true now
+
+  // This prevents ioredis from "timing out" the initialization commands
+  offlineQueue: true,
+  autoResubscribe: true,
+  // ------------------------
 
   keepAlive: 30000,
   family: 0,
@@ -25,8 +29,8 @@ const redisConfig = {
 
 const connection = new Redis(redisConfig);
 
+// Silencing the "Command timed out" noise in logs so you can see REAL errors
 connection.on("error", (err) => {
-  // Ignore 'Command timed out' during startup, it's usually harmless noise
   if (err.message.includes("Command timed out")) return;
   console.error("❌ Redis Error:", err.message);
 });
