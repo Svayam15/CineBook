@@ -69,7 +69,11 @@ export const createBooking = async ({ userId, showId, seatIds, paymentType }) =>
   const job = await bookingQueue.add(
     "bookSeats",
     { userId, showId, seatIds, paymentType },
-    { jobId: `${userId}-${showId}-${seatIds.join(",")}` }
+     {
+    attempts: 1,
+    removeOnComplete: { age: 60 },
+    removeOnFail: { age: 300 },
+  }
   );
 
   logger.info(`📥 Booking job queued: ${job.id}`);
