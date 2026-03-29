@@ -72,7 +72,7 @@ const PaymentForm = ({ bookingId, totalAmount, onSuccess }) => {
 // ---------------- REST FALLBACK POLL ----------------
 const startRestPoll = ({ jobId, onSuccess, onFail, apiInstance }) => {
   let attempts = 0;
-  const maxAttempts = 30; // ✅ 60 seconds total at 2s interval
+  const maxAttempts = 30;
 
   const poll = setInterval(async () => {
     attempts++;
@@ -104,22 +104,32 @@ const Payment = () => {
   const location = useLocation();
   const navigate = useNavigate();
 
-  const { jobId, showId, selectedSeats, totalAmount, show } = location.state || {};
+  const {
+    jobId,
+    showId,
+    selectedSeats,
+    totalAmount,
+    show,
+    isRepay,        // ✅ flag from MyBookings Pay Now
+    bookingId: repayBookingId, // ✅ existing bookingId from MyBookings
+  } = location.state || {};
 
   const [clientSecret, setClientSecret] = useState(null);
-  const [bookingId, setBookingId] = useState(null);
+  const [bookingId, setBookingId] = useState(repayBookingId || null);
   const [expiresAt, setExpiresAt] = useState(null);
   const [timeLeft, setTimeLeft] = useState(null);
   const [loadingIntent, setLoadingIntent] = useState(true);
-  const [bookingReady, setBookingReady] = useState(false);
+  const [bookingReady, setBookingReady] = useState(isRepay || false); // ✅ skip SSE if repay
 
   useEffect(() => {
-    if (!jobId || !showId) navigate("/");
-  }, [jobId, showId, navigate]);
+    // ✅ For repay — we already have bookingId, no need for jobId check
+    if (!isRepay && (!jobId || !showId)) navigate("/");
+  }, [isRepay, jobId, showId, navigate]);
 
   // ---------------- SSE + REST FALLBACK ----------------
+  // ✅ Skip entirely if isRepay — booking already exists
   useEffect(() => {
-    if (!jobId || bookingReady) return;
+    if (isRepay || !jobId || bookingReady) return;
 
     let pollInterval = null;
 
@@ -141,7 +151,6 @@ const Payment = () => {
     eventSource.onmessage = (e) => {
       try {
         const data = JSON.parse(e.data);
-
         if (data.status === "success" && data.booking) {
           eventSource.close();
           if (pollInterval) clearInterval(pollInterval);
@@ -161,7 +170,6 @@ const Payment = () => {
       pollInterval = startRestPoll({ jobId, onSuccess, onFail, apiInstance: api });
     };
 
-    // ✅ Increased from 5s to 10s — gives Render worker more time to process
     const safetyTimer = setTimeout(() => {
       if (!bookingReady) {
         pollInterval = startRestPoll({ jobId, onSuccess, onFail, apiInstance: api });
@@ -173,7 +181,7 @@ const Payment = () => {
       if (pollInterval) clearInterval(pollInterval);
       clearTimeout(safetyTimer);
     };
-  }, [jobId, bookingReady, navigate]);
+  }, [isRepay, jobId, bookingReady, navigate]);
 
   // ---------------- CREATE PAYMENT INTENT ----------------
   useEffect(() => {
@@ -186,14 +194,15 @@ const Payment = () => {
         setExpiresAt(res.data.expiresAt);
       } catch (err) {
         toast.error(err.response?.data?.message || err.message);
-        navigate("/");
+        // ✅ If repay and payment intent fails — go to MyBookings not home
+        navigate(isRepay ? "/my-bookings" : "/");
       } finally {
         setLoadingIntent(false);
       }
     };
 
     createIntent().catch(console.error);
-  }, [bookingReady, bookingId, navigate]);
+  }, [bookingReady, bookingId, navigate, isRepay]);
 
   // ---------------- TIMER ----------------
   useEffect(() => {
@@ -206,12 +215,12 @@ const Payment = () => {
       if (left === 0) {
         clearInterval(interval);
         toast.error("Seat reservation expired. Please try again.");
-        navigate("/");
+        navigate(isRepay ? "/my-bookings" : "/");
       }
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [expiresAt, navigate]);
+  }, [expiresAt, navigate, isRepay]);
 
   const formatTime = (seconds) => {
     const m = Math.floor(seconds / 60);
@@ -225,6 +234,9 @@ const Payment = () => {
     });
   };
 
+  // ✅ Seat count — handle both fresh booking and repay
+  const seatCount = selectedSeats?.length ?? 0;
+
   return (
     <div className="min-h-screen bg-dark pb-20 md:pb-0">
       <Navbar />
@@ -232,6 +244,15 @@ const Payment = () => {
         <h1 className="font-heading text-2xl font-bold text-white mb-2">
           Complete Payment
         </h1>
+
+        {/* ✅ Repay notice */}
+        {isRepay && (
+          <div className="mb-4 bg-yellow-500/10 border border-yellow-500/20 rounded-xl px-4 py-3">
+            <p className="text-yellow-400 text-sm">
+              ⚠️ Your previous payment was incomplete. Complete it now to confirm your seats.
+            </p>
+          </div>
+        )}
 
         {timeLeft !== null && (
           <div className={`flex items-center gap-2 mb-6 text-sm font-medium ${timeLeft < 60 ? "text-red-400" : "text-golden"}`}>
@@ -252,7 +273,7 @@ const Payment = () => {
             </div>
             <div className="flex justify-between">
               <span className="text-muted">Seats</span>
-              <span className="text-white">{selectedSeats?.length} seat(s)</span>
+              <span className="text-white">{seatCount} seat(s)</span>
             </div>
             <div className="flex justify-between border-t border-border pt-2 mt-2">
               <span className="text-white font-semibold">Total</span>

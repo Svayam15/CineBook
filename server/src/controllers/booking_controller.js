@@ -5,6 +5,7 @@ import { bookingQueue } from "../queues/booking_queue.js";
 import { MAX_SEATS_PER_BOOKING, CANCELLATION_HOURS_PARTIAL_REFUND, CANCELLATION_HOURS_FULL_REFUND } from "../utils/constants.js";
 import logger from "../config/logger.js";
 import { processRefund } from "../services/refund_service.js";
+import { sendBookingCancelledEmail } from "../services/email_service.js"; // ✅ add this
 
 // 🎟️ CREATE BOOKING
 export const createBooking = asyncHandler(async (req, res) => {
@@ -62,7 +63,6 @@ export const getBookingStatusRest = asyncHandler(async (req, res) => {
 
   const state = await job.getState();
 
-  // ✅ Always return "success" not "completed" so frontend can handle it uniformly
   if (state === "completed") {
     return res.json({ status: "success", booking: job.returnvalue });
   }
@@ -88,8 +88,6 @@ export const getBookingStatus = asyncHandler(async (req, res) => {
       const job = await bookingQueue.getJob(jobId);
 
       if (!job) {
-        // ✅ Job not found — could mean it completed and was cleaned already
-        // Try to find the booking in DB directly
         res.write(`data: ${JSON.stringify({ status: "failed", reason: "Job not found" })}\n\n`);
         clearInterval(interval);
         return res.end();
@@ -97,7 +95,6 @@ export const getBookingStatus = asyncHandler(async (req, res) => {
 
       const state = await job.getState();
 
-      // ✅ Normalize state to "success" so Payment.jsx can handle it
       if (state === "completed") {
         res.write(`data: ${JSON.stringify({ status: "success", booking: job.returnvalue })}\n\n`);
         clearInterval(interval);
@@ -110,7 +107,6 @@ export const getBookingStatus = asyncHandler(async (req, res) => {
         return res.end();
       }
 
-      // still waiting/active — send current state
       res.write(`data: ${JSON.stringify({ status: state })}\n\n`);
 
     } catch (err) {
@@ -148,7 +144,11 @@ export const cancelBooking = asyncHandler(async (req, res) => {
 
   const booking = await prisma.booking.findUnique({
     where: { id: bookingId },
-    include: { show: true },
+    include: {
+      show: { include: { movie: true, theatre: true } }, // ✅ include for email
+      user: true,                                         // ✅ include for email
+      seats: { include: { showSeat: true } },            // ✅ include for email
+    },
   });
 
   if (!booking || booking.userId !== userId) {
@@ -169,7 +169,7 @@ export const cancelBooking = asyncHandler(async (req, res) => {
     throw error;
   }
 
-  // ── PENDING cancel ─────────────────────────────────────────────────────────
+  // ── PENDING cancel ──────────────────────────────────────────────────────────
   if (booking.status === "PENDING") {
     await prisma.$transaction([
       prisma.showSeat.updateMany({
@@ -181,10 +181,23 @@ export const cancelBooking = asyncHandler(async (req, res) => {
         data: { status: "CANCELLED", cancelledAt: new Date() },
       }),
     ]);
-    return res.json({ success: true, message: "Pending booking cancelled and seats released." });
+
+    // ✅ Send cancellation email for PENDING — no refund
+    sendBookingCancelledEmail({
+      user: booking.user,
+      booking,
+      show: booking.show,
+      refundAmount: 0,
+      cancelledSeats: booking.seats.length,
+    }).catch((err) => logger.error(`Cancel email error: ${err.message}`));
+
+    return res.json({
+      success: true,
+      message: "Pending booking cancelled and seats released.",
+    });
   }
 
-  // ── PAID cancel — time-based refund ───────────────────────────────────────
+  // ── PAID cancel — time-based refund ────────────────────────────────────────
   const now = new Date();
   const showTime = new Date(booking.show.startTime);
   const hoursRemaining = (showTime - now) / (1000 * 60 * 60);
@@ -199,15 +212,15 @@ export const cancelBooking = asyncHandler(async (req, res) => {
   let message;
 
   if (hoursRemaining >= CANCELLATION_HOURS_FULL_REFUND) {
-  refundAmount = booking.totalAmount;
-  message = "Booking cancelled. 100% refund initiated.";
-} else if (hoursRemaining >= CANCELLATION_HOURS_PARTIAL_REFUND) {
-  refundAmount = Math.round((booking.totalAmount || 0) * 0.5 * 100) / 100;
-  message = "Booking cancelled. 50% refund initiated.";
-} else {
-  refundAmount = 0;
-  message = "Booking cancelled. No refund (under 4 hours to show). Seats released.";
-}
+    refundAmount = booking.totalAmount;
+    message = "Booking cancelled. 100% refund initiated.";
+  } else if (hoursRemaining >= CANCELLATION_HOURS_PARTIAL_REFUND) {
+    refundAmount = Math.round((booking.totalAmount || 0) * 0.5 * 100) / 100;
+    message = "Booking cancelled. 50% refund initiated.";
+  } else {
+    refundAmount = 0;
+    message = "Booking cancelled. No refund (under 4 hours to show). Seats released.";
+  }
 
   await prisma.$transaction([
     prisma.showSeat.updateMany({
@@ -224,6 +237,7 @@ export const cancelBooking = asyncHandler(async (req, res) => {
     }),
   ]);
 
+  // ✅ Process Stripe refund
   if (booking.paymentType === "CARD" && booking.paymentId && refundAmount > 0) {
     try {
       await processRefund({
@@ -233,6 +247,16 @@ export const cancelBooking = asyncHandler(async (req, res) => {
       });
     } catch (err) {
       logger.error(`Stripe refund failed for booking ${bookingId}: ${err.message}`);
+
+      // ✅ Still send email even if Stripe refund fails
+      sendBookingCancelledEmail({
+        user: booking.user,
+        booking,
+        show: booking.show,
+        refundAmount,
+        cancelledSeats: booking.seats.length,
+      }).catch((e) => logger.error(`Cancel email error: ${e.message}`));
+
       return res.json({
         success: true,
         message: `${message} (Note: Stripe refund failed — contact support)`,
@@ -240,6 +264,15 @@ export const cancelBooking = asyncHandler(async (req, res) => {
       });
     }
   }
+
+  // ✅ Send cancellation email for PAID — with refund details
+  sendBookingCancelledEmail({
+    user: booking.user,
+    booking,
+    show: booking.show,
+    refundAmount,
+    cancelledSeats: booking.seats.length,
+  }).catch((err) => logger.error(`Cancel email error: ${err.message}`));
 
   return res.json({ success: true, message, refundAmount });
 });

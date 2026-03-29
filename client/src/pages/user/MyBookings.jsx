@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import Navbar from "../../components/common/Navbar";
 import api from "../../api/axios";
 import toast from "react-hot-toast";
-import { Ticket, Clock, MapPin, Calendar, X, QrCode } from "lucide-react";
+import { Ticket, Clock, MapPin, Calendar, X, QrCode, CreditCard } from "lucide-react";
 import { formatDate } from "@/utils/formatDate.js";
 import { QRCodeSVG } from "qrcode.react";
 
@@ -19,7 +20,7 @@ const getRefundPolicy = (showStartTime) => {
   const showTime = new Date(showStartTime);
   const hoursRemaining = (showTime - now) / (1000 * 60 * 60);
 
-  if (hoursRemaining < 0) return null; // show already started
+  if (hoursRemaining < 0) return null;
   if (hoursRemaining >= 24) return { percent: 100, label: "100% refund", color: "text-green-400" };
   if (hoursRemaining >= 4)  return { percent: 50,  label: "50% refund",  color: "text-yellow-400" };
   return { percent: 0, label: "No refund (under 4hrs)", color: "text-red-400" };
@@ -35,8 +36,6 @@ const CancelModal = ({ booking, onClose, onConfirm, cancelling }) => {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm px-4">
       <div className="bg-card border border-border rounded-2xl w-full max-w-sm shadow-2xl overflow-hidden">
-
-        {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-border">
           <span className="font-heading font-semibold text-white">Cancel Booking</span>
           <button onClick={onClose} className="text-muted hover:text-white transition">
@@ -44,7 +43,6 @@ const CancelModal = ({ booking, onClose, onConfirm, cancelling }) => {
           </button>
         </div>
 
-        {/* Body */}
         <div className="p-5 space-y-4">
           <p className="text-white text-sm">
             Are you sure you want to cancel your booking for{" "}
@@ -53,7 +51,6 @@ const CancelModal = ({ booking, onClose, onConfirm, cancelling }) => {
             </span>?
           </p>
 
-          {/* Refund Info */}
           <div className="bg-dark rounded-xl px-4 py-3 space-y-2">
             <p className="text-muted text-xs font-medium uppercase tracking-wide">
               Refund Policy
@@ -94,7 +91,6 @@ const CancelModal = ({ booking, onClose, onConfirm, cancelling }) => {
             )}
           </div>
 
-          {/* Buttons */}
           <div className="flex gap-3 pt-1">
             <button
               onClick={onClose}
@@ -125,8 +121,6 @@ const TicketModal = ({ booking, onClose }) => {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm px-4">
       <div className="bg-card border border-border rounded-2xl w-full max-w-sm shadow-2xl overflow-hidden">
-
-        {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-border">
           <div className="flex items-center gap-2">
             <Ticket size={18} className="text-primary" />
@@ -137,10 +131,7 @@ const TicketModal = ({ booking, onClose }) => {
           </button>
         </div>
 
-        {/* Ticket Body */}
         <div className="p-5 space-y-4">
-
-          {/* Movie + Status */}
           <div>
             <h3 className="font-heading text-lg font-bold text-white leading-tight">
               {booking.show?.movie?.title}
@@ -155,14 +146,12 @@ const TicketModal = ({ booking, onClose }) => {
             </div>
           </div>
 
-          {/* Divider with holes */}
           <div className="flex items-center gap-2">
             <div className="w-3 h-3 rounded-full bg-dark border border-border -ml-7" />
             <div className="flex-1 border-t border-dashed border-border" />
             <div className="w-3 h-3 rounded-full bg-dark border border-border -mr-7" />
           </div>
 
-          {/* Details */}
           <div className="space-y-2 text-sm">
             <div className="flex items-start gap-2 text-muted">
               <MapPin size={13} className="mt-0.5 shrink-0 text-primary" />
@@ -178,7 +167,6 @@ const TicketModal = ({ booking, onClose }) => {
             </div>
           </div>
 
-          {/* Seats */}
           <div>
             <p className="text-muted text-xs mb-2">Seats</p>
             <div className="flex flex-wrap gap-1.5">
@@ -197,20 +185,17 @@ const TicketModal = ({ booking, onClose }) => {
             </div>
           </div>
 
-          {/* Amount */}
           <div className="flex justify-between items-center bg-dark rounded-xl px-4 py-3">
             <span className="text-muted text-sm">Total Paid</span>
             <span className="text-white font-bold text-lg">₹{booking.totalAmount}</span>
           </div>
 
-          {/* Divider with holes */}
           <div className="flex items-center gap-2">
             <div className="w-3 h-3 rounded-full bg-dark border border-border -ml-7" />
             <div className="flex-1 border-t border-dashed border-border" />
             <div className="w-3 h-3 rounded-full bg-dark border border-border -mr-7" />
           </div>
 
-          {/* QR Code */}
           <div className="flex flex-col items-center gap-3">
             <div className="bg-white p-3 rounded-2xl">
               <QRCodeSVG
@@ -234,10 +219,11 @@ const TicketModal = ({ booking, onClose }) => {
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 const MyBookings = () => {
+  const navigate = useNavigate();
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedTicket, setSelectedTicket] = useState(null);
-  const [cancelTarget, setCancelTarget] = useState(null);   // ✅ booking to cancel
+  const [cancelTarget, setCancelTarget] = useState(null);
   const [cancelling, setCancelling] = useState(false);
 
   const fetchBookings = async () => {
@@ -262,7 +248,7 @@ const MyBookings = () => {
       const res = await api.delete(`/bookings/${cancelTarget.id}`);
       toast.success(res.data.message);
       setCancelTarget(null);
-      await fetchBookings(); // ✅ refresh list //here
+      await fetchBookings();
     } catch (err) {
       toast.error(err.response?.data?.message || err.message);
     } finally {
@@ -270,18 +256,38 @@ const MyBookings = () => {
     }
   };
 
-  // ✅ Show cancel button only if show hasn't started yet
+  // ✅ Pay Now — only for PENDING bookings where show hasn't started
+  const canPayNow = (booking) => {
+    if (booking.status !== "PENDING") return false;
+    const showTime = new Date(booking.show?.rawStartTime || booking.show?.startTime);
+    return showTime > new Date();
+  };
+
+  // ✅ Cancel — PAID or PENDING, show not started
   const canCancel = (booking) => {
     if (booking.status !== "PAID" && booking.status !== "PENDING") return false;
     const showTime = new Date(booking.show?.rawStartTime || booking.show?.startTime);
     return showTime > new Date();
   };
 
+  // ✅ Navigate to Payment page with existing bookingId — skips SSE
+  const handlePayNow = (booking) => {
+    navigate("/payment", {
+      state: {
+        isRepay: true,                  // ✅ tells Payment.jsx to skip SSE
+        bookingId: booking.id,
+        showId: booking.showId,
+        selectedSeats: booking.seats,
+        totalAmount: booking.totalAmount,
+        show: booking.show,
+      },
+    });
+  };
+
   return (
     <div className="min-h-screen bg-dark pb-20 md:pb-0">
       <Navbar />
 
-      {/* Ticket Modal */}
       {selectedTicket && (
         <TicketModal
           booking={selectedTicket}
@@ -289,7 +295,6 @@ const MyBookings = () => {
         />
       )}
 
-      {/* Cancel Confirm Modal */}
       {cancelTarget && (
         <CancelModal
           booking={cancelTarget}
@@ -385,7 +390,7 @@ const MyBookings = () => {
                     <p className="text-muted text-xs">{booking.paymentType}</p>
                     <p className="text-muted text-xs">#{booking.id}</p>
 
-                    {/* View Ticket — only for PAID */}
+                    {/* View Ticket — PAID only */}
                     {booking.status === "PAID" && (
                       <button
                         onClick={() => setSelectedTicket(booking)}
@@ -396,7 +401,18 @@ const MyBookings = () => {
                       </button>
                     )}
 
-                    {/* ✅ Cancel button — PAID or PENDING, show not started */}
+                    {/* ✅ Pay Now — PENDING only */}
+                    {canPayNow(booking) && (
+                      <button
+                        onClick={() => handlePayNow(booking)}
+                        className="flex items-center gap-1.5 bg-green-500/10 hover:bg-green-500/20 text-green-400 border border-green-500/20 px-3 py-1.5 rounded-xl text-xs font-medium transition"
+                      >
+                        <CreditCard size={13} />
+                        Pay Now
+                      </button>
+                    )}
+
+                    {/* ✅ Cancel — PAID or PENDING, show not started */}
                     {canCancel(booking) && (
                       <button
                         onClick={() => setCancelTarget(booking)}

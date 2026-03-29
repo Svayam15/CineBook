@@ -1,4 +1,5 @@
 import axios from "axios";
+import useAuthStore from "../store/authStore"; // ✅ static import
 
 /// <reference types="vite/client" />
 
@@ -29,10 +30,7 @@ api.interceptors.response.use(
     );
 
     if (error.response?.status === 401 && !isPublicRoute) {
-      const { default: useAuthStore } = await import("../store/authStore");
-      useAuthStore.getState().clearAuth();
-      // Don't hard redirect here — let ProtectedRoute handle it
-      // clearAuth sets isAuthenticated: false, ProtectedRoute will navigate to /login
+      useAuthStore.getState().clearAuth(); // ✅ no await import needed
     }
 
     const data = error.response?.data;

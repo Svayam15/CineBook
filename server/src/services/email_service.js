@@ -47,6 +47,7 @@ export const sendBookingConfirmationEmail = async ({ user, booking, show, seats 
 // ❌ SHOW CANCELLED BY ADMIN
 export const sendShowCancelledEmail = async ({ user, booking, show, refundAmount }) => {
   try {
+
     await resend.emails.send({
       from: FROM_EMAIL,
       to: user.email,
@@ -81,8 +82,19 @@ export const sendShowCancelledEmail = async ({ user, booking, show, refundAmount
 // 🔄 BOOKING CANCELLED BY USER
 export const sendBookingCancelledEmail = async ({ user, booking, show, refundAmount, cancelledSeats }) => {
   try {
-    const hoursBeforeShow = (new Date(show.startTime) - new Date()) / (1000 * 60 * 60);
-    const fullRefund = hoursBeforeShow > 3;
+    const now = new Date();
+    const showTime = new Date(show.startTime);
+    const hoursRemaining = (showTime - now) / (1000 * 60 * 60);
+
+    // ✅ Fixed to match actual refund policy: 24hrs/4hrs tiers
+    let refundPolicyText = "";
+    if (hoursRemaining >= 24) {
+      refundPolicyText = "✅ Full refund applied (cancelled more than 24 hours before show)";
+    } else if (hoursRemaining >= 4) {
+      refundPolicyText = "⚠️ 50% refund applied (cancelled between 4-24 hours before show)";
+    } else {
+      refundPolicyText = "❌ No refund (cancelled less than 4 hours before show)";
+    }
 
     await resend.emails.send({
       from: FROM_EMAIL,
@@ -98,16 +110,18 @@ export const sendBookingCancelledEmail = async ({ user, booking, show, refundAmo
         ${booking.paymentType === "CARD"
           ? `
             <p><strong>Refund Amount:</strong> ₹${refundAmount}</p>
-            ${fullRefund
-              ? `<p>✅ Full refund applied (cancelled more than 3 hours before show)</p>`
-              : `<p>⚠️ 10% cancellation fee applied (cancelled less than 3 hours before show)</p>`
+            <p>${refundPolicyText}</p>
+            ${refundAmount > 0
+              ? `<p>Refund will be credited to your original payment method within 5-7 business days.</p>`
+              : ""
             }
-            <p>Refund will be credited within 5-7 business days.</p>
           `
-          : `<p>You paid via <strong>CASH</strong>. Please visit the theatre to collect your refund of ₹${refundAmount}.</p>`
+          : refundAmount > 0
+            ? `<p>You paid via <strong>CASH</strong>. Please visit the theatre to collect your refund of ₹${refundAmount}.</p>`
+            : `<p>No refund applicable as per cancellation policy.</p>`
         }
         <hr/>
-        <p>Thank you for using our service! 🎬</p>
+        <p>Thank you for using CineBook! 🎬</p>
       `,
     });
 
