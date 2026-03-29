@@ -20,7 +20,7 @@ const connection = new Redis({
 
   // --- NETWORK STABILITY ---
   connectTimeout: 30000,
-  commandTimeout: 30000,
+  commandTimeout: 0,
   keepAlive: 30000, // 30s is perfect: prevents Render idle-timeouts while saving quota
   family: 0,        // Supports both IPv4 and IPv6
 });
