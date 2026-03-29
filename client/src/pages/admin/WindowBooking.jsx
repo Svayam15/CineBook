@@ -82,7 +82,7 @@ const WindowBooking = () => {
       let attempts = 0;
       const maxAttempts = 30;
 
-      await new Promise((resolve) => setTimeout(resolve, 2000));
+      await new Promise((resolve) => setTimeout(resolve, 3000));
 
       const pollInterval = setInterval(async () => {
         attempts++;
@@ -90,7 +90,7 @@ const WindowBooking = () => {
           const statusRes = await api.get(`/bookings/status-rest/${jobId}`);
           const { status, reason } = statusRes.data;
 
-          if (status === "success") {
+          if (status === "success" || statusRes.data.booking) {
             clearInterval(pollInterval);
             toast.success("Booking confirmed! 🎉");
             setSelectedSeats([]);
