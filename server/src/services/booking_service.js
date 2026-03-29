@@ -8,7 +8,7 @@ import {
 } from "../utils/constants.js";
 import logger from "../config/logger.js";
 
-// ⏱️ RELEASE EXPIRED LOCKS — called on a slow interval, not per request
+// ⏱️ RELEASE EXPIRED LOCKS
 export const releaseExpiredLocks = async () => {
   try {
     const expiredSeats = await prisma.showSeat.findMany({
@@ -47,8 +47,6 @@ export const releaseExpiredLocks = async () => {
 
 // 🎟️ CREATE BOOKING
 export const createBooking = async ({ userId, showId, seatIds, paymentType }) => {
-  // ✅ Removed releaseExpiredLocks() from here — no longer runs on every booking
-
   const show = await prisma.show.findUnique({
     where: { id: showId },
     select: { startTime: true },
@@ -69,11 +67,11 @@ export const createBooking = async ({ userId, showId, seatIds, paymentType }) =>
   const job = await bookingQueue.add(
     "bookSeats",
     { userId, showId, seatIds, paymentType },
-     {
-    attempts: 1,
-    removeOnComplete: { age: 60 },
-    removeOnFail: { age: 300 },
-  }
+    {
+      attempts: 1,
+      removeOnComplete: { age: 300 }, // keep 5 mins
+      removeOnFail: { age: 600 },     // keep 10 mins
+    }
   );
 
   logger.info(`📥 Booking job queued: ${job.id}`);

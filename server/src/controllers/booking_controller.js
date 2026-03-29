@@ -4,7 +4,7 @@ import * as bookingService from "../services/booking_service.js";
 import { bookingQueue } from "../queues/booking_queue.js";
 import { MAX_SEATS_PER_BOOKING } from "../utils/constants.js";
 import logger from "../config/logger.js";
-import { processRefund } from "../services/refund_service.js"; // add this import at top
+import { processRefund } from "../services/refund_service.js";
 
 // 🎟️ CREATE BOOKING
 export const createBooking = asyncHandler(async (req, res) => {
@@ -23,7 +23,7 @@ export const createBooking = asyncHandler(async (req, res) => {
     throw error;
   }
 
-  // 🛡️ GUARD: Duplicate Block
+  // 🛡️ Duplicate block
   const existingActive = await prisma.booking.findFirst({
     where: {
       userId,
@@ -56,11 +56,19 @@ export const getBookingStatusRest = asyncHandler(async (req, res) => {
   const { jobId } = req.params;
   const job = await bookingQueue.getJob(jobId);
 
-  if (!job) return res.status(404).json({ status: "failed", reason: "Job not found" });
+  if (!job) {
+    return res.status(404).json({ status: "failed", reason: "Job not found" });
+  }
 
   const state = await job.getState();
-  if (state === "completed") return res.json({ status: "success", booking: job.returnvalue });
-  if (state === "failed") return res.json({ status: "failed", reason: job.failedReason });
+
+  // ✅ Always return "success" not "completed" so frontend can handle it uniformly
+  if (state === "completed") {
+    return res.json({ status: "success", booking: job.returnvalue });
+  }
+  if (state === "failed") {
+    return res.json({ status: "failed", reason: job.failedReason });
+  }
 
   return res.json({ status: state });
 });
@@ -78,30 +86,44 @@ export const getBookingStatus = asyncHandler(async (req, res) => {
   const interval = setInterval(async () => {
     try {
       const job = await bookingQueue.getJob(jobId);
+
       if (!job) {
+        // ✅ Job not found — could mean it completed and was cleaned already
+        // Try to find the booking in DB directly
         res.write(`data: ${JSON.stringify({ status: "failed", reason: "Job not found" })}\n\n`);
         clearInterval(interval);
         return res.end();
       }
 
       const state = await job.getState();
-      const data = { status: state };
-      if (state === "completed") data.booking = job.returnvalue;
-      if (state === "failed") data.reason = job.failedReason;
 
-      res.write(`data: ${JSON.stringify(data)}\n\n`);
-
-      if (state === "completed" || state === "failed") {
+      // ✅ Normalize state to "success" so Payment.jsx can handle it
+      if (state === "completed") {
+        res.write(`data: ${JSON.stringify({ status: "success", booking: job.returnvalue })}\n\n`);
         clearInterval(interval);
-        res.end();
+        return res.end();
       }
+
+      if (state === "failed") {
+        res.write(`data: ${JSON.stringify({ status: "failed", reason: job.failedReason })}\n\n`);
+        clearInterval(interval);
+        return res.end();
+      }
+
+      // still waiting/active — send current state
+      res.write(`data: ${JSON.stringify({ status: state })}\n\n`);
+
     } catch (err) {
+      logger.error(`SSE error for job ${jobId}: ${err.message}`);
       clearInterval(interval);
       res.end();
     }
   }, 2000);
 
-  req.on("close", () => { clearInterval(interval); res.end(); });
+  req.on("close", () => {
+    clearInterval(interval);
+    res.end();
+  });
 });
 
 // 📋 GET MY BOOKINGS
@@ -147,7 +169,7 @@ export const cancelBooking = asyncHandler(async (req, res) => {
     throw error;
   }
 
-  // ── PENDING cancel — no refund needed ──────────────────────────────────────
+  // ── PENDING cancel ─────────────────────────────────────────────────────────
   if (booking.status === "PENDING") {
     await prisma.$transaction([
       prisma.showSeat.updateMany({
@@ -162,7 +184,7 @@ export const cancelBooking = asyncHandler(async (req, res) => {
     return res.json({ success: true, message: "Pending booking cancelled and seats released." });
   }
 
-  // ── PAID cancel — time-based refund policy ─────────────────────────────────
+  // ── PAID cancel — time-based refund ───────────────────────────────────────
   const now = new Date();
   const showTime = new Date(booking.show.startTime);
   const hoursRemaining = (showTime - now) / (1000 * 60 * 60);
@@ -187,7 +209,6 @@ export const cancelBooking = asyncHandler(async (req, res) => {
     message = "Booking cancelled. No refund (under 4 hours to show). Seats released.";
   }
 
-  // ── Release seats + update booking in DB ───────────────────────────────────
   await prisma.$transaction([
     prisma.showSeat.updateMany({
       where: { pendingBookingId: bookingId },
@@ -203,7 +224,6 @@ export const cancelBooking = asyncHandler(async (req, res) => {
     }),
   ]);
 
-  // ── Stripe refund (CARD only, only if refundAmount > 0) ────────────────────
   if (booking.paymentType === "CARD" && booking.paymentId && refundAmount > 0) {
     try {
       await processRefund({
@@ -212,7 +232,6 @@ export const cancelBooking = asyncHandler(async (req, res) => {
         paymentId: booking.paymentId,
       });
     } catch (err) {
-      // DB is already updated — log but don't fail the response
       logger.error(`Stripe refund failed for booking ${bookingId}: ${err.message}`);
       return res.json({
         success: true,

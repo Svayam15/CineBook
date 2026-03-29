@@ -13,7 +13,6 @@ import {
 } from "@stripe/react-stripe-js";
 import Spinner from "../../components/common/Spinner";
 
-// ✅ Safe env usage
 const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY);
 
 // ---------------- PAYMENT FORM ----------------
@@ -24,7 +23,6 @@ const PaymentForm = ({ bookingId, totalAmount, onSuccess }) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-
     if (!stripe || !elements || processing) return;
 
     setProcessing(true);
@@ -44,7 +42,6 @@ const PaymentForm = ({ bookingId, totalAmount, onSuccess }) => {
           paymentIntentId: paymentIntent.id,
           bookingId,
         });
-
         toast.success("Payment successful! 🎉");
         onSuccess();
       }
@@ -61,20 +58,45 @@ const PaymentForm = ({ bookingId, totalAmount, onSuccess }) => {
       className={`space-y-4 ${processing ? "opacity-70 pointer-events-none" : ""}`}
     >
       <PaymentElement />
-
       <button
         type="submit"
         disabled={!stripe || processing}
         className="w-full bg-primary hover:bg-primary-dark text-white font-semibold py-3 rounded-xl transition disabled:opacity-50 text-sm mt-2"
       >
-        {processing ? (
-          <Spinner text="Processing payment..." />
-        ) : (
-          `Pay ₹${totalAmount}`
-        )}
+        {processing ? <Spinner text="Processing payment..." /> : `Pay ₹${totalAmount}`}
       </button>
     </form>
   );
+};
+
+// ---------------- REST FALLBACK POLL ----------------
+const startRestPoll = ({ jobId, onSuccess, onFail, apiInstance }) => {
+  let attempts = 0;
+  const maxAttempts = 20; // 40 seconds total
+
+  const poll = setInterval(async () => {
+    attempts++;
+    try {
+      const res = await apiInstance.get(`/bookings/status-rest/${jobId}`);
+      const { status, booking, reason } = res.data;
+
+      if (status === "success" && booking) {
+        clearInterval(poll);
+        onSuccess(booking);
+      } else if (status === "failed") {
+        clearInterval(poll);
+        onFail(reason || "Booking failed");
+      } else if (attempts >= maxAttempts) {
+        clearInterval(poll);
+        onFail("Booking timed out. Please try again.");
+      }
+    } catch {
+      clearInterval(poll);
+      onFail("Connection error. Please try again.");
+    }
+  }, 2000);
+
+  return poll;
 };
 
 // ---------------- MAIN COMPONENT ----------------
@@ -82,8 +104,7 @@ const Payment = () => {
   const location = useLocation();
   const navigate = useNavigate();
 
-  const { jobId, showId, selectedSeats, totalAmount, show } =
-    location.state || {};
+  const { jobId, showId, selectedSeats, totalAmount, show } = location.state || {};
 
   const [clientSecret, setClientSecret] = useState(null);
   const [bookingId, setBookingId] = useState(null);
@@ -92,41 +113,70 @@ const Payment = () => {
   const [loadingIntent, setLoadingIntent] = useState(true);
   const [bookingReady, setBookingReady] = useState(false);
 
-  // Redirect if invalid
   useEffect(() => {
     if (!jobId || !showId) navigate("/");
   }, [jobId, showId, navigate]);
 
-  // ---------------- SSE (FIXED) ----------------
+  // ---------------- SSE + REST FALLBACK ----------------
   useEffect(() => {
     if (!jobId || bookingReady) return;
 
+    let pollInterval = null;
+
+    const onSuccess = (booking) => {
+      setBookingId(booking.id);
+      setBookingReady(true);
+    };
+
+    const onFail = (reason) => {
+      toast.error(reason);
+      navigate("/");
+    };
+
+    // Try SSE first
     const eventSource = new EventSource(
-      `${import.meta.env.VITE_API_URL || ""}/bookings/status/${jobId}`,
+      `${import.meta.env.VITE_API_URL}/bookings/status/${jobId}`,
       { withCredentials: true }
     );
 
     eventSource.onmessage = (e) => {
-      const data = JSON.parse(e.data);
+      try {
+        const data = JSON.parse(e.data);
 
-      if (data.status === "success") {
-        setBookingId(data.booking.id);
-        setBookingReady(true);
-        eventSource.close();
-      } else if (data.status === "failed") {
-        toast.error(data.reason || "Booking failed");
-        eventSource.close();
-        navigate("/");
+        if (data.status === "success" && data.booking) {
+          eventSource.close();
+          if (pollInterval) clearInterval(pollInterval);
+          onSuccess(data.booking);
+        } else if (data.status === "failed") {
+          eventSource.close();
+          if (pollInterval) clearInterval(pollInterval);
+          onFail(data.reason || "Booking failed");
+        }
+        // for waiting/active states — do nothing, keep listening
+      } catch {
+        // ignore parse errors
       }
     };
 
+    // SSE error — fall back to REST polling silently
     eventSource.onerror = () => {
       eventSource.close();
-      toast.error("Connection error");
-      navigate("/");
+      pollInterval = startRestPoll({ jobId, onSuccess, onFail, apiInstance: api });
     };
 
-    return () => eventSource.close();
+    // Also start REST polling as a safety net after 5 seconds
+    // in case SSE connects but never fires onmessage
+    const safetyTimer = setTimeout(() => {
+      if (!bookingReady) {
+        pollInterval = startRestPoll({ jobId, onSuccess, onFail, apiInstance: api });
+      }
+    }, 5000);
+
+    return () => {
+      eventSource.close();
+      if (pollInterval) clearInterval(pollInterval);
+      clearTimeout(safetyTimer);
+    };
   }, [jobId, bookingReady, navigate]);
 
   // ---------------- CREATE PAYMENT INTENT ----------------
@@ -135,10 +185,7 @@ const Payment = () => {
 
     const createIntent = async () => {
       try {
-        const res = await api.post("/payment/create-order", {
-          bookingId,
-        });
-
+        const res = await api.post("/payment/create-order", { bookingId });
         setClientSecret(res.data.clientSecret);
         setExpiresAt(res.data.expiresAt);
       } catch (err) {
@@ -157,11 +204,7 @@ const Payment = () => {
     if (!expiresAt) return;
 
     const interval = setInterval(() => {
-      const left = Math.max(
-        0,
-        Math.floor((new Date(expiresAt) - new Date()) / 1000)
-      );
-
+      const left = Math.max(0, Math.floor((new Date(expiresAt) - new Date()) / 1000));
       setTimeLeft(left);
 
       if (left === 0) {
@@ -187,67 +230,46 @@ const Payment = () => {
   };
 
   return (
-    <div className="min-h-screen bg-dark">
+    <div className="min-h-screen bg-dark pb-20 md:pb-0">
       <Navbar />
 
-      <div className="max-w-lg mx-auto px-6 py-8">
+      <div className="max-w-lg mx-auto px-4 sm:px-6 py-8">
         <h1 className="font-heading text-2xl font-bold text-white mb-2">
           Complete Payment
         </h1>
 
-        {/* TIMER */}
         {timeLeft !== null && (
-          <div
-            className={`flex items-center gap-2 mb-6 text-sm font-medium ${
-              timeLeft < 60 ? "text-red-400" : "text-golden"
-            }`}
-          >
+          <div className={`flex items-center gap-2 mb-6 text-sm font-medium ${timeLeft < 60 ? "text-red-400" : "text-golden"}`}>
             ⏱️ Seats reserved for: {formatTime(timeLeft)}
           </div>
         )}
 
-        {/* ORDER SUMMARY */}
+        {/* Order Summary */}
         <div className="bg-card border border-border rounded-2xl p-5 mb-6">
-          <h2 className="font-heading text-lg font-semibold text-white mb-3">
-            Order Summary
-          </h2>
-
+          <h2 className="font-heading text-lg font-semibold text-white mb-3">Order Summary</h2>
           <div className="space-y-2 text-sm">
             <div className="flex justify-between">
               <span className="text-muted">Movie</span>
-              <span className="text-white">
-                {show?.movie?.title}
-              </span>
+              <span className="text-white">{show?.movie?.title}</span>
             </div>
-
             <div className="flex justify-between">
               <span className="text-muted">Theatre</span>
-              <span className="text-white">
-                {show?.theatre?.name}
-              </span>
+              <span className="text-white">{show?.theatre?.name}</span>
             </div>
-
             <div className="flex justify-between">
               <span className="text-muted">Seats</span>
-              <span className="text-white">
-                {selectedSeats?.length} seat(s)
-              </span>
+              <span className="text-white">{selectedSeats?.length} seat(s)</span>
             </div>
-
             <div className="flex justify-between border-t border-border pt-2 mt-2">
               <span className="text-white font-semibold">Total</span>
-              <span className="text-white font-bold text-lg">
-                ₹{totalAmount}
-              </span>
+              <span className="text-white font-bold text-lg">₹{totalAmount}</span>
             </div>
           </div>
         </div>
 
-        {/* PAYMENT FORM */}
+        {/* Payment Form */}
         <div className="bg-card border border-border rounded-2xl p-5">
-          <h2 className="font-heading text-lg font-semibold text-white mb-4">
-            Payment Details
-          </h2>
+          <h2 className="font-heading text-lg font-semibold text-white mb-4">Payment Details</h2>
 
           {loadingIntent || !clientSecret ? (
             <div className="flex items-center justify-center py-8">
