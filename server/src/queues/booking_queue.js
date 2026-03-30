@@ -1,9 +1,9 @@
 import { Queue } from "bullmq";
-import connection from "../config/redis.js";
 import logger from "../config/logger.js";
+import { createRedisConnection } from "../config/redis.js";
 
 export const bookingQueue = new Queue("bookingQueue", {
-  connection,
+    connection: createRedisConnection(), // own connection for better isolation and performance
   defaultJobOptions: {
     attempts: 1,
     removeOnComplete: { age: 3600 }, // ✅ 1 hour — consistent with per-job settings

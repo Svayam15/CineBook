@@ -1,5 +1,5 @@
 import { Worker } from "bullmq";
-import connection from "../config/redis.js";
+import { createRedisConnection } from "../config/redis.js";
 import prisma from "../utils/prisma.js";
 import logger from "../config/logger.js";
 import { SEAT_STATUS, BOOKING_STATUS } from "../utils/constants.js";
@@ -95,7 +95,8 @@ const worker = new Worker(
     });
   },
   {
-    connection,
+     connection: createRedisConnection(), // own connection
+  concurrency: 1, // important on free tier,
     lockDuration: 30000,
     lockRenewTime: 15000,
     drainDelay: 300,
