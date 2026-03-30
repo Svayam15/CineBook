@@ -83,42 +83,70 @@ export const getBookingStatus = asyncHandler(async (req, res) => {
   res.setHeader("Connection", "keep-alive");
   res.flushHeaders();
 
+  let closed = false;
+
+  // ✅ Hard timeout — kill SSE after 30s no matter what
+  const hardTimeout = setTimeout(() => {
+    if (!closed) {
+      closed = true;
+      res.write(`data: ${JSON.stringify({ status: "failed", reason: "Timed out waiting for job" })}\n\n`);
+      clearInterval(interval);
+      res.end();
+    }
+  }, 30000);
+
   const interval = setInterval(async () => {
+    if (closed) return;
     try {
       const job = await bookingQueue.getJob(jobId);
 
       if (!job) {
-        res.write(`data: ${JSON.stringify({ status: "failed", reason: "Job not found" })}\n\n`);
+        closed = true;
         clearInterval(interval);
+        clearTimeout(hardTimeout);
+        res.write(`data: ${JSON.stringify({ status: "failed", reason: "Job not found" })}\n\n`);
         return res.end();
       }
 
+      // ✅ getState() already fetches state — no need for separate getJob call next tick
       const state = await job.getState();
 
       if (state === "completed") {
-        res.write(`data: ${JSON.stringify({ status: "success", booking: job.returnvalue })}\n\n`);
+        closed = true;
         clearInterval(interval);
+        clearTimeout(hardTimeout);
+        res.write(`data: ${JSON.stringify({ status: "success", booking: job.returnvalue })}\n\n`);
         return res.end();
       }
 
       if (state === "failed") {
-        res.write(`data: ${JSON.stringify({ status: "failed", reason: job.failedReason })}\n\n`);
+        closed = true;
         clearInterval(interval);
+        clearTimeout(hardTimeout);
+        res.write(`data: ${JSON.stringify({ status: "failed", reason: job.failedReason })}\n\n`);
         return res.end();
       }
 
       res.write(`data: ${JSON.stringify({ status: state })}\n\n`);
 
     } catch (err) {
-      logger.error(`SSE error for job ${jobId}: ${err.message}`);
-      clearInterval(interval);
-      res.end();
+      if (!closed) {
+        closed = true;
+        clearInterval(interval);
+        clearTimeout(hardTimeout);
+        logger.error(`SSE error for job ${jobId}: ${err.message}`);
+        res.end();
+      }
     }
-  }, 2000);
+  }, 2000); // ✅ consider bumping to 3000ms to reduce Redis load
 
   req.on("close", () => {
-    clearInterval(interval);
-    res.end();
+    if (!closed) {
+      closed = true;
+      clearInterval(interval);
+      clearTimeout(hardTimeout);
+      res.end();
+    }
   });
 });
 

@@ -14,7 +14,6 @@ import errorMiddleware from "./middlewares/error_middleware.js";
 import { globalLimiter } from "./middlewares/rateLimiter_middleware.js";
 import { authMiddleware } from "./middlewares/auth_middleware.js";
 import { requireAdmin } from "./middlewares/role_middleware.js";
-import serverAdapter from "./config/bullBoard.js";
 import logger from "./config/logger.js";
 
 const app = express();
@@ -68,13 +67,10 @@ app.use("/theatres", theatreRoutes);
 app.use("/admin", adminRoutes);
 
 // 🐂 Bull Board — dev only, never in production
+// app.js — replace the static import
 if (process.env.NODE_ENV !== "production") {
-  app.use(
-    "/admin/queues",
-    authMiddleware,
-    requireAdmin,
-    serverAdapter.getRouter()
-  );
+  const { default: serverAdapter } = await import("./config/bullBoard.js");
+  app.use("/admin/queues", authMiddleware, requireAdmin, serverAdapter.getRouter());
 }
 
 // ✅ Health check
