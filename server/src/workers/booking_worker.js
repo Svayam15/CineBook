@@ -95,12 +95,12 @@ const worker = new Worker(
     });
   },
   {
-     connection: createRedisConnection(), // own connection
-  concurrency: 1, // important on free tier,
-    lockDuration: 30000,
-    lockRenewTime: 15000,
-    drainDelay: 300,
-  }
+  connection: createRedisConnection(),
+  concurrency: 1,
+  lockDuration: 30000,
+  lockRenewTime: 15000,
+  drainDelay: 300,
+}
 );
 
 worker.on("completed", (job) => {
