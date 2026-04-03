@@ -40,7 +40,7 @@ const PaymentForm = ({ bookingId, totalAmount, onSuccess, onPaymentStarted }) =>
     if (!stripe || !elements || processing) return;
 
     setProcessing(true);
-    onPaymentStarted?.(); // ✅ stop timer immediately when user clicks Pay
+    onPaymentStarted?.();
 
     try {
       const { error, paymentIntent } = await stripe.confirmPayment({
@@ -104,11 +104,11 @@ const startRestPoll = ({ jobId, onSuccess, onFail, apiInstance }) => {
         onFail(reason || "Booking failed");
       } else if (attempts >= maxAttempts) {
         clearInterval(poll);
-        onFail("Booking timed out. Please try again.");
+        onFail("Booking timed out. Please check My Bookings.");
       }
     } catch {
       clearInterval(poll);
-      onFail("Connection error. Please try again.");
+      onFail("Connection error. Please check My Bookings.");
     }
   }, 2000);
 
@@ -136,7 +136,7 @@ const Payment = () => {
   const [timeLeft, setTimeLeft] = useState(null);
   const [loadingIntent, setLoadingIntent] = useState(true);
   const [bookingReady, setBookingReady] = useState(isRepay || false);
-  const [paymentStarted, setPaymentStarted] = useState(false); // ✅ timer kill switch
+  const [paymentStarted, setPaymentStarted] = useState(false);
 
   useEffect(() => {
     if (!isRepay && (!jobId || !showId)) navigate("/");
@@ -153,9 +153,15 @@ const Payment = () => {
       setBookingReady(true);
     };
 
+    // ✅ Smarter onFail — if seats expired it could be a webhook race condition
     const onFail = (reason) => {
-      toast.error(reason);
-      navigate("/");
+      if (reason?.toLowerCase().includes("expired")) {
+        toast("Seats may still be reserved. Check My Bookings.", { icon: "⚠️" });
+        navigate("/my-bookings");
+      } else {
+        toast.error(reason);
+        navigate("/");
+      }
     };
 
     const eventSource = new EventSource(
@@ -166,6 +172,7 @@ const Payment = () => {
     eventSource.onmessage = (e) => {
       try {
         const data = JSON.parse(e.data);
+
         if (data.status === "success" && data.booking) {
           eventSource.close();
           if (pollInterval) clearInterval(pollInterval);
@@ -174,6 +181,12 @@ const Payment = () => {
           eventSource.close();
           if (pollInterval) clearInterval(pollInterval);
           onFail(data.reason || "Booking failed");
+        } else if (data.status === "timeout") {
+          // ✅ SSE timed out — booking may still complete via Stripe webhook
+          eventSource.close();
+          if (pollInterval) clearInterval(pollInterval);
+          toast("Payment is processing. Check My Bookings for confirmation.", { icon: "⏳" });
+          navigate("/my-bookings");
         }
       } catch {
         // ignore parse errors
@@ -223,7 +236,6 @@ const Payment = () => {
     if (!expiresAt) return;
 
     const interval = setInterval(() => {
-      // ✅ Stop timer the moment user starts paying — prevents false expired toast
       if (paymentStarted) {
         clearInterval(interval);
         return;
@@ -264,7 +276,6 @@ const Payment = () => {
           Complete Payment
         </h1>
 
-        {/* ✅ Repay notice */}
         {isRepay && (
           <div className="mb-4 bg-yellow-500/10 border border-yellow-500/20 rounded-xl px-4 py-3">
             <p className="text-yellow-400 text-sm">
@@ -291,7 +302,6 @@ const Payment = () => {
               <span className="text-muted">Theatre</span>
               <span className="text-white">{show?.theatre?.name}</span>
             </div>
-            {/* ✅ Fixed: show formatted IST time instead of raw UTC */}
             <div className="flex justify-between">
               <span className="text-muted">Show Time</span>
               <span className="text-white">
@@ -338,7 +348,7 @@ const Payment = () => {
                 bookingId={bookingId}
                 totalAmount={totalAmount}
                 onSuccess={handleSuccess}
-                onPaymentStarted={() => setPaymentStarted(true)} // ✅ kills timer
+                onPaymentStarted={() => setPaymentStarted(true)}
               />
             </Elements>
           )}
