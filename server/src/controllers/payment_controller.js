@@ -2,7 +2,7 @@ import Stripe from "stripe";
 import prisma from "../utils/prisma.js";
 import { calculateRefund } from "../services/booking_service.js";
 import { processRefund } from "../services/refund_service.js";
-import { sendBookingConfirmationEmail } from "../services/email_service.js"; // ← ADD
+import { sendBookingConfirmationEmail } from "../services/email_service.js";
 import logger from "../config/logger.js";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
@@ -73,16 +73,23 @@ export const verifyPayment = async (req, res) => {
       prisma.booking.findUnique({
         where: { id: bookingId },
         include: {
-          show: {
-            include: { movie: true, theatre: true }, // ← ADD movie & theatre for email
-          },
-          user: true, // ← ADD user for email
+          show: { include: { movie: true, theatre: true } },
+          user: true,
         },
       }),
     ]);
 
-    if (lockedSeats.length === 0) return res.status(400).json({ message: "Seat reservation expired" });
     if (!booking) return res.status(404).json({ message: "Booking not found" });
+
+    // ✅ Webhook already processed — return success gracefully
+    if (booking.status === "PAID") {
+      return res.json({
+        message: "Payment successful! Seats confirmed. 🎉",
+        booking,
+      });
+    }
+
+    if (lockedSeats.length === 0) return res.status(400).json({ message: "Seat reservation expired" });
 
     const updated = await prisma.$transaction(async (tx) => {
       await tx.showSeat.updateMany({
@@ -107,13 +114,11 @@ export const verifyPayment = async (req, res) => {
       });
     });
 
-    // ✅ Send booking confirmation email — fetch updated seats for email
     const bookingSeats = await prisma.bookingSeat.findMany({
       where: { bookingId },
       include: { showSeat: true },
     });
 
-    // Fire and forget — don't block response
     sendBookingConfirmationEmail({
       user: booking.user,
       booking: updated,
