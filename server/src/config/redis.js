@@ -10,7 +10,7 @@ export function createRedisConnection() {
     maxRetriesPerRequest: null,
     enableReadyCheck: false,
     connectTimeout: 10000,
-    commandTimeout: 10000,
+    ...(isWorker ? {} : { commandTimeout: 10000 }), // ✅ no commandTimeout for worker
     keepAlive: 30000,
     family: 4,
     retryStrategy(times) {

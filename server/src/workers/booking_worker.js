@@ -95,7 +95,7 @@ const worker = new Worker(
     });
   },
   {
-  connection: createRedisConnection(),
+  connection: createRedisConnection(true), // ✅ isWorker = true, no commandTimeout
   concurrency: 1,
   lockDuration: 30000,
   lockRenewTime: 15000,
