@@ -32,7 +32,8 @@ export const sendBookingConfirmationEmail = async ({ user, booking, show, seats 
         <p><strong>Seats:</strong></p>
         <pre>${seatList}</pre>
         <p><strong>Total Paid:</strong> ₹${booking.totalAmount}</p>
-        <p><strong>Payment ID:</strong> ${booking.paymentId || "CASH"}</p>
+        <p><strong>Payment Method:</strong> ${booking.paymentType === "CARD" ? "Card" : "Cash"}</p>
+        <p><strong>Payment ID:</strong> ${booking.paymentId}</p>
         <hr/>
         <p>Enjoy the movie! 🍿</p>
       `,

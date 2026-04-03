@@ -40,9 +40,9 @@ export const handleWebhook = async (req, res) => {
       // ✅ PAYMENT SUCCEEDED
       case "payment_intent.succeeded": {
         const booking = await prisma.booking.findUnique({
-          where: {id: bookingId},
+          where: { id: bookingId },
           include: {
-            show: {include: {movie: true, theatre: true}},
+            show: { include: { movie: true, theatre: true } },
             user: true,
           },
         });
@@ -59,30 +59,21 @@ export const handleWebhook = async (req, res) => {
         }
 
         const lockedSeats = await prisma.showSeat.findMany({
-          where: {pendingBookingId: bookingId, status: "LOCKED"},
+          where: { pendingBookingId: bookingId, status: "LOCKED" },
         });
 
         if (lockedSeats.length === 0) {
-
-          // ✅ Seats may have expired — but payment succeeded
-          // Re-lock available seats and confirm booking anyway
-          const bookedSeats = await prisma.showSeat.findMany({
-            where: {pendingBookingId: bookingId},
-          });
-
           logger.warn(`Webhook: No locked seats for booking ${bookingId}`);
 
-          // Find any seats that were originally for this booking
-          // by checking bookingSeat records if they exist
           const existingBookingSeats = await prisma.bookingSeat.findMany({
-            where: {bookingId},
+            where: { bookingId },
           });
 
           if (existingBookingSeats.length > 0) {
             // BookingSeats already created — just mark as PAID
             await prisma.booking.update({
-              where: {id: bookingId},
-              data: {status: "PAID", paymentId: paymentIntent.id},
+              where: { id: bookingId },
+              data: { status: "PAID", paymentId: paymentIntent.id },
             });
           } else {
             logger.error(`Webhook: Cannot confirm booking ${bookingId} — seats expired and no booking seats found`);
@@ -91,7 +82,6 @@ export const handleWebhook = async (req, res) => {
 
           break;
         }
-
 
         // Confirm booking in transaction
         await prisma.$transaction(async (tx) => {
@@ -120,7 +110,11 @@ export const handleWebhook = async (req, res) => {
           });
         });
 
-        // Send confirmation email
+        // ✅ Fetch fresh booking so paymentId is included in email
+        const updatedBooking = await prisma.booking.findUnique({
+          where: { id: bookingId },
+        });
+
         const bookingSeats = await prisma.bookingSeat.findMany({
           where: { bookingId },
           include: { showSeat: true },
@@ -128,7 +122,7 @@ export const handleWebhook = async (req, res) => {
 
         sendBookingConfirmationEmail({
           user: booking.user,
-          booking,
+          booking: updatedBooking, // ✅ has paymentId and correct paymentType
           show: booking.show,
           seats: bookingSeats,
         }).catch((err) => logger.error(`Webhook confirmation email error: ${err.message}`));
@@ -145,7 +139,6 @@ export const handleWebhook = async (req, res) => {
 
         if (!booking || booking.status !== "PENDING") break;
 
-        // Release seats & mark booking as FAILED
         await prisma.$transaction(async (tx) => {
           await tx.showSeat.updateMany({
             where: { pendingBookingId: bookingId },
@@ -170,7 +163,6 @@ export const handleWebhook = async (req, res) => {
 
         if (!booking || booking.status !== "PENDING") break;
 
-        // Release seats & mark booking as FAILED
         await prisma.$transaction(async (tx) => {
           await tx.showSeat.updateMany({
             where: { pendingBookingId: bookingId },

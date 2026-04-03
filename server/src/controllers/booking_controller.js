@@ -5,12 +5,12 @@ import { bookingQueue } from "../queues/booking_queue.js";
 import { MAX_SEATS_PER_BOOKING, CANCELLATION_HOURS_PARTIAL_REFUND, CANCELLATION_HOURS_FULL_REFUND } from "../utils/constants.js";
 import logger from "../config/logger.js";
 import { processRefund } from "../services/refund_service.js";
-import { sendBookingCancelledEmail } from "../services/email_service.js"; // ✅ add this
+import { sendBookingCancelledEmail } from "../services/email_service.js";
 
 // 🎟️ CREATE BOOKING
 export const createBooking = asyncHandler(async (req, res) => {
   const userId = req.user.userId;
-  const { showId, seatIds } = req.body;
+  const { showId, seatIds, paymentType } = req.body; // ✅ extract paymentType
 
   if (!showId || !seatIds || seatIds.length === 0) {
     const error = new Error("showId and seatIds are required");
@@ -43,6 +43,7 @@ export const createBooking = asyncHandler(async (req, res) => {
     userId,
     showId,
     seatIds,
+    paymentType: paymentType || "CARD", // ✅ pass paymentType through
   });
 
   res.status(202).json({
@@ -85,15 +86,15 @@ export const getBookingStatus = asyncHandler(async (req, res) => {
 
   let closed = false;
 
-  // ✅ Hard timeout — kill SSE after 30s no matter what
+  // ✅ Hard timeout — 2 minutes to allow Stripe payment to complete
   const hardTimeout = setTimeout(() => {
     if (!closed) {
       closed = true;
-      res.write(`data: ${JSON.stringify({ status: "failed", reason: "Timed out waiting for job" })}\n\n`);
+      res.write(`data: ${JSON.stringify({ status: "timeout", reason: "Please check My Bookings for your booking status" })}\n\n`);
       clearInterval(interval);
       res.end();
     }
-  }, 30000);
+  }, 120000);
 
   const interval = setInterval(async () => {
     if (closed) return;
@@ -108,7 +109,6 @@ export const getBookingStatus = asyncHandler(async (req, res) => {
         return res.end();
       }
 
-      // ✅ getState() already fetches state — no need for separate getJob call next tick
       const state = await job.getState();
 
       if (state === "completed") {
@@ -138,7 +138,7 @@ export const getBookingStatus = asyncHandler(async (req, res) => {
         res.end();
       }
     }
-  }, 2000); // ✅ consider bumping to 3000ms to reduce Redis load
+  }, 2000);
 
   req.on("close", () => {
     if (!closed) {
@@ -173,9 +173,9 @@ export const cancelBooking = asyncHandler(async (req, res) => {
   const booking = await prisma.booking.findUnique({
     where: { id: bookingId },
     include: {
-      show: { include: { movie: true, theatre: true } }, // ✅ include for email
-      user: true,                                         // ✅ include for email
-      seats: { include: { showSeat: true } },            // ✅ include for email
+      show: { include: { movie: true, theatre: true } },
+      user: true,
+      seats: { include: { showSeat: true } },
     },
   });
 
@@ -197,7 +197,7 @@ export const cancelBooking = asyncHandler(async (req, res) => {
     throw error;
   }
 
-  // ── PENDING cancel ──────────────────────────────────────────────────────────
+  // ── PENDING cancel ─────────────────────────────────────────────────────────
   if (booking.status === "PENDING") {
     await prisma.$transaction([
       prisma.showSeat.updateMany({
@@ -210,7 +210,6 @@ export const cancelBooking = asyncHandler(async (req, res) => {
       }),
     ]);
 
-    // ✅ Send cancellation email for PENDING — no refund
     sendBookingCancelledEmail({
       user: booking.user,
       booking,
@@ -225,7 +224,7 @@ export const cancelBooking = asyncHandler(async (req, res) => {
     });
   }
 
-  // ── PAID cancel — time-based refund ────────────────────────────────────────
+  // ── PAID cancel — time-based refund ───────────────────────────────────────
   const now = new Date();
   const showTime = new Date(booking.show.startTime);
   const hoursRemaining = (showTime - now) / (1000 * 60 * 60);
@@ -276,7 +275,6 @@ export const cancelBooking = asyncHandler(async (req, res) => {
     } catch (err) {
       logger.error(`Stripe refund failed for booking ${bookingId}: ${err.message}`);
 
-      // ✅ Still send email even if Stripe refund fails
       sendBookingCancelledEmail({
         user: booking.user,
         booking,
@@ -293,7 +291,6 @@ export const cancelBooking = asyncHandler(async (req, res) => {
     }
   }
 
-  // ✅ Send cancellation email for PAID — with refund details
   sendBookingCancelledEmail({
     user: booking.user,
     booking,
