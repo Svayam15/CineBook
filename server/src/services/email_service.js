@@ -28,7 +28,7 @@ export const sendBookingConfirmationEmail = async ({ user, booking, show, seats 
         <h3>Booking Details:</h3>
         <p><strong>Movie:</strong> ${show.movie.title} (${show.showType})</p>
         <p><strong>Theatre:</strong> ${show.theatre.name}, ${show.theatre.location}</p>
-        <p><strong>Date & Time:</strong> ${new Date(show.startTime).toLocaleString()}</p>
+        <p><strong>Date & Time:</strong> ${new Date(show.startTime).toLocaleString("en-IN", { timeZone: "Asia/Kolkata", hour12: true })}</p>
         <p><strong>Seats:</strong></p>
         <pre>${seatList}</pre>
         <p><strong>Total Paid:</strong> ₹${booking.totalAmount}</p>
@@ -61,7 +61,7 @@ export const sendShowCancelledEmail = async ({ user, booking, show, refundAmount
         <h3>Show Details:</h3>
         <p><strong>Movie:</strong> ${show.movie.title}</p>
         <p><strong>Theatre:</strong> ${show.theatre.name}, ${show.theatre.location}</p>
-        <p><strong>Date & Time:</strong> ${new Date(show.startTime).toLocaleString()}</p>
+        <p><strong>Date & Time:</strong> ${new Date(show.startTime).toLocaleString("en-IN", { timeZone: "Asia/Kolkata", hour12: true })}</p>
         <hr/>
         <h3>Refund Details:</h3>
         ${booking.paymentType === "CARD"
