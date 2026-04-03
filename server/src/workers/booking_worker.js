@@ -103,6 +103,19 @@ const worker = new Worker(
 }
 );
 
+worker.on("error", (err) => {
+  logger.error(`Worker error: ${err.message}`);
+});
+
+worker.on("stalled", (jobId) => {
+  logger.warn(`⚠️ Job stalled: ${jobId}`);
+});
+
+worker.on("active", (job) => {
+  logger.info(`🔄 Job active: ${job.id}`);
+});
+
+
 worker.on("completed", (job) => {
   logger.info(`✅ Seats reserved for job ${job.id}`);
 });
