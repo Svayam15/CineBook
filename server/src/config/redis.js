@@ -5,7 +5,7 @@ if (!process.env.REDIS_URL) {
   throw new Error("REDIS_URL environment variable is not defined");
 }
 
-export function createRedisConnection() {
+export function createRedisConnection(isWorker = false) {
   const conn = new Redis(process.env.REDIS_URL, {
     maxRetriesPerRequest: null,
     enableReadyCheck: false,
