@@ -216,9 +216,14 @@ export const cancelBooking = asyncHandler(async (req, res) => {
   }
 
   // ── PENDING cancel ──────────────────────────────────────────────────────────
-  if (booking.status === "PENDING") {
+if (booking.status === "PENDING") {
+    // ✅ Get locked seat IDs BEFORE releasing them
+    const lockedSeats = await prisma.showSeat.findMany({
+      where: { pendingBookingId: bookingId },
+      select: { id: true },
+    });
+
     await prisma.$transaction([
-      // PENDING seats are LOCKED with pendingBookingId set — correct to use this
       prisma.showSeat.updateMany({
         where: { pendingBookingId: bookingId },
         data: { status: "AVAILABLE", lockedAt: null, pendingBookingId: null },
@@ -237,9 +242,9 @@ export const cancelBooking = asyncHandler(async (req, res) => {
       cancelledSeats: booking.seats.length,
     }).catch((err) => logger.error(`Cancel email error: ${err.message}`));
 
-    // ✅ Broadcast AVAILABLE
-    booking.seats.forEach((bs) => {
-      broadcastToShow(booking.show.id, { seatId: bs.showSeatId, status: "AVAILABLE" });
+    // ✅ Broadcast AVAILABLE using actual locked seat IDs
+    lockedSeats.forEach((seat) => {
+      broadcastToShow(booking.show.id, { seatId: seat.id, status: "AVAILABLE" });
     });
 
     return res.json({
