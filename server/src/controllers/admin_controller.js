@@ -302,11 +302,11 @@ export const adminCancelShow = asyncHandler(async (req, res) => {
 
 // ❌ ADMIN CANCEL SPECIFIC BOOKING
 export const adminCancelBooking = asyncHandler(async (req, res) => {
-  const { id } = req.params;
-  // ✅ No req.body — DELETE requests have no body. Always cancel all seats.
+  const { bookingId } = req.params;
+  // ✅ No req.body — DELETE requests have nobody. Always cancel all seats.
 
   const booking = await prisma.booking.findUnique({
-    where: { id: parseInt(id) },
+    where: { id: parseInt(bookingId) },
     include: {
       user: true,
       show: { include: { movie: true, theatre: true } },
@@ -376,7 +376,7 @@ export const adminCancelBooking = asyncHandler(async (req, res) => {
     cancelledSeats: seatsToCancel.length,
   }).catch((err) => logger.error(`Cancel email error: ${err.message}`));
 
-  logger.info(`Admin cancelled booking ${id}. Refund: ₹${refundAmount}`);
+  logger.info(`Admin cancelled booking ${bookingId}. Refund: ₹${refundAmount}`);
 
   return res.json({
     message: booking.paymentType === "CASH"
