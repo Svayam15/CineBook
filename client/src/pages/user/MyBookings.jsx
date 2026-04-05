@@ -29,7 +29,11 @@ const formatIST = (dateStr) => {
 };
 
 // ─── Refund Policy Helper ─────────────────────────────────────────────────────
-const getRefundPolicy = (showStartTime) => {
+const getRefundPolicy = (showStartTime, bookingStatus) => {
+  if (bookingStatus === "PENDING") {
+    return { percent: 0, label: "No payment made", color: "text-zinc-400", isPending: true };
+  }
+
   const now = new Date();
   const showTime = new Date(showStartTime);
   const hoursRemaining = (showTime - now) / (1000 * 60 * 60);
@@ -42,8 +46,13 @@ const getRefundPolicy = (showStartTime) => {
 
 // ─── Cancel Confirm Modal ─────────────────────────────────────────────────────
 const CancelModal = ({ booking, onClose, onConfirm, cancelling }) => {
-  const policy = getRefundPolicy(booking.show?.rawStartTime || booking.show?.startTime);
-  const refundAmount = policy
+  const policy = getRefundPolicy(
+    booking.show?.rawStartTime || booking.show?.startTime,
+    booking.status
+  );
+  const refundAmount = policy?.isPending
+    ? 0
+    : policy
     ? Math.round((booking.totalAmount || 0) * (policy.percent / 100) * 100) / 100
     : 0;
 
@@ -69,7 +78,12 @@ const CancelModal = ({ booking, onClose, onConfirm, cancelling }) => {
             <p className="text-muted text-xs font-medium uppercase tracking-wide">
               Refund Policy
             </p>
-            {policy ? (
+
+            {policy?.isPending ? (
+              <p className="text-zinc-400 text-sm">
+                No payment was made — nothing to refund. Seats will be released.
+              </p>
+            ) : policy ? (
               <>
                 <div className="flex justify-between items-center">
                   <span className="text-muted text-sm">Refund</span>
