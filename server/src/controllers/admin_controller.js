@@ -302,11 +302,11 @@ export const adminCancelShow = asyncHandler(async (req, res) => {
 
 // ❌ ADMIN CANCEL SPECIFIC BOOKING
 export const adminCancelBooking = asyncHandler(async (req, res) => {
-  const { bookingId } = req.params;
-  const { seatIds } = req.body;
+  const { id } = req.params;
+  const { seatIds } = null;
 
   const booking = await prisma.booking.findUnique({
-    where: { id: parseInt(bookingId) },
+    where: { id: parseInt(id) },
     include: {
       user: true,
       show: { include: { movie: true, theatre: true } },
