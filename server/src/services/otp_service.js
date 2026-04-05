@@ -3,6 +3,7 @@ import logger from "../config/logger.js";
 import { OTP_TYPE } from "../utils/constants.js";
 import { Resend } from "resend";
 import crypto from "crypto";
+import bcrypt from "bcrypt";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 const FROM_EMAIL = process.env.FROM_EMAIL;
@@ -12,10 +13,21 @@ const MAX_OTP_ATTEMPTS = 3;
 const MAX_RESEND_COUNT = 3;
 const OTP_BLOCK_MINS = 15;
 const RESEND_BLOCK_MINS = 60;
+const OTP_HASH_ROUNDS = 6; // ✅ low rounds — OTP is only 6 digits, speed matters here
 
 // 🔢 Generate 6 digit OTP
 const generateOTP = () => {
   return crypto.randomInt(100000, 999999).toString();
+};
+
+// 🔒 Hash OTP before storing
+const hashOTP = async (otp) => {
+  return bcrypt.hash(otp, OTP_HASH_ROUNDS);
+};
+
+// 🔒 Compare plain OTP against stored hash
+const verifyOTPHash = async (plain, hashed) => {
+  return bcrypt.compare(plain, hashed);
 };
 
 // 📧 Send OTP email
@@ -89,14 +101,15 @@ export const createAndSendOTP = async ({ email, type, userData = null }) => {
 
   // Generate new OTP
   const otp = generateOTP();
+  const hashedOTP = await hashOTP(otp); // ✅ hash before storing
   const expiresAt = new Date(Date.now() + OTP_EXPIRY_MINS * 60 * 1000);
   const resendCount = existing ? existing.resendCount + 1 : 0;
 
-  // Save to DB
+  // ✅ Store hashed OTP — plain OTP never touches the DB
   await prisma.oTP.create({
     data: {
       email,
-      otp,
+      otp: hashedOTP,
       type,
       expiresAt,
       resendCount,
@@ -104,7 +117,7 @@ export const createAndSendOTP = async ({ email, type, userData = null }) => {
     },
   });
 
-  // Send email
+  // Send plain OTP in email — only the user sees it
   await sendOTPEmail(email, otp, type);
 
   logger.info(`📧 OTP sent to ${email} for ${type}`);
@@ -144,12 +157,13 @@ export const verifyOTP = async ({ email, otp, type }) => {
     throw error;
   }
 
-  // Check OTP
-  if (record.otp !== otp) {
+  // ✅ FIX: compare using bcrypt instead of plain string equality
+  const isMatch = await verifyOTPHash(otp, record.otp);
+
+  if (!isMatch) {
     const newAttempts = record.attempts + 1;
 
     if (newAttempts >= MAX_OTP_ATTEMPTS) {
-      // Block for 15 mins
       await prisma.oTP.update({
         where: { id: record.id },
         data: {

@@ -36,7 +36,7 @@ app.use(cors({
     if (!origin) return callback(null, true);
     if (allowedOrigins.includes(origin)) {
       return callback(null, true); }
-      console.log("Blocked by CORS:", origin); // debug
+      logger.warn(`Blocked by CORS: ${origin}`); // debug
     return callback(new Error("Not allowed by CORS"));
   },
   credentials: true,
@@ -56,6 +56,18 @@ app.use((req, res, next) => {
 
 app.use(cookieParser());
 
+app.use((req, res, next) => {
+  const start = Date.now();
+  res.on("finish", () => {
+    const duration = Date.now() - start;
+    const level = res.statusCode >= 500 ? "error" : res.statusCode >= 400 ? "warn" : "info";
+    logger[level](
+      `${req.method} ${req.path} ${res.statusCode} ${duration}ms`
+    );
+  });
+  next();
+});
+
 // 🛣️ Routes
 app.use("/auth", authRoutes);
 app.use("/users", userRoutes);
@@ -66,9 +78,12 @@ app.use("/payment", paymentRoutes);
 app.use("/theatres", theatreRoutes);
 app.use("/admin", adminRoutes);
 
+
 // 🐂 Bull Board — dev only, never in production
 // app.js — replace the static import
 if (process.env.NODE_ENV !== "production") {
+  const { default: testRoutes } = await import("./routes/test_routes.js");
+app.use("/test", testRoutes);
   const { default: serverAdapter } = await import("./config/bullBoard.js");
   app.use("/admin/queues", authMiddleware, requireAdmin, serverAdapter.getRouter());
 }

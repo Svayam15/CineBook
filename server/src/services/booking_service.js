@@ -8,38 +8,54 @@ import {
 } from "../utils/constants.js";
 import logger from "../config/logger.js";
 
-// ⏱️ RELEASE EXPIRED LOCKS
+// ⏱️ RELEASE EXPIRED LOCKS — replace in booking_service.js
+// This version uses a single transaction to avoid the findMany → updateMany gap
+
 export const releaseExpiredLocks = async () => {
   try {
-    const expiredSeats = await prisma.showSeat.findMany({
-      where: {
-        status: "LOCKED",
-        lockedAt: { lt: new Date(Date.now() - LOCK_EXPIRY_TIME) },
-      },
-    });
+    const expiryThreshold = new Date(Date.now() - LOCK_EXPIRY_TIME);
 
-    if (expiredSeats.length === 0) return;
-
-    const expiredBookingIds = [
-      ...new Set(expiredSeats.map((s) => s.pendingBookingId).filter(Boolean)),
-    ];
-
-    await prisma.showSeat.updateMany({
-      where: {
-        status: "LOCKED",
-        lockedAt: { lt: new Date(Date.now() - LOCK_EXPIRY_TIME) },
-      },
-      data: { status: "AVAILABLE", lockedAt: null, pendingBookingId: null },
-    });
-
-    if (expiredBookingIds.length > 0) {
-      await prisma.booking.updateMany({
-        where: { id: { in: expiredBookingIds }, status: BOOKING_STATUS.PENDING },
-        data: { status: BOOKING_STATUS.FAILED },
+    // ✅ FIX: single transaction — find expired booking IDs and release atomically
+    await prisma.$transaction(async (tx) => {
+      // Step 1: get expired bookingIds before releasing (needed to mark bookings FAILED)
+      const expiredSeats = await tx.showSeat.findMany({
+        where: {
+          status: "LOCKED",
+          lockedAt: { lt: expiryThreshold },
+        },
+        select: { pendingBookingId: true },
       });
-    }
 
-    logger.info(`♻️ Released ${expiredSeats.length} expired locked seats`);
+      if (expiredSeats.length === 0) return;
+
+      const expiredBookingIds = [
+        ...new Set(
+          expiredSeats.map((s) => s.pendingBookingId).filter(Boolean)
+        ),
+      ];
+
+      // Step 2: release seats (same condition — atomic within transaction)
+      await tx.showSeat.updateMany({
+        where: {
+          status: "LOCKED",
+          lockedAt: { lt: expiryThreshold },
+        },
+        data: { status: "AVAILABLE", lockedAt: null, pendingBookingId: null },
+      });
+
+      // Step 3: mark expired bookings as FAILED
+      if (expiredBookingIds.length > 0) {
+        await tx.booking.updateMany({
+          where: {
+            id: { in: expiredBookingIds },
+            status: BOOKING_STATUS.PENDING,
+          },
+          data: { status: BOOKING_STATUS.FAILED },
+        });
+      }
+
+      logger.info(`♻️ Released ${expiredSeats.length} expired locked seats, ${expiredBookingIds.length} bookings marked FAILED`);
+    });
   } catch (err) {
     logger.error(`Failed to release expired locks: ${err.message}`);
   }

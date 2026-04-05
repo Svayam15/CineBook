@@ -127,7 +127,7 @@ export const getAllBookings = asyncHandler(async (req, res) => {
   });
 });
 
-// 🎫 ADMIN WINDOW BOOKING — updated to match new worker pattern
+// 🎫 ADMIN WINDOW BOOKING
 export const adminCreateBooking = asyncHandler(async (req, res) => {
   const adminId = req.user.userId;
   const { showId, seatIds, paymentType } = req.body;
@@ -144,7 +144,6 @@ export const adminCreateBooking = asyncHandler(async (req, res) => {
     throw error;
   }
 
-  // ✅ Fetch show + seats together in parallel — same pattern as booking_service.js
   const [show, seats] = await Promise.all([
     prisma.show.findUnique({
       where: { id: showId },
@@ -185,7 +184,6 @@ export const adminCreateBooking = asyncHandler(async (req, res) => {
     throw error;
   }
 
-  // ✅ Early availability check — fail fast before queuing
   const unavailableSeats = seats.filter((s) => s.status !== "AVAILABLE");
   if (unavailableSeats.length > 0) {
     const error = new Error("Some seats are no longer available");
@@ -193,13 +191,11 @@ export const adminCreateBooking = asyncHandler(async (req, res) => {
     throw error;
   }
 
-  // ✅ Pre-calculate totalAmount
   const totalAmount = seats.reduce((sum, seat) => {
     if (seat.type === "GOLDEN") return sum + (show.goldenPrice || 0);
     return sum + show.regularPrice;
   }, 0);
 
-  // ✅ Unique jobId — same pattern as booking_service.js
   const jobId = `booking-${adminId}-${showId}-${Date.now()}`;
 
   const job = await bookingQueue.add(
@@ -210,10 +206,10 @@ export const adminCreateBooking = asyncHandler(async (req, res) => {
       seatIds,
       paymentType,
       isWindowBooking: true,
-      totalAmount,            // ✅ pre-calculated
-      seats,                  // ✅ pre-fetched
-      regularPrice: show.regularPrice,  // ✅ pre-fetched
-      goldenPrice: show.goldenPrice,    // ✅ pre-fetched
+      totalAmount,
+      seats,
+      regularPrice: show.regularPrice,
+      goldenPrice: show.goldenPrice,
     },
     {
       jobId,
@@ -441,49 +437,72 @@ export const adminCancelMovie = asyncHandler(async (req, res) => {
   const futureShows = movie.shows.filter(
     (s) => new Date(s.startTime) > new Date()
   );
+  const futureShowIds = futureShows.map((s) => s.id);
 
-  for (const show of futureShows) {
-    const bookings = await prisma.booking.findMany({
-      where: { showId: show.id, status: "PAID" },
-      include: { user: true, seats: true },
-    });
+  // ✅ Get all affected bookings upfront for email notifications
+  const affectedBookings = futureShowIds.length > 0
+    ? await prisma.booking.findMany({
+        where: {
+          showId: { in: futureShowIds },
+          status: "PAID",
+        },
+        include: { user: true, seats: true },
+      })
+    : [];
 
+  // ✅ Single transaction for ALL shows instead of N transactions
+  if (futureShowIds.length > 0) {
     await prisma.$transaction(async (tx) => {
       await tx.showSeat.updateMany({
-        where: { showId: show.id },
+        where: { showId: { in: futureShowIds } },
         data: { status: "AVAILABLE", lockedAt: null, pendingBookingId: null },
       });
       await tx.booking.updateMany({
-        where: { showId: show.id, status: { in: ["PENDING", "PAID"] } },
+        where: {
+          showId: { in: futureShowIds },
+          status: { in: ["PENDING", "PAID"] },
+        },
         data: { status: "CANCELLED", cancelledAt: new Date() },
       });
-      await tx.show.update({
-        where: { id: show.id },
+      await tx.show.updateMany({
+        where: { id: { in: futureShowIds } },
         data: { isActive: false },
       });
     });
 
-    await processBulkRefunds(show.id);
-
-    const fullShow = await prisma.show.findUnique({
-      where: { id: show.id },
-      include: { movie: true, theatre: true },
-    });
-
-    for (const booking of bookings) {
-      sendShowCancelledEmail({
-        user: booking.user,
-        booking,
-        show: fullShow,
-        refundAmount: booking.totalAmount,
-      }).catch((err) => logger.error(`Movie cancel email error: ${err.message}`));
-    }
+    // ✅ Process all refunds in parallel
+    await Promise.allSettled(
+      futureShowIds.map((showId) => processBulkRefunds(showId))
+    );
   }
 
+  // Soft delete the movie
   await prisma.movie.update({
     where: { id: movieId },
     data: { isDeleted: true },
   });
+
+  // Fetch full show details for emails
+  const fullShows = futureShowIds.length > 0
+    ? await prisma.show.findMany({
+        where: { id: { in: futureShowIds } },
+        include: { movie: true, theatre: true },
+      })
+    : [];
+
+  const showMap = Object.fromEntries(fullShows.map((s) => [s.id, s]));
+
+  // Send emails non-blocking
+  for (const booking of affectedBookings) {
+    const show = showMap[booking.showId];
+    if (!show) continue;
+    sendShowCancelledEmail({
+      user: booking.user,
+      booking,
+      show,
+      refundAmount: booking.totalAmount,
+    }).catch((err) => logger.error(`Movie cancel email error: ${err.message}`));
+  }
 
   logger.info(`Movie ${movieId} soft-deleted. ${futureShows.length} future shows cancelled.`);
 
@@ -557,18 +576,18 @@ export const getDashboardStats = asyncHandler(async (req, res) => {
     totalTheatres,
     totalUsers,
     totalBookings,
-    paidBookings,
+    revenueAgg,
     allActiveShows,
     todayBookings,
-    todayPaid,
+    todayRevenueAgg,
   ] = await Promise.all([
     prisma.movie.count({ where: { isDeleted: false } }),
     prisma.theatre.count(),
     prisma.user.count({ where: { role: "USER" } }),
     prisma.booking.count(),
-    prisma.booking.findMany({
+    prisma.booking.aggregate({
       where: { status: "PAID" },
-      select: { totalAmount: true },
+      _sum: { totalAmount: true },
     }),
     prisma.show.findMany({
       where: { isActive: true },
@@ -577,14 +596,14 @@ export const getDashboardStats = asyncHandler(async (req, res) => {
     prisma.booking.count({
       where: { createdAt: { gte: startOfDay } },
     }),
-    prisma.booking.findMany({
+    prisma.booking.aggregate({
       where: { status: "PAID", createdAt: { gte: startOfDay } },
-      select: { totalAmount: true },
+      _sum: { totalAmount: true },
     }),
   ]);
 
-  const totalRevenue = paidBookings.reduce((sum, b) => sum + (b.totalAmount || 0), 0);
-  const todayRevenue = todayPaid.reduce((sum, b) => sum + (b.totalAmount || 0), 0);
+  const totalRevenue = revenueAgg._sum.totalAmount ?? 0;
+  const todayRevenue = todayRevenueAgg._sum.totalAmount ?? 0;
 
   const upcomingShows = allActiveShows.filter((s) => new Date(s.startTime) > now).length;
   const ongoingShows = allActiveShows.filter((s) => {

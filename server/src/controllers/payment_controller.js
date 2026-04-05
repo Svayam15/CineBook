@@ -18,6 +18,12 @@ export const createOrder = async (req, res) => {
     });
 
     if (!booking) return res.status(404).json({ message: "Booking not found" });
+
+    // ✅ FIX 1: ownership check — user can only pay for their own booking
+    if (booking.userId !== req.user.userId && req.user.role !== "ADMIN") {
+      return res.status(403).json({ message: "Forbidden" });
+    }
+
     if (booking.status === "PAID") return res.status(400).json({ message: "Booking already paid" });
     if (booking.status === "FAILED") return res.status(400).json({ message: "Booking expired. Please book again." });
     if (booking.status === "CANCELLED") return res.status(400).json({ message: "Booking was cancelled" });
@@ -81,6 +87,11 @@ export const verifyPayment = async (req, res) => {
 
     if (!booking) return res.status(404).json({ message: "Booking not found" });
 
+    // ✅ FIX 1: ownership check
+    if (booking.userId !== req.user.userId && req.user.role !== "ADMIN") {
+      return res.status(403).json({ message: "Forbidden" });
+    }
+
     // ✅ Webhook already processed — return success gracefully
     if (booking.status === "PAID") {
       return res.json({
@@ -89,7 +100,9 @@ export const verifyPayment = async (req, res) => {
       });
     }
 
-    if (lockedSeats.length === 0) return res.status(400).json({ message: "Seat reservation expired" });
+    if (lockedSeats.length === 0) {
+      return res.status(400).json({ message: "Seat reservation expired" });
+    }
 
     const updated = await prisma.$transaction(async (tx) => {
       await tx.showSeat.updateMany({
@@ -97,16 +110,24 @@ export const verifyPayment = async (req, res) => {
         data: { status: "BOOKED", lockedAt: null, pendingBookingId: null },
       });
 
-      await tx.bookingSeat.createMany({
-        data: lockedSeats.map((seat) => ({
-          bookingId,
-          showSeatId: seat.id,
-          seatType: seat.type,
-          seatPrice: seat.type === "GOLDEN"
-            ? (booking.show.goldenPrice || 0)
-            : booking.show.regularPrice,
-        })),
+      // ✅ FIX 2: guard against duplicate BookingSeats if webhook already created them
+      const existingBookingSeats = await tx.bookingSeat.count({
+        where: { bookingId },
       });
+
+      if (existingBookingSeats === 0) {
+        await tx.bookingSeat.createMany({
+          data: lockedSeats.map((seat) => ({
+            bookingId,
+            showSeatId: seat.id,
+            seatType: seat.type,
+            seatPrice:
+              seat.type === "GOLDEN"
+                ? booking.show.goldenPrice || 0
+                : booking.show.regularPrice,
+          })),
+        });
+      }
 
       return tx.booking.update({
         where: { id: bookingId },
@@ -150,6 +171,12 @@ export const cancelAndRefund = async (req, res) => {
     });
 
     if (!booking) return res.status(404).json({ message: "Booking not found" });
+
+    // ✅ FIX 1: ownership check
+    if (!cancelledByAdmin && booking.userId !== req.user.userId) {
+      return res.status(403).json({ message: "Forbidden" });
+    }
+
     if (booking.status !== "PAID") return res.status(400).json({ message: "Only paid bookings can be refunded" });
 
     const seatsToCancel = seatIds || booking.seats.map((s) => s.showSeatId);
@@ -162,6 +189,7 @@ export const cancelAndRefund = async (req, res) => {
     }
 
     await prisma.$transaction(async (tx) => {
+      // ✅ FIX: use actual seat IDs not pendingBookingId (seats are BOOKED state)
       await tx.showSeat.updateMany({
         where: { id: { in: cancelledSeatsData.map((bs) => bs.showSeatId) } },
         data: { status: "AVAILABLE", lockedAt: null, pendingBookingId: null },
@@ -187,9 +215,10 @@ export const cancelAndRefund = async (req, res) => {
     logger.info(`Booking ${bookingId} cancelled. Refund: ₹${refundAmount}`);
 
     return res.json({
-      message: booking.paymentType === "CASH"
-        ? "Booking cancelled. Customer will collect cash refund manually."
-        : `Booking cancelled. Refund of ₹${refundAmount} processed.`,
+      message:
+        booking.paymentType === "CASH"
+          ? "Booking cancelled. Customer will collect cash refund manually."
+          : `Booking cancelled. Refund of ₹${refundAmount} processed.`,
       refundAmount,
       paymentType: booking.paymentType,
     });

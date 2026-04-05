@@ -10,7 +10,7 @@ import { sendBookingCancelledEmail } from "../services/email_service.js";
 // 🎟️ CREATE BOOKING
 export const createBooking = asyncHandler(async (req, res) => {
   const userId = req.user.userId;
-  const { showId, seatIds, paymentType } = req.body; // ✅ extract paymentType
+  const { showId, seatIds, paymentType } = req.body;
 
   if (!showId || !seatIds || seatIds.length === 0) {
     const error = new Error("showId and seatIds are required");
@@ -24,7 +24,24 @@ export const createBooking = asyncHandler(async (req, res) => {
     throw error;
   }
 
-  // 🛡️ Duplicate block
+  // ✅ FIX: validate all seatIds are positive integers with no duplicates
+  const allPositiveIntegers = seatIds.every(
+    (id) => Number.isInteger(id) && id > 0
+  );
+  if (!allPositiveIntegers) {
+    const error = new Error("All seatIds must be positive integers");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const noDuplicates = new Set(seatIds).size === seatIds.length;
+  if (!noDuplicates) {
+    const error = new Error("Duplicate seatIds are not allowed");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  // 🛡️ Best-effort duplicate check — real guard is inside the worker transaction
   const existingActive = await prisma.booking.findFirst({
     where: {
       userId,
@@ -43,7 +60,7 @@ export const createBooking = asyncHandler(async (req, res) => {
     userId,
     showId,
     seatIds,
-    paymentType: paymentType || "CARD", // ✅ pass paymentType through
+    paymentType: paymentType || "CARD",
   });
 
   res.status(202).json({
@@ -197,9 +214,10 @@ export const cancelBooking = asyncHandler(async (req, res) => {
     throw error;
   }
 
-  // ── PENDING cancel ─────────────────────────────────────────────────────────
+  // ── PENDING cancel ──────────────────────────────────────────────────────────
   if (booking.status === "PENDING") {
     await prisma.$transaction([
+      // PENDING seats are LOCKED with pendingBookingId set — correct to use this
       prisma.showSeat.updateMany({
         where: { pendingBookingId: bookingId },
         data: { status: "AVAILABLE", lockedAt: null, pendingBookingId: null },
@@ -224,7 +242,7 @@ export const cancelBooking = asyncHandler(async (req, res) => {
     });
   }
 
-  // ── PAID cancel — time-based refund ───────────────────────────────────────
+  // ── PAID cancel — time-based refund ────────────────────────────────────────
   const now = new Date();
   const showTime = new Date(booking.show.startTime);
   const hoursRemaining = (showTime - now) / (1000 * 60 * 60);
@@ -249,9 +267,13 @@ export const cancelBooking = asyncHandler(async (req, res) => {
     message = "Booking cancelled. No refund (under 4 hours to show). Seats released.";
   }
 
+  // ✅ FIX: PAID bookings have seats in BOOKED state with pendingBookingId = null
+  // Must release using actual showSeatId from BookingSeat records
+  const bookedSeatIds = booking.seats.map((bs) => bs.showSeatId);
+
   await prisma.$transaction([
     prisma.showSeat.updateMany({
-      where: { pendingBookingId: bookingId },
+      where: { id: { in: bookedSeatIds } },
       data: { status: "AVAILABLE", lockedAt: null, pendingBookingId: null },
     }),
     prisma.booking.update({

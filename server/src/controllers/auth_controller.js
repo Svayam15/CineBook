@@ -6,19 +6,21 @@ import { createAndSendOTP, verifyOTP } from "../services/otp_service.js";
 import { checkLoginBlock, recordFailedAttempt, resetLoginAttempts } from "../services/login_attempt_service.js";
 import { sendPasswordResetSuccessEmail } from "../services/email_service.js";
 import { OTP_TYPE } from "../utils/constants.js";
+import { timingSafeEqual } from "crypto";
 
 const JWT_SECRET = process.env.JWT_SECRET;
 
 // 🔥 SET COOKIE HELPER
 const setAuthCookie = (res, token, stayLoggedIn = false) => {
+  const isProduction = process.env.NODE_ENV === "production";
   res.cookie("token", token, {
     httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "none",
-    domain: ".svayam.dev",
+    secure: isProduction,
+    sameSite: isProduction ? "none" : "lax",
+    domain: isProduction ? ".svayam.dev" : undefined,
     maxAge: stayLoggedIn
-      ? 30 * 24 * 60 * 60 * 1000  // 30 days
-      : 24 * 60 * 60 * 1000,       // 1 day
+      ? 30 * 24 * 60 * 60 * 1000
+      : 24 * 60 * 60 * 1000,
   });
 };
 
@@ -309,11 +311,12 @@ export const resendOTP = async (req, res) => {
 
 // 🚪 LOGOUT
 export const logout = (req, res) => {
+  const isProduction = process.env.NODE_ENV === "production";
   res.clearCookie("token", {
     httpOnly: true,
-    secure: true,
-    sameSite: "none",
-    domain: ".svayam.dev",
+    secure: isProduction,
+    sameSite: isProduction ? "none" : "lax",
+    domain: isProduction ? ".svayam.dev" : undefined,
   });
   res.json({ message: "Logged out successfully" });
 };
@@ -323,9 +326,13 @@ export const adminSignup = async (req, res) => {
   try {
     const { name, surname, username, email, password, adminSecret } = req.body;
 
-    if (adminSecret !== process.env.ADMIN_SECRET) {
-      return res.status(403).json({ message: "Invalid admin secret" });
-    }
+// NEW — replace with this
+const provided = Buffer.from(adminSecret ?? "");
+const expected = Buffer.from(process.env.ADMIN_SECRET ?? "");
+const isValidSecret = provided.length === expected.length && timingSafeEqual(provided, expected);
+if (!isValidSecret) {
+  return res.status(403).json({ message: "Invalid admin secret" });
+}
 
     let usernameFormatted = username?.toLowerCase();
     let emailFormatted = email?.toLowerCase();
