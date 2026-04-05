@@ -2,6 +2,7 @@ import Stripe from "stripe";
 import prisma from "../utils/prisma.js";
 import { sendBookingConfirmationEmail } from "../services/email_service.js";
 import logger from "../config/logger.js";
+import { broadcastToShow } from "../utils/sseManager.js";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
@@ -70,20 +71,19 @@ export const handleWebhook = async (req, res) => {
           });
 
           if (existingBookingSeats.length > 0) {
-            // BookingSeats already created — just mark as PAID
             await prisma.booking.update({
               where: { id: bookingId },
               data: { status: "PAID", paymentId: paymentIntent.id },
             });
           } else {
-            logger.error(`Webhook: Cannot confirm booking ${bookingId} — seats expired and no booking seats found`);
+            logger.error(`Webhook: Cannot confirm booking ${bookingId} — seats expired`);
             break;
           }
 
           break;
         }
 
-        // Confirm booking in transaction
+        // ✅ Confirm booking in transaction
         await prisma.$transaction(async (tx) => {
           await tx.showSeat.updateMany({
             where: { pendingBookingId: bookingId },
@@ -110,7 +110,14 @@ export const handleWebhook = async (req, res) => {
           });
         });
 
-        // ✅ Fetch fresh booking so paymentId is included in email
+        // ✅ Broadcast BOOKED to all clients viewing this show
+        lockedSeats.forEach((seat) => {
+          broadcastToShow(booking.show.id, { seatId: seat.id, status: "BOOKED" });
+        });
+
+        logger.info(`Webhook: Broadcast BOOKED for ${lockedSeats.length} seats on show ${booking.show.id}`);
+
+        // ✅ Send confirmation email
         const updatedBooking = await prisma.booking.findUnique({
           where: { id: bookingId },
         });
@@ -122,7 +129,7 @@ export const handleWebhook = async (req, res) => {
 
         sendBookingConfirmationEmail({
           user: booking.user,
-          booking: updatedBooking, // ✅ has paymentId and correct paymentType
+          booking: updatedBooking,
           show: booking.show,
           seats: bookingSeats,
         }).catch((err) => logger.error(`Webhook confirmation email error: ${err.message}`));
@@ -139,6 +146,12 @@ export const handleWebhook = async (req, res) => {
 
         if (!booking || booking.status !== "PENDING") break;
 
+        // ✅ Get seats before releasing so we can broadcast
+        const failedSeats = await prisma.showSeat.findMany({
+          where: { pendingBookingId: bookingId },
+          select: { id: true },
+        });
+
         await prisma.$transaction(async (tx) => {
           await tx.showSeat.updateMany({
             where: { pendingBookingId: bookingId },
@@ -149,6 +162,11 @@ export const handleWebhook = async (req, res) => {
             where: { id: bookingId },
             data: { status: "FAILED" },
           });
+        });
+
+        // ✅ Broadcast AVAILABLE — seats freed up
+        failedSeats.forEach((seat) => {
+          broadcastToShow(booking.showId, { seatId: seat.id, status: "AVAILABLE" });
         });
 
         logger.info(`Webhook: Booking ${bookingId} marked FAILED ❌`);
@@ -163,6 +181,12 @@ export const handleWebhook = async (req, res) => {
 
         if (!booking || booking.status !== "PENDING") break;
 
+        // ✅ Get seats before releasing so we can broadcast
+        const cancelledSeats = await prisma.showSeat.findMany({
+          where: { pendingBookingId: bookingId },
+          select: { id: true },
+        });
+
         await prisma.$transaction(async (tx) => {
           await tx.showSeat.updateMany({
             where: { pendingBookingId: bookingId },
@@ -173,6 +197,11 @@ export const handleWebhook = async (req, res) => {
             where: { id: bookingId },
             data: { status: "FAILED" },
           });
+        });
+
+        // ✅ Broadcast AVAILABLE — seats freed up
+        cancelledSeats.forEach((seat) => {
+          broadcastToShow(booking.showId, { seatId: seat.id, status: "AVAILABLE" });
         });
 
         logger.info(`Webhook: Booking ${bookingId} cancelled by customer 🚫`);

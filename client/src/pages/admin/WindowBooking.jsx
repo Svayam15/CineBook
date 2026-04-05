@@ -143,7 +143,17 @@ const WindowBooking = () => {
             clearInterval(pollInterval);
             toast.success("Booking confirmed! 🎉");
             setSelectedSeats([]);
-            await handleShowSelect(selectedShow);
+
+            // ✅ Only re-fetch seats — do NOT call handleShowSelect
+            // Calling handleShowSelect resets selectedShow object
+            // which triggers SSE useEffect to close and reopen connection
+            try {
+              const seatsRes = await api.get(`/shows/${selectedShow.id}/seats`);
+              setSeats(seatsRes.data);
+            } catch (err) {
+              toast.error(err.message);
+            }
+
             setBooking(false);
           } else if (status === "failed") {
             clearInterval(pollInterval);
@@ -175,7 +185,9 @@ const WindowBooking = () => {
   const totalAmount = selectedSeats.reduce((sum, seatId) => {
     const seat = seats.find((s) => s.id === seatId);
     if (!seat) return sum;
-    return sum + (seat.type === "GOLDEN" ? selectedShow?.goldenPrice || 0 : selectedShow?.regularPrice || 0);
+    return sum + (seat.type === "GOLDEN"
+      ? selectedShow?.goldenPrice || 0
+      : selectedShow?.regularPrice || 0);
   }, 0);
 
   return (
@@ -244,6 +256,7 @@ const WindowBooking = () => {
             </div>
           ) : (
             <div className="bg-card border border-border rounded-2xl p-5">
+
               <div className="w-full bg-primary/10 border border-primary/20 rounded-lg py-2 text-center text-primary text-xs font-medium mb-6">
                 🎬 SCREEN
               </div>
@@ -278,7 +291,7 @@ const WindowBooking = () => {
                 ))}
               </div>
 
-              {/* Legend — updated locked to red */}
+              {/* Legend */}
               <div className="flex flex-wrap gap-4 mb-6 text-xs text-muted">
                 <span className="flex items-center gap-1.5">
                   <span className="w-4 h-4 rounded bg-zinc-800 inline-block" />Available
