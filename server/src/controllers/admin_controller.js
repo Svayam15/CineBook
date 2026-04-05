@@ -303,7 +303,7 @@ export const adminCancelShow = asyncHandler(async (req, res) => {
 // ❌ ADMIN CANCEL SPECIFIC BOOKING
 export const adminCancelBooking = asyncHandler(async (req, res) => {
   const { id } = req.params;
-  const { seatIds } = null;
+  // ✅ No req.body — DELETE requests have no body. Always cancel all seats.
 
   const booking = await prisma.booking.findUnique({
     where: { id: parseInt(id) },
@@ -326,12 +326,10 @@ export const adminCancelBooking = asyncHandler(async (req, res) => {
     throw error;
   }
 
-  const seatsToCancel = seatIds
-    ? booking.seats.filter((bs) => seatIds.includes(bs.showSeatId))
-    : booking.seats;
+  const seatsToCancel = booking.seats;
 
   if (seatsToCancel.length === 0) {
-    const error = new Error("No matching seats found");
+    const error = new Error("No seats found for this booking");
     error.statusCode = 400;
     throw error;
   }
@@ -343,8 +341,7 @@ export const adminCancelBooking = asyncHandler(async (req, res) => {
     throw error;
   }
 
-  const cancelledAmount = seatsToCancel.reduce((sum, bs) => sum + bs.seatPrice, 0);
-  const refundAmount = cancelledAmount;
+  const refundAmount = seatsToCancel.reduce((sum, bs) => sum + bs.seatPrice, 0);
 
   if (booking.paymentType === "CARD" && booking.paymentId) {
     await processRefund({ bookingId: booking.id, refundAmount, paymentId: booking.paymentId });
@@ -357,21 +354,16 @@ export const adminCancelBooking = asyncHandler(async (req, res) => {
     });
 
     await tx.bookingSeat.deleteMany({
-      where: {
-        bookingId: booking.id,
-        showSeatId: { in: seatsToCancel.map((bs) => bs.showSeatId) },
-      },
+      where: { bookingId: booking.id },
     });
-
-    const remainingSeats = booking.seats.length - seatsToCancel.length;
 
     await tx.booking.update({
       where: { id: booking.id },
       data: {
-        totalAmount: (booking.totalAmount || 0) - cancelledAmount,
-        status: remainingSeats === 0 ? "CANCELLED" : "PAID",
-        cancelledAt: remainingSeats === 0 ? new Date() : null,
+        status: "CANCELLED",
+        cancelledAt: new Date(),
         refundAmount,
+        totalAmount: 0,
       },
     });
   });
@@ -384,7 +376,7 @@ export const adminCancelBooking = asyncHandler(async (req, res) => {
     cancelledSeats: seatsToCancel.length,
   }).catch((err) => logger.error(`Cancel email error: ${err.message}`));
 
-  logger.info(`Admin cancelled booking ${bookingId}. Refund: ₹${refundAmount}`);
+  logger.info(`Admin cancelled booking ${id}. Refund: ₹${refundAmount}`);
 
   return res.json({
     message: booking.paymentType === "CASH"

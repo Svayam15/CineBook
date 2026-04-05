@@ -1,20 +1,18 @@
-// Manages all SSE connections grouped by showId
-// showId → Set of response objects
-
 import logger from "../config/logger.js";
 
 const showConnections = new Map();
 
 export const addConnection = (showId, res) => {
-  const id = parseInt(showId); // ✅ normalize to number always
+  const id = parseInt(showId);  // ✅ always number
   if (!showConnections.has(id)) {
     showConnections.set(id, new Set());
   }
   showConnections.get(id).add(res);
+  logger.info(`SSE addConnection: showId=${id} totalConnections=${showConnections.get(id).size}`);
 };
 
 export const removeConnection = (showId, res) => {
-  const id = parseInt(showId);
+  const id = parseInt(showId);  // ✅ always number
   const connections = showConnections.get(id);
   if (!connections) return;
   connections.delete(res);
@@ -24,7 +22,7 @@ export const removeConnection = (showId, res) => {
 };
 
 export const broadcastToShow = (showId, data) => {
-  const id = parseInt(showId);
+  const id = parseInt(showId);  // ✅ always number
   const connections = showConnections.get(id);
   logger.info(`SSE broadcast: showId=${id} connections=${connections?.size ?? 0}`);
   if (!connections || connections.size === 0) return;
