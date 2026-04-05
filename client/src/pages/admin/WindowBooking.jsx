@@ -80,33 +80,31 @@ const maxAttempts = 60; // ✅ 60 seconds total
 
 const pollInterval = setInterval(async () => {
   attempts++;
-  try {
-    const statusRes = await api.get(
-      `/bookings/pending-status?showId=${selectedShow.id}&jobId=${jobId}&adminPoll=true`
-    );
-    const { status, booking: bookingData } = statusRes.data;
+        try {
+          const statusRes = await api.get(`/bookings/status-rest/${jobId}`);
+          const { status, reason } = statusRes.data;
 
-    if (status === "PAID" && bookingData) {
-      clearInterval(pollInterval);
-      toast.success("Booking confirmed! 🎉");
-      setSelectedSeats([]);
-      await handleShowSelect(selectedShow);
-      setBooking(false);
-    } else if (status === "FAILED") {
-      clearInterval(pollInterval);
-      toast.error("Booking failed. Seats may have been taken.");
-      setBooking(false);
-    } else if (attempts >= maxAttempts) {
-      clearInterval(pollInterval);
-      toast.error("Booking timed out. Please check bookings list.");
-      setBooking(false);
-    }
-  } catch (err) {
-    clearInterval(pollInterval);
-    toast.error(err.message);
-    setBooking(false);
-  }
-}, 2000);
+          if (status === "success" || statusRes.data.booking) {
+            clearInterval(pollInterval);
+            toast.success("Booking confirmed! 🎉");
+            setSelectedSeats([]);
+            await handleShowSelect(selectedShow);
+            setBooking(false);
+          } else if (status === "failed") {
+            clearInterval(pollInterval);
+            toast.error(reason || "Booking failed");
+            setBooking(false);
+          } else if (attempts >= maxAttempts) {
+            clearInterval(pollInterval);
+            toast.error("Booking timed out. Please try again.");
+            setBooking(false);
+          }
+        } catch (err) {
+          clearInterval(pollInterval);
+          toast.error(err.message);
+          setBooking(false);
+        }
+      }, 1000);
     } catch (err) {
       toast.error(err.message);
       setBooking(false);
