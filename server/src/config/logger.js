@@ -20,7 +20,7 @@ const prodFormat = combine(
 );
 
 const logger = winston.createLogger({
-  level: process.env.NODE_ENV === "production" ? "warn" : "debug",
+  level: process.env.NODE_ENV === "production" ? "info" : "debug",
   format: process.env.NODE_ENV === "production" ? prodFormat : devFormat,
   transports: [new winston.transports.Console()],
 });
