@@ -4,6 +4,7 @@ import axios from "../../api/axios";
 import api from "../../api/axios";
 import toast from "react-hot-toast";
 import useAuthStore from "../../store/authStore";
+import Navbar from "../../components/common/Navbar";
 
 const ShowDetails = () => {
   const { id } = useParams();
@@ -13,10 +14,7 @@ const ShowDetails = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [selectedSeats, setSelectedSeats] = useState([]);
-
-    // ✅ NEW: prevent duplicate bookings
   const [bookingLoading, setBookingLoading] = useState(false);
-
   const { isAuthenticated } = useAuthStore();
 
   useEffect(() => {
@@ -38,13 +36,12 @@ const ShowDetails = () => {
     fetchShow().catch(console.error);
   }, [id]);
 
-  // Check if show has already started
   const isShowStarted = show?.rawStartTime ? new Date(show.rawStartTime) <= new Date() : false;
 
   const toggleSeat = (seat) => {
     if (seat.status !== "AVAILABLE") return;
     if (isShowStarted) return;
-      if (bookingLoading) return;
+    if (bookingLoading) return;
     setSelectedSeats((prev) =>
       prev.find((s) => s.id === seat.id)
         ? prev.filter((s) => s.id !== seat.id)
@@ -53,32 +50,22 @@ const ShowDetails = () => {
   };
 
   const totalAmount = selectedSeats.reduce((sum, seat) => {
-    const price =
-      seat.type === "GOLDEN" ? show?.goldenPrice : show?.regularPrice;
+    const price = seat.type === "GOLDEN" ? show?.goldenPrice : show?.regularPrice;
     return sum + (price || 0);
   }, 0);
 
   const handleProceed = async () => {
     if (selectedSeats.length === 0) return;
-
-    // 🚫 Check if show has already started
     if (isShowStarted) {
       toast.error("Show has already started. Booking is not allowed.");
       return;
     }
-
-    // If not logged in → redirect to login with redirect back
     if (!isAuthenticated) {
-      navigate("/login", {
-        state: { redirect: `/shows/${id}` },
-      });
+      navigate("/login", { state: { redirect: `/shows/${id}` } });
       return;
     }
-
     try {
-
-      setBookingLoading(true); // ✅ prevent multiple clicks
-
+      setBookingLoading(true);
       const res = await api.post("/bookings", {
         showId: parseInt(id),
         seatIds: selectedSeats.map((s) => s.id),
@@ -94,10 +81,10 @@ const ShowDetails = () => {
       });
     } catch (err) {
       toast.error(err.message);
+      setBookingLoading(false);
     }
   };
 
-  // Group seats by row
   const seatsByRow = seats.reduce((acc, seat) => {
     if (!acc[seat.row]) acc[seat.row] = [];
     acc[seat.row].push(seat);
@@ -108,19 +95,21 @@ const ShowDetails = () => {
 
   if (loading) {
     return (
-      <div style={styles.loadingWrap}>
-        <div style={styles.spinner} />
-        <p style={styles.loadingText}>Loading show details...</p>
+      <div className="min-h-screen bg-dark flex flex-col items-center justify-center gap-4">
+        <div className="w-9 h-9 border-2 border-primary/20 border-t-primary rounded-full animate-spin" />
+        <p className="text-muted text-sm">Loading show details...</p>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div style={styles.errorWrap}>
-        <span style={styles.errorIcon}>✕</span>
-        <p style={styles.errorText}>{error}</p>
-        <button style={styles.backBtn} onClick={() => navigate(-1)}>
+      <div className="min-h-screen bg-dark flex flex-col items-center justify-center gap-4">
+        <p className="text-red-400 text-base">{error}</p>
+        <button
+          onClick={() => navigate(-1)}
+          className="bg-card border border-border text-muted hover:text-white px-4 py-2 rounded-xl text-sm transition"
+        >
           Go Back
         </button>
       </div>
@@ -128,548 +117,167 @@ const ShowDetails = () => {
   }
 
   return (
-    <div style={styles.page}>
-      {/* Ambient background */}
-      <div style={styles.ambientBg} />
+    <div className="min-h-screen bg-dark pb-32 md:pb-24">
+      <Navbar />
 
       {/* Header */}
-      <div style={styles.header}>
-        <button style={styles.backBtn} onClick={() => navigate(-1)}>
+      <div className="px-4 sm:px-10 pt-6 pb-4 flex items-start gap-4">
+        <button
+          onClick={() => navigate(-1)}
+          className="bg-white/5 border border-white/10 text-white px-4 py-2 rounded-lg text-sm mt-1 whitespace-nowrap hover:bg-white/10 transition"
+        >
           ← Back
         </button>
-        <div style={styles.headerInfo}>
-          <h1 style={styles.movieTitle}>{show?.movie?.title}</h1>
-          <div style={styles.badges}>
-            <span style={styles.badge}>{show?.showType}</span>
-            <span style={styles.badgeDim}>{show?.movie?.duration} min</span>
+        <div className="flex flex-col gap-2">
+          <h1 className="font-heading text-2xl sm:text-4xl font-bold text-white leading-tight">
+            {show?.movie?.title}
+          </h1>
+          <div className="flex items-center gap-2">
+            <span className="bg-primary/20 border border-primary/40 text-primary px-3 py-0.5 rounded-full text-xs font-semibold tracking-wide">
+              {show?.showType}
+            </span>
+            <span className="text-muted text-sm">{show?.movie?.duration} min</span>
           </div>
         </div>
       </div>
 
-      {/* Show Info Bar */}
-      <div style={styles.infoBar}>
-        <div style={styles.infoItem}>
-          <span style={styles.infoLabel}>THEATRE</span>
-          <span style={styles.infoValue}>{show?.theatre?.name}</span>
-        </div>
-        <div style={styles.infoDivider} />
-        <div style={styles.infoItem}>
-          <span style={styles.infoLabel}>LOCATION</span>
-          <span style={styles.infoValue}>{show?.theatre?.location}</span>
-        </div>
-        <div style={styles.infoDivider} />
-        <div style={styles.infoItem}>
-          <span style={styles.infoLabel}>STARTS</span>
-          <span style={styles.infoValue}>{show?.startTime}</span>
-        </div>
-        <div style={styles.infoDivider} />
-        <div style={styles.infoItem}>
-          <span style={styles.infoLabel}>ENDS</span>
-          <span style={styles.infoValue}>{show?.endTime}</span>
-        </div>
+      {/* Info Bar */}
+      <div className="mx-4 sm:mx-10 mb-6 bg-white/[0.03] border border-white/[0.07] rounded-xl overflow-hidden flex flex-wrap">
+        {[
+          { label: "THEATRE", value: show?.theatre?.name },
+          { label: "LOCATION", value: show?.theatre?.location },
+          { label: "STARTS", value: show?.startTime },
+          { label: "ENDS", value: show?.endTime },
+        ].map((item, i) => (
+          <div key={i} className="flex-1 min-w-[140px] flex flex-col gap-1 px-5 py-4 border-r border-white/[0.06] last:border-r-0">
+            <span className="text-[10px] tracking-widest text-muted font-semibold">{item.label}</span>
+            <span className="text-sm text-white/80 font-medium">{item.value}</span>
+          </div>
+        ))}
       </div>
 
       {/* Show Started Banner */}
       {isShowStarted && (
-        <div style={styles.startedBanner}>
+        <div className="mx-4 sm:mx-10 mb-5 px-5 py-3.5 bg-red-500/8 border border-red-500/30 rounded-xl text-red-400 text-sm font-medium text-center">
           ⚠️ This show has already started. Booking is no longer available.
         </div>
       )}
 
       {/* Pricing */}
-      <div style={styles.pricingRow}>
-        <div style={styles.priceCard}>
-          <span style={styles.priceLabel}>REGULAR</span>
-          <span style={styles.priceValue}>₹{show?.regularPrice}</span>
+      <div className="flex gap-3 px-4 sm:px-10 mb-8">
+        <div className="flex flex-col gap-1 px-6 py-3.5 bg-white/[0.03] border border-white/[0.07] rounded-xl min-w-[120px]">
+          <span className="text-[10px] tracking-widest text-muted font-semibold">REGULAR</span>
+          <span className="text-xl font-bold text-white">₹{show?.regularPrice}</span>
         </div>
         {show?.hasGoldenSeats && (
-          <div style={{ ...styles.priceCard, ...styles.goldenCard }}>
-            <span style={styles.priceLabel}>GOLDEN ✦</span>
-            <span style={{ ...styles.priceValue, color: "#f5c842" }}>
-              ₹{show?.goldenPrice}
-            </span>
+          <div className="flex flex-col gap-1 px-6 py-3.5 bg-golden/5 border border-golden/20 rounded-xl min-w-[120px]">
+            <span className="text-[10px] tracking-widest text-muted font-semibold">GOLDEN ✦</span>
+            <span className="text-xl font-bold text-golden">₹{show?.goldenPrice}</span>
           </div>
         )}
       </div>
 
       {/* Screen */}
-      <div style={styles.screenWrap}>
-        <div style={styles.screen}>
-          <span style={styles.screenText}>SCREEN</span>
+      <div className="flex flex-col items-center mb-8 px-10">
+        <div className="relative w-full max-w-lg">
+          <span className="absolute -top-5 left-1/2 -translate-x-1/2 text-[10px] tracking-[0.2em] text-muted font-semibold">
+            SCREEN
+          </span>
+          <div className="h-1.5 bg-gradient-to-r from-transparent via-primary to-transparent rounded-full" />
         </div>
-        <div style={styles.screenGlow} />
+        <div className="w-full max-w-lg h-10 bg-gradient-to-b from-primary/8 to-transparent rounded-b-full" />
       </div>
 
-      {/* Seat Map */}
-      <div style={styles.seatMapWrap}>
-        {rows.map((row) => (
-          <div key={row} style={styles.seatRow}>
-            <span style={styles.rowLabel}>{row}</span>
-            <div style={styles.seatsInRow}>
-              {seatsByRow[row]
-                .sort((a, b) => a.number - b.number)
-                .map((seat) => {
-                  const isSelected = selectedSeats.find((s) => s.id === seat.id);
-                  const isGolden = seat.type === "GOLDEN";
-                  const isBooked = seat.status === "BOOKED";
-                  const isLocked = seat.status === "LOCKED";
+      {/* Seat Map — horizontally scrollable */}
+      <div className="overflow-x-auto pb-2">
+        <div className="flex flex-col items-center gap-1.5 px-4 min-w-max mx-auto">
+          {rows.map((row) => (
+            <div key={row} className="flex items-center gap-2">
+              <span className="w-5 text-right text-[11px] text-muted font-semibold">{row}</span>
+              <div className="flex gap-1">
+                {seatsByRow[row]
+                  .sort((a, b) => a.number - b.number)
+                  .map((seat) => {
+                    const isSelected = selectedSeats.find((s) => s.id === seat.id);
+                    const isGolden = seat.type === "GOLDEN";
+                    const isBooked = seat.status === "BOOKED";
+                    const isLocked = seat.status === "LOCKED";
 
-                  let seatStyle = { ...styles.seat };
-                  if (isShowStarted) seatStyle = { ...seatStyle, ...styles.seatBooked };
-                  else if (isBooked) seatStyle = { ...seatStyle, ...styles.seatBooked };
-                  else if (isLocked) seatStyle = { ...seatStyle, ...styles.seatLocked };
-                  else if (isSelected && isGolden) seatStyle = { ...seatStyle, ...styles.seatSelectedGolden };
-                  else if (isSelected) seatStyle = { ...seatStyle, ...styles.seatSelected };
-                  else if (isGolden) seatStyle = { ...seatStyle, ...styles.seatGolden };
-                  else seatStyle = { ...seatStyle, ...styles.seatAvailable };
+                    let cls = "w-7 h-6 rounded-t-md rounded-b-sm text-[9px] font-semibold transition flex items-center justify-center border-none cursor-pointer ";
 
-                  return (
-                    <button
-                      key={seat.id}
-                      style={seatStyle}
-                      onClick={() => toggleSeat(seat)}
-                      title={
-                        isShowStarted
-                          ? "Show has already started"
-                          : `${seat.row}${seat.number} — ${seat.type} — ${seat.status}`
-                      }
-                      disabled={isBooked || isLocked || isShowStarted}
-                    >
-                      {seat.number}
-                    </button>
-                  );
-                })}
+                    if (isShowStarted || isBooked) {
+                      cls += "bg-white/[0.03] text-[#2a2a3a] cursor-not-allowed";
+                    } else if (isLocked) {
+                      cls += "bg-red-500/10 text-red-400 cursor-not-allowed opacity-50";
+                    } else if (isSelected && isGolden) {
+                      cls += "bg-golden text-dark scale-110";
+                    } else if (isSelected) {
+                      cls += "bg-primary text-white scale-110";
+                    } else if (isGolden) {
+                      cls += "bg-golden/15 text-golden border border-golden/30 hover:bg-golden/25";
+                    } else {
+                      cls += "bg-white/8 text-muted hover:bg-white/15";
+                    }
+
+                    return (
+                      <button
+                        key={seat.id}
+                        className={cls}
+                        onClick={() => toggleSeat(seat)}
+                        disabled={isBooked || isLocked || isShowStarted}
+                        title={`${seat.row}${seat.number} — ${seat.type} — ${seat.status}`}
+                      >
+                        {seat.number}
+                      </button>
+                    );
+                  })}
+              </div>
             </div>
-          </div>
-        ))}
+          ))}
+        </div>
       </div>
 
       {/* Legend */}
-      <div style={styles.legend}>
+      <div className="flex flex-wrap gap-4 justify-center px-10 mt-6 mb-4">
         {[
-          { style: styles.seatAvailable, label: "Available" },
-          { style: styles.seatGolden, label: "Golden" },
-          { style: styles.seatSelected, label: "Selected" },
-          { style: styles.seatBooked, label: "Booked" },
-          { style: styles.seatLocked, label: "Locked" },
-        ].map(({ style, label }) => (
-          <div key={label} style={styles.legendItem}>
-            <div style={{ ...styles.legendDot, ...style }} />
-            <span style={styles.legendLabel}>{label}</span>
+          { cls: "bg-white/8 text-muted", label: "Available" },
+          { cls: "bg-golden/15 text-golden border border-golden/30", label: "Golden" },
+          { cls: "bg-primary text-white", label: "Selected" },
+          { cls: "bg-white/[0.03] text-[#2a2a3a]", label: "Booked" },
+          { cls: "bg-red-500/10 text-red-400 opacity-50", label: "Locked" },
+        ].map(({ cls, label }) => (
+          <div key={label} className="flex items-center gap-2">
+            <div className={`w-5 h-[18px] rounded-t rounded-b-sm ${cls}`} />
+            <span className="text-xs text-muted">{label}</span>
           </div>
         ))}
       </div>
 
-{/* Sticky Bottom Bar — hidden if show has started */}
-{selectedSeats.length > 0 && !isShowStarted && (
-  <div style={styles.bottomBar}>
-    <div style={styles.bottomInfo}>
-      <span style={styles.bottomSeats}>
-        {selectedSeats.length} seat{selectedSeats.length > 1 ? "s" : ""} selected
-      </span>
-      <span style={styles.bottomSeatNames}>
-        {selectedSeats.map((s) => `${s.row}${s.number}`).join(", ")}
-      </span>
-    </div>
-
-    <div style={styles.bottomRight}>
-      <span style={styles.totalAmount}>₹{totalAmount}</span>
-
-      <button
-        style={{
-          ...styles.proceedBtn,
-          opacity: bookingLoading ? 0.7 : 1,
-          cursor: bookingLoading ? "not-allowed" : "pointer",
-        }}
-        onClick={handleProceed}
-        disabled={bookingLoading}
-      >
-        {bookingLoading ? "Processing..." : "Proceed →"}
-      </button>
-    </div>
-  </div>
-)}
+      {/* Sticky Bottom Bar */}
+      {selectedSeats.length > 0 && !isShowStarted && (
+        <div className="fixed bottom-0 left-0 right-0 z-50 bg-dark/95 border-t border-primary/30 backdrop-blur-xl px-4 sm:px-10 py-4 flex items-center justify-between gap-4">
+          <div className="flex flex-col gap-1">
+            <span className="text-sm font-semibold text-white">
+              {selectedSeats.length} seat{selectedSeats.length > 1 ? "s" : ""} selected
+            </span>
+            <span className="text-xs text-primary tracking-wide">
+              {selectedSeats.map((s) => `${s.row}${s.number}`).join(", ")}
+            </span>
+          </div>
+          <div className="flex items-center gap-5">
+            <span className="text-2xl font-bold text-white">₹{totalAmount}</span>
+            <button
+              onClick={handleProceed}
+              disabled={bookingLoading}
+              className="bg-primary hover:bg-primary-dark disabled:opacity-70 disabled:cursor-not-allowed text-white px-7 py-3 rounded-xl text-sm font-semibold transition"
+            >
+              {bookingLoading ? "Processing..." : "Proceed →"}
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
-};
-
-
-const styles = {
-  page: {
-    minHeight: "100vh",
-    backgroundColor: "#0a0a0f",
-    color: "#e8e8f0",
-    fontFamily: "'DM Sans', 'Segoe UI', sans-serif",
-    paddingBottom: "120px",
-    position: "relative",
-    overflowX: "hidden",
-  },
-  ambientBg: {
-    position: "fixed",
-    top: 0,
-    left: "50%",
-    transform: "translateX(-50%)",
-    width: "600px",
-    height: "300px",
-    background: "radial-gradient(ellipse at center, rgba(99,102,241,0.12) 0%, transparent 70%)",
-    pointerEvents: "none",
-    zIndex: 0,
-  },
-  loadingWrap: {
-    minHeight: "100vh",
-    display: "flex",
-    flexDirection: "column",
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "#0a0a0f",
-    gap: "16px",
-  },
-  spinner: {
-    width: "36px",
-    height: "36px",
-    border: "3px solid rgba(99,102,241,0.2)",
-    borderTop: "3px solid #6366f1",
-    borderRadius: "50%",
-    animation: "spin 0.8s linear infinite",
-  },
-  loadingText: {
-    color: "#666",
-    fontSize: "14px",
-    letterSpacing: "0.05em",
-  },
-  errorWrap: {
-    minHeight: "100vh",
-    display: "flex",
-    flexDirection: "column",
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "#0a0a0f",
-    gap: "16px",
-  },
-  errorIcon: {
-    fontSize: "32px",
-    color: "#ef4444",
-  },
-  errorText: {
-    color: "#ef4444",
-    fontSize: "16px",
-  },
-  header: {
-    position: "relative",
-    zIndex: 1,
-    padding: "32px 40px 24px",
-    display: "flex",
-    alignItems: "flex-start",
-    gap: "24px",
-  },
-  backBtn: {
-    background: "rgba(255,255,255,0.06)",
-    border: "1px solid rgba(255,255,255,0.1)",
-    color: "#e8e8f0",
-    padding: "8px 16px",
-    borderRadius: "8px",
-    cursor: "pointer",
-    fontSize: "13px",
-    letterSpacing: "0.02em",
-    whiteSpace: "nowrap",
-    marginTop: "4px",
-    transition: "background 0.2s",
-  },
-  headerInfo: {
-    display: "flex",
-    flexDirection: "column",
-    gap: "10px",
-  },
-  movieTitle: {
-    fontSize: "clamp(24px, 4vw, 40px)",
-    fontWeight: "700",
-    margin: 0,
-    letterSpacing: "-0.02em",
-    lineHeight: 1.1,
-    background: "linear-gradient(135deg, #ffffff 0%, #a5b4fc 100%)",
-    WebkitBackgroundClip: "text",
-    WebkitTextFillColor: "transparent",
-  },
-  badges: {
-    display: "flex",
-    gap: "8px",
-    alignItems: "center",
-  },
-  badge: {
-    background: "rgba(99,102,241,0.2)",
-    border: "1px solid rgba(99,102,241,0.4)",
-    color: "#a5b4fc",
-    padding: "4px 12px",
-    borderRadius: "100px",
-    fontSize: "12px",
-    fontWeight: "600",
-    letterSpacing: "0.08em",
-  },
-  badgeDim: {
-    color: "#555",
-    fontSize: "13px",
-  },
-  infoBar: {
-    position: "relative",
-    zIndex: 1,
-    display: "flex",
-    flexWrap: "wrap",
-    gap: "0",
-    margin: "0 40px 32px",
-    background: "rgba(255,255,255,0.03)",
-    border: "1px solid rgba(255,255,255,0.07)",
-    borderRadius: "12px",
-    overflow: "hidden",
-  },
-  infoItem: {
-    flex: "1 1 150px",
-    display: "flex",
-    flexDirection: "column",
-    gap: "4px",
-    padding: "16px 24px",
-  },
-  infoLabel: {
-    fontSize: "10px",
-    letterSpacing: "0.12em",
-    color: "#555",
-    fontWeight: "600",
-  },
-  infoValue: {
-    fontSize: "14px",
-    color: "#c8c8d8",
-    fontWeight: "500",
-  },
-  infoDivider: {
-    width: "1px",
-    background: "rgba(255,255,255,0.06)",
-    margin: "12px 0",
-  },
-  startedBanner: {
-    position: "relative",
-    zIndex: 1,
-    margin: "0 40px 24px",
-    padding: "14px 20px",
-    background: "rgba(239,68,68,0.08)",
-    border: "1px solid rgba(239,68,68,0.3)",
-    borderRadius: "10px",
-    color: "#ef4444",
-    fontSize: "14px",
-    fontWeight: "500",
-    textAlign: "center",
-    letterSpacing: "0.02em",
-  },
-  pricingRow: {
-    position: "relative",
-    zIndex: 1,
-    display: "flex",
-    gap: "12px",
-    padding: "0 40px 32px",
-  },
-  priceCard: {
-    display: "flex",
-    flexDirection: "column",
-    gap: "4px",
-    padding: "14px 24px",
-    background: "rgba(255,255,255,0.03)",
-    border: "1px solid rgba(255,255,255,0.07)",
-    borderRadius: "10px",
-    minWidth: "120px",
-  },
-  goldenCard: {
-    background: "rgba(245,200,66,0.05)",
-    border: "1px solid rgba(245,200,66,0.2)",
-  },
-  priceLabel: {
-    fontSize: "10px",
-    letterSpacing: "0.12em",
-    color: "#555",
-    fontWeight: "600",
-  },
-  priceValue: {
-    fontSize: "20px",
-    fontWeight: "700",
-    color: "#e8e8f0",
-  },
-  screenWrap: {
-    position: "relative",
-    zIndex: 1,
-    display: "flex",
-    flexDirection: "column",
-    alignItems: "center",
-    marginBottom: "32px",
-    padding: "0 40px",
-  },
-  screen: {
-    width: "min(500px, 80%)",
-    height: "6px",
-    background: "linear-gradient(90deg, transparent, rgba(99,102,241,0.8), transparent)",
-    borderRadius: "3px",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    position: "relative",
-  },
-  screenText: {
-    position: "absolute",
-    top: "-20px",
-    fontSize: "10px",
-    letterSpacing: "0.2em",
-    color: "#444",
-    fontWeight: "600",
-  },
-  screenGlow: {
-    width: "min(500px, 80%)",
-    height: "40px",
-    background: "linear-gradient(180deg, rgba(99,102,241,0.08) 0%, transparent 100%)",
-    borderRadius: "0 0 100px 100px",
-  },
-  seatMapWrap: {
-    position: "relative",
-    zIndex: 1,
-    display: "flex",
-    flexDirection: "column",
-    alignItems: "center",
-    gap: "6px",
-    padding: "0 16px",
-  },
-  seatRow: {
-    display: "flex",
-    alignItems: "center",
-    gap: "8px",
-  },
-  rowLabel: {
-    width: "20px",
-    fontSize: "11px",
-    color: "#444",
-    fontWeight: "600",
-    textAlign: "right",
-    letterSpacing: "0.05em",
-  },
-  seatsInRow: {
-    display: "flex",
-    gap: "5px",
-    flexWrap: "wrap",
-    justifyContent: "center",
-  },
-  seat: {
-    width: "28px",
-    height: "26px",
-    borderRadius: "5px 5px 3px 3px",
-    border: "none",
-    fontSize: "9px",
-    fontWeight: "600",
-    cursor: "pointer",
-    transition: "transform 0.1s, opacity 0.1s",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  seatAvailable: {
-    background: "rgba(255,255,255,0.08)",
-    color: "#888",
-  },
-  seatGolden: {
-    background: "rgba(245,200,66,0.15)",
-    color: "#f5c842",
-    border: "1px solid rgba(245,200,66,0.3)",
-  },
-  seatSelected: {
-    background: "#6366f1",
-    color: "#fff",
-    transform: "scale(1.1)",
-  },
-  seatSelectedGolden: {
-    background: "#f5c842",
-    color: "#0a0a0f",
-    transform: "scale(1.1)",
-  },
-  seatBooked: {
-    background: "rgba(255,255,255,0.03)",
-    color: "#2a2a3a",
-    cursor: "not-allowed",
-  },
-  seatLocked: {
-    background: "rgba(239,68,68,0.1)",
-    color: "#ef4444",
-    cursor: "not-allowed",
-    opacity: 0.5,
-  },
-  legend: {
-    position: "relative",
-    zIndex: 1,
-    display: "flex",
-    flexWrap: "wrap",
-    gap: "16px",
-    justifyContent: "center",
-    padding: "24px 40px",
-    marginTop: "16px",
-  },
-  legendItem: {
-    display: "flex",
-    alignItems: "center",
-    gap: "8px",
-  },
-  legendDot: {
-    width: "20px",
-    height: "18px",
-    borderRadius: "4px 4px 2px 2px",
-  },
-  legendLabel: {
-    fontSize: "12px",
-    color: "#555",
-  },
-  bottomBar: {
-    position: "fixed",
-    bottom: 0,
-    left: 0,
-    right: 0,
-    zIndex: 100,
-    background: "rgba(10,10,15,0.95)",
-    borderTop: "1px solid rgba(99,102,241,0.3)",
-    backdropFilter: "blur(20px)",
-    padding: "16px 40px",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: "16px",
-  },
-  bottomInfo: {
-    display: "flex",
-    flexDirection: "column",
-    gap: "4px",
-  },
-  bottomSeats: {
-    fontSize: "14px",
-    fontWeight: "600",
-    color: "#e8e8f0",
-  },
-  bottomSeatNames: {
-    fontSize: "12px",
-    color: "#6366f1",
-    letterSpacing: "0.05em",
-  },
-  bottomRight: {
-    display: "flex",
-    alignItems: "center",
-    gap: "20px",
-  },
-  totalAmount: {
-    fontSize: "24px",
-    fontWeight: "700",
-    color: "#e8e8f0",
-  },
-  proceedBtn: {
-    background: "linear-gradient(135deg, #6366f1, #818cf8)",
-    border: "none",
-    color: "#fff",
-    padding: "12px 28px",
-    borderRadius: "10px",
-    fontSize: "15px",
-    fontWeight: "600",
-    cursor: "pointer",
-    letterSpacing: "0.02em",
-    transition: "opacity 0.2s, transform 0.1s",
-  },
 };
 
 export default ShowDetails;
