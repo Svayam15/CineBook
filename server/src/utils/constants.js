@@ -11,7 +11,7 @@ export const SHOW_TYPE = {
 
 export const LOCK_EXPIRY_TIME = 10 * 60 * 1000; // 10 mins
 
-export const MAX_SEATS_PER_BOOKING = 15;
+export const MAX_SEATS_PER_BOOKING = 10;
 
 export const ALLOWED_SEAT_COUNTS = [120, 180, 240, 300];
 
