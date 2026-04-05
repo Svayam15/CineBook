@@ -67,13 +67,9 @@ const Bookings = () => {
     }
   }, [appliedSearch]);
 
-  // Auto-refresh bookings every 10 seconds
-useEffect(() => {
-  const interval = setInterval(() => {
+  useEffect(() => {
     fetchBookings(page).catch(console.error);
-  }, 10000);
-  return () => clearInterval(interval);
-}, [page, fetchBookings]);
+  }, [page, fetchBookings]);
 
   const applySearch = () => {
     setAppliedSearch(searchInput);
