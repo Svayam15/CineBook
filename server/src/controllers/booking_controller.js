@@ -6,6 +6,7 @@ import { MAX_SEATS_PER_BOOKING, CANCELLATION_HOURS_PARTIAL_REFUND, CANCELLATION_
 import logger from "../config/logger.js";
 import { processRefund } from "../services/refund_service.js";
 import { sendBookingCancelledEmail } from "../services/email_service.js";
+import { broadcastToShow } from "../utils/sseManager.js";
 
 // 🎟️ CREATE BOOKING
 export const createBooking = asyncHandler(async (req, res) => {
@@ -236,6 +237,11 @@ export const cancelBooking = asyncHandler(async (req, res) => {
       cancelledSeats: booking.seats.length,
     }).catch((err) => logger.error(`Cancel email error: ${err.message}`));
 
+    // ✅ Broadcast AVAILABLE
+    booking.seats.forEach((bs) => {
+      broadcastToShow(booking.show.id, { seatId: bs.showSeatId, status: "AVAILABLE" });
+    });
+
     return res.json({
       success: true,
       message: "Pending booking cancelled and seats released.",
@@ -285,6 +291,12 @@ export const cancelBooking = asyncHandler(async (req, res) => {
       },
     }),
   ]);
+
+
+  // ✅ Broadcast AVAILABLE
+  bookedSeatIds.forEach((seatId) => {
+    broadcastToShow(booking.show.id, { seatId, status: "AVAILABLE" });
+  });
 
   // ✅ Process Stripe refund
   if (booking.paymentType === "CARD" && booking.paymentId && refundAmount > 0) {

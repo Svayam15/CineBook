@@ -8,6 +8,7 @@ import {
   sendBookingCancelledEmail,
 } from "../services/email_service.js";
 import logger from "../config/logger.js";
+import { broadcastToShow } from "../utils/sseManager.js";
 
 // 👥 GET ALL USERS (with pagination)
 export const getAllUsers = asyncHandler(async (req, res) => {
@@ -375,6 +376,11 @@ export const adminCancelBooking = asyncHandler(async (req, res) => {
     refundAmount,
     cancelledSeats: seatsToCancel.length,
   }).catch((err) => logger.error(`Cancel email error: ${err.message}`));
+
+  // ✅ Broadcast AVAILABLE — seats freed up
+  seatsToCancel.forEach((bs) => {
+    broadcastToShow(booking.showId, { seatId: bs.showSeatId, status: "AVAILABLE" });
+  });
 
   logger.info(`Admin cancelled booking ${bookingId}. Refund: ₹${refundAmount}`);
 
