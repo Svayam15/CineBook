@@ -45,6 +45,14 @@ enum OTPType {
   FORGOT_PASSWORD
 }
 
+// ✅ NEW
+enum MovieRating {
+  U
+  UA
+  A
+  S
+}
+
 ///////////////////////
 // MODELS
 ///////////////////////
@@ -88,11 +96,20 @@ model LoginAttempt {
 }
 
 model Movie {
-  id        Int      @id @default(autoincrement())
-  title     String
-  duration  Int
-  createdAt DateTime @default(now())
-  isDeleted Boolean  @default(false)
+  id          Int         @id @default(autoincrement())
+  title       String
+  duration    Int
+  // ✅ NEW fields
+  posterUrl   String
+  language    String
+  rating      MovieRating
+  genre       String
+  description String
+  releaseDate DateTime
+  director    String?
+  cast        String?
+  createdAt   DateTime    @default(now())
+  isDeleted   Boolean     @default(false)
 
   shows Show[]
 }
@@ -119,7 +136,6 @@ model Show {
   isActive       Boolean  @default(true)
   createdAt      DateTime @default(now())
 
-  // ✅ Cascade: deleting Movie or Theatre deletes their Shows
   movie   Movie   @relation(fields: [movieId], references: [id], onDelete: Cascade)
   theatre Theatre @relation(fields: [theatreId], references: [id], onDelete: Cascade)
 
@@ -137,7 +153,6 @@ model ShowSeat {
   lockedAt         DateTime?
   pendingBookingId Int?
 
-  // ✅ Cascade: deleting Show deletes its seats
   show         Show          @relation(fields: [showId], references: [id], onDelete: Cascade)
   bookingSeats BookingSeat[]
 
@@ -160,9 +175,7 @@ model Booking {
   cancelledAt  DateTime?
   createdAt    DateTime      @default(now())
 
-  // ✅ Cascade: deleting User deletes their bookings
   user  User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-  // ✅ Cascade: deleting Show deletes its bookings
   show  Show          @relation(fields: [showId], references: [id], onDelete: Cascade)
   seats BookingSeat[]
 
@@ -177,7 +190,6 @@ model BookingSeat {
   seatType   SeatType
   seatPrice  Float
 
-  // ✅ Cascade: deleting Booking or ShowSeat deletes BookingSeat
   booking  Booking  @relation(fields: [bookingId], references: [id], onDelete: Cascade)
   showSeat ShowSeat @relation(fields: [showSeatId], references: [id], onDelete: Cascade)
 

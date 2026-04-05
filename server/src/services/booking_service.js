@@ -7,6 +7,7 @@ import {
   CANCELLATION_HOURS_PARTIAL_REFUND,
 } from "../utils/constants.js";
 import logger from "../config/logger.js";
+import { broadcastToShow } from "../utils/sseManager.js";
 
 // ⏱️ RELEASE EXPIRED LOCKS — replace in booking_service.js
 // This version uses a single transaction to avoid the findMany → updateMany gap
@@ -23,7 +24,7 @@ export const releaseExpiredLocks = async () => {
           status: "LOCKED",
           lockedAt: { lt: expiryThreshold },
         },
-        select: { pendingBookingId: true },
+        select: { id:true, showId: true,  pendingBookingId: true },
       });
 
       if (expiredSeats.length === 0) return;
@@ -53,6 +54,11 @@ export const releaseExpiredLocks = async () => {
           data: { status: BOOKING_STATUS.FAILED },
         });
       }
+
+      // ✅ Broadcast AVAILABLE to all clients for affected shows
+  expiredSeats.forEach((seat) => {
+    broadcastToShow(seat.showId, { seatId: seat.id, status: "AVAILABLE" });
+  });
 
       logger.info(`♻️ Released ${expiredSeats.length} expired locked seats, ${expiredBookingIds.length} bookings marked FAILED`);
     });

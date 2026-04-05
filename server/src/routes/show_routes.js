@@ -9,6 +9,7 @@ import {
   rescheduleShow,
   deleteShow,
   getAdminShows,
+  seatUpdatesSSE,
 } from "../controllers/show_controller.js";
 import { authMiddleware } from "../middlewares/auth_middleware.js";
 import {requireAdmin} from "../middlewares/role_middleware.js";
@@ -20,6 +21,7 @@ router.get("/", getShows);
 router.get("/:id", getShowById);
 router.get("/:id/seats", getShowSeats);
 router.get("/:id/seats/available", getAvailableSeats);
+router.get("/:id/seat-updates", seatUpdatesSSE);
 
 // Admin only
 router.get("/admin/all", authMiddleware, requireAdmin, getAdminShows);

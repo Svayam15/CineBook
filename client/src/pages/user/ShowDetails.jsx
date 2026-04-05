@@ -5,6 +5,13 @@ import api from "../../api/axios";
 import toast from "react-hot-toast";
 import useAuthStore from "../../store/authStore";
 
+const RATING_COLORS = {
+  U: "bg-green-500/20 text-green-400",
+  UA: "bg-yellow-500/20 text-yellow-400",
+  A: "bg-red-500/20 text-red-400",
+  S: "bg-blue-500/20 text-blue-400",
+};
+
 const ShowDetails = () => {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -38,6 +45,41 @@ const ShowDetails = () => {
     fetchShow().catch(console.error);
   }, [id]);
 
+  // ✅ SSE — real-time seat updates
+useEffect(() => {
+  if (!id) return;
+
+  const apiBase = import.meta.env.VITE_API_URL || "";
+  const eventSource = new EventSource(`${apiBase}/shows/${id}/seat-updates`);
+
+  eventSource.onmessage = (e) => {
+    const data = JSON.parse(e.data);
+    if (data.type === "connected") return; // initial handshake
+
+    // Update just that one seat in local state
+    setSeats((prev) =>
+      prev.map((seat) =>
+        seat.id === data.seatId ? { ...seat, status: data.status } : seat
+      )
+    );
+
+    // If a seat we had selected just got locked/booked by someone else, deselect it
+    if (data.status === "LOCKED" || data.status === "BOOKED") {
+      setSelectedSeats((prev) => prev.filter((s) => s.id !== data.seatId));
+    }
+  };
+
+  eventSource.onerror = () => {
+    eventSource.close();
+  };
+
+  return () => {
+    eventSource.close();
+  };
+}, [id]);
+
+
+
   // Check if show has already started
   const isShowStarted = show?.rawStartTime ? new Date(show.rawStartTime) <= new Date() : false;
 
@@ -67,7 +109,7 @@ const ShowDetails = () => {
       return;
     }
 
-    // If not logged in → redirect to login with redirect back
+    // If not logged in → redirect to log in with redirect back
     if (!isAuthenticated) {
       navigate("/login", {
         state: { redirect: `/shows/${id}` },
@@ -94,6 +136,9 @@ const ShowDetails = () => {
       });
     } catch (err) {
       toast.error(err.message);
+    }
+    finally{
+      setBookingLoading(false);
     }
   };
 
@@ -131,6 +176,47 @@ const ShowDetails = () => {
     <div style={styles.page}>
       {/* Ambient background */}
       <div style={styles.ambientBg} />
+
+        {/* ✅ NEW: Movie Poster + Info Header */}
+      {show?.movie?.posterUrl && (
+        <div style={styles.posterHeader}>
+          <div style={styles.posterBg}>
+            <img src={show.movie.posterUrl} alt={show.movie.title} style={styles.posterBgImg} />
+            <div style={styles.posterBgOverlay} />
+          </div>
+          <div style={styles.posterContent}>
+            <img src={show.movie.posterUrl} alt={show.movie.title} style={styles.posterThumb} />
+            <div style={styles.posterInfo}>
+              <button style={styles.backBtnNew} onClick={() => navigate(-1)}>← Back</button>
+              <h1 style={styles.movieTitleNew}>{show.movie.title}</h1>
+              <div style={styles.badgesNew}>
+                <span style={styles.badge}>{show.showType}</span>
+                <span style={styles.badgeDim}>{show.movie.duration} min</span>
+                {show.movie.rating && (
+                  <span style={{
+                    ...styles.ratingBadge,
+                    background: show.movie.rating === "U" ? "rgba(34,197,94,0.2)" :
+                                show.movie.rating === "UA" ? "rgba(234,179,8,0.2)" :
+                                show.movie.rating === "A" ? "rgba(239,68,68,0.2)" : "rgba(59,130,246,0.2)",
+                    color: show.movie.rating === "U" ? "#4ade80" :
+                           show.movie.rating === "UA" ? "#facc15" :
+                           show.movie.rating === "A" ? "#f87171" : "#60a5fa",
+                  }}>
+                    {show.movie.rating}
+                  </span>
+                )}
+                {show.movie.language && (
+                  <span style={styles.langBadge}>{show.movie.language}</span>
+                )}
+              </div>
+              {show.movie.description && (
+                <p style={styles.descriptionNew}>{show.movie.description}</p>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
 
       {/* Header */}
       <div style={styles.header}>
@@ -314,6 +400,107 @@ const styles = {
     background: "radial-gradient(ellipse at center, rgba(99,102,241,0.12) 0%, transparent 70%)",
     pointerEvents: "none",
     zIndex: 0,
+  },
+  // ✅ NEW poster header styles
+  posterHeader: {
+    position: "relative",
+    width: "100%",
+    minHeight: "220px",
+    overflow: "hidden",
+    zIndex: 1,
+    marginBottom: "0",
+  },
+  posterBg: {
+    position: "absolute",
+    inset: 0,
+    overflow: "hidden",
+  },
+  posterBgImg: {
+    width: "100%",
+    height: "100%",
+    objectFit: "cover",
+    objectPosition: "top",
+    filter: "blur(20px) brightness(0.3)",
+    transform: "scale(1.1)",
+  },
+  posterBgOverlay: {
+    position: "absolute",
+    inset: 0,
+    background: "linear-gradient(to bottom, rgba(10,10,15,0.4) 0%, rgba(10,10,15,0.95) 100%)",
+  },
+  posterContent: {
+    position: "relative",
+    zIndex: 2,
+    display: "flex",
+    gap: "24px",
+    padding: "24px 40px",
+    alignItems: "flex-end",
+  },
+  posterThumb: {
+    width: "100px",
+    height: "150px",
+    objectFit: "cover",
+    borderRadius: "12px",
+    flexShrink: 0,
+    border: "2px solid rgba(255,255,255,0.1)",
+    boxShadow: "0 8px 32px rgba(0,0,0,0.5)",
+  },
+  posterInfo: {
+    flex: 1,
+    display: "flex",
+    flexDirection: "column",
+    gap: "8px",
+  },
+  backBtnNew: {
+    background: "rgba(255,255,255,0.06)",
+    border: "1px solid rgba(255,255,255,0.1)",
+    color: "#e8e8f0",
+    padding: "6px 14px",
+    borderRadius: "8px",
+    cursor: "pointer",
+    fontSize: "12px",
+    width: "fit-content",
+    marginBottom: "4px",
+  },
+  movieTitleNew: {
+    fontSize: "clamp(20px, 3.5vw, 36px)",
+    fontWeight: "700",
+    margin: 0,
+    letterSpacing: "-0.02em",
+    lineHeight: 1.1,
+    background: "linear-gradient(135deg, #ffffff 0%, #a5b4fc 100%)",
+    WebkitBackgroundClip: "text",
+    WebkitTextFillColor: "transparent",
+  },
+  badgesNew: {
+    display: "flex",
+    gap: "8px",
+    alignItems: "center",
+    flexWrap: "wrap",
+  },
+  ratingBadge: {
+    padding: "3px 10px",
+    borderRadius: "100px",
+    fontSize: "11px",
+    fontWeight: "700",
+    letterSpacing: "0.05em",
+  },
+  langBadge: {
+    background: "rgba(255,255,255,0.08)",
+    color: "#aaa",
+    padding: "3px 10px",
+    borderRadius: "100px",
+    fontSize: "11px",
+  },
+  descriptionNew: {
+    fontSize: "13px",
+    color: "#888",
+    lineHeight: 1.5,
+    display: "-webkit-box",
+    WebkitLineClamp: 2,
+    WebkitBoxOrient: "vertical",
+    overflow: "hidden",
+    maxWidth: "500px",
   },
   loadingWrap: {
     minHeight: "100vh",

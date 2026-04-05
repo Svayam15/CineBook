@@ -30,6 +30,39 @@ const WindowBooking = () => {
     fetchShows().catch(console.error);
   }, []);
 
+  // ✅ SSE — real-time seat updates for selected show
+useEffect(() => {
+  if (!selectedShow) return;
+
+  const apiBase = import.meta.env.VITE_API_URL || "";
+  const eventSource = new EventSource(`${apiBase}/shows/${selectedShow.id}/seat-updates`);
+
+  eventSource.onmessage = (e) => {
+    const data = JSON.parse(e.data);
+    if (data.type === "connected") return;
+
+    setSeats((prev) =>
+      prev.map((seat) =>
+        seat.id === data.seatId ? { ...seat, status: data.status } : seat
+      )
+    );
+
+    // Deselect if someone else locked/booked it
+    if (data.status === "LOCKED" || data.status === "BOOKED") {
+      setSelectedSeats((prev) => prev.filter((id) => id !== data.seatId));
+    }
+  };
+
+  eventSource.onerror = () => {
+    eventSource.close();
+  };
+
+  return () => {
+    eventSource.close();
+  };
+}, [selectedShow?.id]);
+
+
   const handleShowSelect = async (show) => {
     if (new Date(show.rawStartTime) <= new Date()) return;
     setSelectedShow(show);

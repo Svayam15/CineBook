@@ -3,6 +3,7 @@ import { createRedisConnection } from "../config/redis.js";
 import prisma from "../utils/prisma.js";
 import logger from "../config/logger.js";
 import { SEAT_STATUS, BOOKING_STATUS } from "../utils/constants.js";
+import { broadcastToShow } from "../utils/sseManager.js";
 
 const worker = new Worker(
   "bookingQueue",
@@ -86,6 +87,12 @@ const worker = new Worker(
           where: { id: booking.id },
           data: { status: BOOKING_STATUS.PAID },
         });
+
+        // ✅ Broadcast BOOKED to all clients
+        seatIds.forEach((seatId) => {
+          broadcastToShow(showId, { seatId, status: "BOOKED" });
+        });
+
 
         return { ...booking, status: "PAID", totalAmount };
       }

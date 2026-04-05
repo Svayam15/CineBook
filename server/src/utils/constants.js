@@ -15,9 +15,8 @@ export const MAX_SEATS_PER_BOOKING = 10;
 
 export const ALLOWED_SEAT_COUNTS = [120, 180, 240, 300];
 
-export const CANCELLATION_HOURS_FULL_REFUND = 24;   // ✅ 100% refund if cancelled 24hrs before
-export const CANCELLATION_HOURS_PARTIAL_REFUND = 4; // ✅ 50% refund if cancelled 4-24hrs before
-                                                     // ✅ 0% refund if under 4hrs — no constant needed
+export const CANCELLATION_HOURS_FULL_REFUND = 24;
+export const CANCELLATION_HOURS_PARTIAL_REFUND = 4;
 
 export const OTP_TYPE = {
   SIGNUP: "SIGNUP",
@@ -42,3 +41,49 @@ export const PAYMENT_TYPE = {
   CASH: "CASH",
   CARD: "CARD",
 };
+
+// ✅ NEW
+export const MOVIE_RATING = {
+  U: "U",
+  UA: "UA",
+  A: "A",
+  S: "S",
+};
+
+export const MOVIE_RATING_LABELS = {
+  U: "U - Universal",
+  UA: "UA - Parental Guidance",
+  A: "A - Adults Only",
+  S: "S - Special",
+};
+
+export const LANGUAGES = [
+  "Hindi",
+  "English",
+  "Tamil",
+  "Telugu",
+  "Kannada",
+  "Malayalam",
+  "Marathi",
+  "Bengali",
+  "Punjabi",
+  "Other",
+];
+
+export const GENRES = [
+  "Action",
+  "Adventure",
+  "Animation",
+  "Comedy",
+  "Crime",
+  "Drama",
+  "Fantasy",
+  "Horror",
+  "Mystery",
+  "Romance",
+  "Sci-Fi",
+  "Thriller",
+  "Biography",
+  "Documentary",
+  "Other",
+];

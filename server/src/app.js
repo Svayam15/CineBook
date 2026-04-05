@@ -42,8 +42,14 @@ app.use(cors({
   credentials: true,
 }));
 
+// ✅ SSE endpoints bypass rate limiter — long-lived connections
+app.use((req, res, next) => {
+  if (req.path.includes("/seat-updates")) return next();
+  globalLimiter(req, res, next);
+});
+
 // 🌐 Global rate limiter
-app.use(globalLimiter);
+//app.use(globalLimiter);
 
 // ⚠️ Raw body for Stripe webhook — MUST be before express.json()
 app.use((req, res, next) => {

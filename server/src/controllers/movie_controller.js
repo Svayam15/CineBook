@@ -1,13 +1,26 @@
 import prisma from "../utils/prisma.js";
 import asyncHandler from "../utils/asyncHandler.js";
 import logger from "../config/logger.js";
+import { MOVIE_RATING } from "../utils/constants.js";
 
 // 🎬 CREATE MOVIE (ADMIN)
 export const createMovie = asyncHandler(async (req, res) => {
-  const { title, duration } = req.body;
+  const {
+    title,
+    duration,
+    posterUrl,
+    language,
+    rating,
+    genre,
+    description,
+    releaseDate,
+    director,
+    cast,
+  } = req.body;
 
-  if (!title || !duration) {
-    const error = new Error("Title and duration are required");
+  // ✅ Validate mandatory fields
+  if (!title || !duration || !posterUrl || !language || !rating || !genre || !description || !releaseDate) {
+    const error = new Error("All fields are required: title, duration, posterUrl, language, rating, genre, description, releaseDate");
     error.statusCode = 400;
     throw error;
   }
@@ -24,15 +37,41 @@ export const createMovie = asyncHandler(async (req, res) => {
     throw error;
   }
 
+  if (!Object.values(MOVIE_RATING).includes(rating)) {
+    const error = new Error("Rating must be one of: U, UA, A, S");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  // ✅ Validate posterUrl is a valid URL
+  try {
+    new URL(posterUrl);
+  } catch {
+    const error = new Error("posterUrl must be a valid URL");
+    error.statusCode = 400;
+    throw error;
+  }
+
   const movie = await prisma.movie.create({
-    data: { title, duration },
+    data: {
+      title,
+      duration,
+      posterUrl,
+      language,
+      rating,
+      genre,
+      description,
+      releaseDate: new Date(releaseDate),
+      director: director || null,
+      cast: cast || null,
+    },
   });
 
   logger.info(`Movie created: ${movie.title}`);
   res.status(201).json({ message: "Movie created", movie });
 });
 
-// 🎬 GET ALL MOVIES (PUBLIC) — exclude soft-deleted
+// 🎬 GET ALL MOVIES (PUBLIC)
 export const getMovies = asyncHandler(async (req, res) => {
   const movies = await prisma.movie.findMany({
     where: { isDeleted: false },
@@ -41,7 +80,7 @@ export const getMovies = asyncHandler(async (req, res) => {
   res.json(movies);
 });
 
-// 🎬 GET MOVIE BY ID (PUBLIC) — exclude soft-deleted
+// 🎬 GET MOVIE BY ID (PUBLIC)
 export const getMovieById = asyncHandler(async (req, res) => {
   const { id } = req.params;
 
@@ -52,6 +91,10 @@ export const getMovieById = asyncHandler(async (req, res) => {
     },
     include: {
       shows: {
+        where: {
+          isActive: true,
+          startTime: { gt: new Date() },
+        },
         include: { theatre: true },
         orderBy: { startTime: "asc" },
       },
@@ -70,25 +113,18 @@ export const getMovieById = asyncHandler(async (req, res) => {
 // ✏️ UPDATE MOVIE (ADMIN)
 export const updateMovie = asyncHandler(async (req, res) => {
   const { id } = req.params;
-  const { title, duration } = req.body;
-
-  if (!title && !duration) {
-    const error = new Error("At least one field (title or duration) is required to update");
-    error.statusCode = 400;
-    throw error;
-  }
-
-  if (duration !== undefined && duration <= 0) {
-    const error = new Error("Duration must be greater than 0");
-    error.statusCode = 400;
-    throw error;
-  }
-
-  if (duration !== undefined && duration > 600) {
-    const error = new Error("Duration cannot exceed 600 minutes");
-    error.statusCode = 400;
-    throw error;
-  }
+  const {
+    title,
+    duration,
+    posterUrl,
+    language,
+    rating,
+    genre,
+    description,
+    releaseDate,
+    director,
+    cast,
+  } = req.body;
 
   const movie = await prisma.movie.findUnique({
     where: { id: parseInt(id) },
@@ -106,7 +142,34 @@ export const updateMovie = asyncHandler(async (req, res) => {
     throw error;
   }
 
-  // 🚫 Block if any show has already started
+  if (duration !== undefined && duration <= 0) {
+    const error = new Error("Duration must be greater than 0");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  if (duration !== undefined && duration > 600) {
+    const error = new Error("Duration cannot exceed 600 minutes");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  if (rating && !Object.values(MOVIE_RATING).includes(rating)) {
+    const error = new Error("Rating must be one of: U, UA, A, S");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  if (posterUrl) {
+    try {
+      new URL(posterUrl);
+    } catch {
+      const error = new Error("posterUrl must be a valid URL");
+      error.statusCode = 400;
+      throw error;
+    }
+  }
+
   const startedShow = await prisma.show.findFirst({
     where: {
       movieId: parseInt(id),
@@ -126,6 +189,14 @@ export const updateMovie = asyncHandler(async (req, res) => {
     data: {
       ...(title && { title }),
       ...(duration && { duration }),
+      ...(posterUrl && { posterUrl }),
+      ...(language && { language }),
+      ...(rating && { rating }),
+      ...(genre && { genre }),
+      ...(description && { description }),
+      ...(releaseDate && { releaseDate: new Date(releaseDate) }),
+      ...(director !== undefined && { director }),
+      ...(cast !== undefined && { cast }),
     },
   });
 
@@ -182,7 +253,6 @@ export const deleteMovie = asyncHandler(async (req, res) => {
     throw error;
   }
 
-  // 🚫 Block if any upcoming shows exist
   const upcomingShow = await prisma.show.findFirst({
     where: {
       movieId,
@@ -197,7 +267,6 @@ export const deleteMovie = asyncHandler(async (req, res) => {
     throw error;
   }
 
-  // 🚫 Block if any ongoing show exists
   const startedShows = await prisma.show.findMany({
     where: {
       movieId,
@@ -218,7 +287,6 @@ export const deleteMovie = asyncHandler(async (req, res) => {
     throw error;
   }
 
-  // 🚫 Block if any pending bookings exist
   const pendingBooking = await prisma.booking.findFirst({
     where: {
       status: "PENDING",
@@ -232,7 +300,6 @@ export const deleteMovie = asyncHandler(async (req, res) => {
     throw error;
   }
 
-  // ✅ Soft delete
   await prisma.movie.update({
     where: { id: movieId },
     data: { isDeleted: true },

@@ -6,6 +6,7 @@ import { sendShowCancelledEmail, sendShowRescheduledEmail } from "../services/em
 import { ALLOWED_SEAT_COUNTS, SHOW_TYPE } from "../utils/constants.js";
 import logger from "../config/logger.js";
 import asyncHandler from "../utils/asyncHandler.js";
+import { addConnection, removeConnection } from "../utils/sseManager.js";
 
 // ⏰ Helper — format to 12hr IST
 const formatToIST = (date) => {
@@ -490,3 +491,36 @@ export const getAdminShows = asyncHandler(async (req, res) => {
     },
   });
 });
+
+// 📡 SSE — real-time seat updates for a show
+export const seatUpdatesSSE = async (req, res) => {
+  const showId = parseInt(req.params.id);
+
+  // SSE headers
+  res.setHeader("Content-Type", "text/event-stream");
+  res.setHeader("Cache-Control", "no-cache");
+  res.setHeader("Connection", "keep-alive");
+  res.setHeader("X-Accel-Buffering", "no"); // important for Render/Nginx
+  res.flushHeaders();
+
+  // Send a heartbeat immediately so client knows it's connected
+  res.write(`data: ${JSON.stringify({ type: "connected", showId })}\n\n`);
+
+  // Register this connection
+  addConnection(showId, res);
+
+  // Heartbeat every 25s to keep connection alive through proxies
+  const heartbeat = setInterval(() => {
+    try {
+      res.write(`: heartbeat\n\n`);
+    } catch {
+      clearInterval(heartbeat);
+    }
+  }, 25000);
+
+  // Cleanup on disconnect
+  req.on("close", () => {
+    clearInterval(heartbeat);
+    removeConnection(showId, res);
+  });
+};
