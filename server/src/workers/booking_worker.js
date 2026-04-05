@@ -14,25 +14,17 @@ const worker = new Worker(
       seatIds,
       paymentType,
       isWindowBooking,
-      totalAmount,      // ✅ pre-calculated in booking_service
-      seats,            // ✅ pre-fetched in booking_service
-      regularPrice,     // ✅ pre-fetched in booking_service
-      goldenPrice,      // ✅ pre-fetched in booking_service
+      totalAmount,
+      seats,
+      regularPrice,
+      goldenPrice,
     } = job.data;
 
-    return prisma.$transaction(async (tx) => {
-
-      // ✅ REMOVED: show fetch — already validated in booking_service
-      // ✅ REMOVED: seats fetch — already passed in job.data
-      // ✅ REMOVED: totalAmount calculation — already done in booking_service
-      // Worker now starts directly at the critical section
-
-      // ✅ Step 1 — atomically lock all seats in ONE query
-      // This is the core concurrency check
+    const result = await prisma.$transaction(async (tx) => {
       const lockedSeats = await tx.showSeat.updateMany({
         where: {
           id: { in: seatIds },
-          status: SEAT_STATUS.AVAILABLE, // ✅ only locks if still available
+          status: SEAT_STATUS.AVAILABLE,
         },
         data: {
           status: SEAT_STATUS.LOCKED,
@@ -40,12 +32,10 @@ const worker = new Worker(
         },
       });
 
-      // ✅ Step 2 — if any seat was taken by someone else, abort immediately
       if (lockedSeats.count !== seatIds.length) {
         throw new Error("Seats just got booked by someone else");
       }
 
-      // ✅ Step 3 — create booking record
       const booking = await tx.booking.create({
         data: {
           userId,
@@ -56,24 +46,17 @@ const worker = new Worker(
         },
       });
 
-      // ✅ Step 4 — attach booking id to locked seats
       await tx.showSeat.updateMany({
         where: { id: { in: seatIds }, status: SEAT_STATUS.LOCKED },
         data: { pendingBookingId: booking.id },
       });
 
-      // ✅ Step 5 — CASH or window booking: mark as PAID immediately, skip Stripe
       if (paymentType === "CASH" || isWindowBooking) {
         await tx.showSeat.updateMany({
           where: { pendingBookingId: booking.id },
-          data: {
-            status: SEAT_STATUS.BOOKED,
-            lockedAt: null,
-            pendingBookingId: null,
-          },
+          data: { status: SEAT_STATUS.BOOKED, lockedAt: null, pendingBookingId: null },
         });
 
-        // ✅ Use pre-fetched seats for bookingSeat creation — correct types + prices
         await tx.bookingSeat.createMany({
           data: seats.map((seat) => ({
             bookingId: booking.id,
@@ -88,18 +71,21 @@ const worker = new Worker(
           data: { status: BOOKING_STATUS.PAID },
         });
 
-        // ✅ Broadcast BOOKED to all clients
-        seatIds.forEach((seatId) => {
-          broadcastToShow(showId, { seatId, status: "BOOKED" });
-        });
-
-
-        return { ...booking, status: "PAID", totalAmount };
+        return { ...booking, status: "PAID", totalAmount, _type: "CASH" };
       }
 
-      // ✅ Step 5 (CARD) — return PENDING, frontend will handle Stripe
-      return { ...booking, totalAmount };
+      return { ...booking, totalAmount, _type: "CARD" };
     });
+
+    // ✅ Broadcast AFTER transaction commits
+    if (result._type === "CASH") {
+      seatIds.forEach((seatId) => broadcastToShow(showId, { seatId, status: "BOOKED" }));
+    } else {
+      // ✅ CARD — broadcast LOCKED so admin sees seats turn red immediately
+      seatIds.forEach((seatId) => broadcastToShow(showId, { seatId, status: "LOCKED" }));
+    }
+
+    return result;
   },
   {
   connection: createRedisConnection(true), // ✅ isWorker = true, no commandTimeout
