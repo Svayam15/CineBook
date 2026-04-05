@@ -4,9 +4,15 @@ import {
   getBookingStatus,
   getMyBookings,
   cancelBooking,
-    getBookingStatusRest
+  getBookingStatusRest
 } from "../controllers/booking_controller.js";
+
+import {
+  scanTicket,
+  confirmTicket,
+} from "../controllers/scan_controller.js";
 import { authMiddleware } from "../middlewares/auth_middleware.js";
+import { requireStaffOrAdmin } from "../middlewares/role_middleware.js";
 import { bookingLimiter } from "../middlewares/rateLimiter_middleware.js";
 
 
@@ -17,5 +23,10 @@ router.get("/my-bookings", authMiddleware, getMyBookings);
 router.get("/status-rest/:jobId", authMiddleware, getBookingStatusRest);
 router.get("/status/:jobId", authMiddleware, getBookingStatus);
 router.delete("/:id", authMiddleware, cancelBooking);
+
+// ✅ Scan routes — Staff + Admin
+router.get("/scan/:bookingId", authMiddleware, requireStaffOrAdmin, scanTicket);
+router.post("/scan/:bookingId/confirm", authMiddleware, requireStaffOrAdmin, confirmTicket);
+
 
 export default router;

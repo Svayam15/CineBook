@@ -14,7 +14,7 @@ import ResetPassword from "./pages/ResetPassword";
 import Home from "./pages/user/Home";
 import LandingPage from "./pages/LandingPage";
 import ShowDetails from "./pages/user/ShowDetails.jsx";
-import MovieDetails from "./pages/user/MovieDetails.jsx"; // ✅ NEW
+import MovieDetails from "./pages/user/MovieDetails.jsx";
 import Payment from "./pages/user/Payment";
 import MyBookings from "./pages/user/MyBookings";
 import BookingConfirm from "./pages/user/BookingConfirm";
@@ -27,6 +27,10 @@ import Shows from "./pages/admin/Shows";
 import Bookings from "./pages/admin/Bookings";
 import Users from "./pages/admin/Users";
 import WindowBooking from "./pages/admin/WindowBooking";
+import Scanner from "./pages/admin/Scanner"; // ✅ NEW
+
+// Staff pages
+import StaffScanner from "./pages/staff/StaffScanner"; // ✅ NEW
 
 // Components
 import ProtectedRoute from "./components/common/ProtectedRoute";
@@ -74,6 +78,7 @@ function App() {
       <Route path="/forgot-password" element={<ForgotPassword />} />
       <Route path="/reset-password" element={<ResetPassword />} />
 
+      {/* Root redirect based on role */}
       <Route
         path="/"
         element={
@@ -81,20 +86,32 @@ function App() {
             <LandingPage />
           ) : user?.role === "ADMIN" ? (
             <Navigate to="/admin" replace />
+          ) : user?.role === "STAFF" ? (
+            <Navigate to="/staff/scanner" replace /> // ✅ Staff redirected to scanner
           ) : (
             <Home />
           )
         }
       />
 
-      {/* Show + Movie details — public */}
+      {/* Public pages */}
       <Route path="/shows/:id" element={<ShowDetails />} />
-      <Route path="/movies/:id" element={<MovieDetails />} /> {/* ✅ NEW */}
+      <Route path="/movies/:id" element={<MovieDetails />} />
 
       {/* Protected user routes */}
       <Route path="/payment" element={<ProtectedRoute><Payment /></ProtectedRoute>} />
       <Route path="/my-bookings" element={<ProtectedRoute><MyBookings /></ProtectedRoute>} />
       <Route path="/booking-confirm" element={<ProtectedRoute><BookingConfirm /></ProtectedRoute>} />
+
+      {/* ✅ Staff routes */}
+      <Route
+        path="/staff/scanner"
+        element={
+          <ProtectedRoute staffOrAdmin>
+            <StaffScanner />
+          </ProtectedRoute>
+        }
+      />
 
       {/* Admin routes */}
       <Route path="/admin" element={<ProtectedRoute adminOnly><Dashboard /></ProtectedRoute>} />
@@ -104,6 +121,7 @@ function App() {
       <Route path="/admin/bookings" element={<ProtectedRoute adminOnly><Bookings /></ProtectedRoute>} />
       <Route path="/admin/users" element={<ProtectedRoute adminOnly><Users /></ProtectedRoute>} />
       <Route path="/admin/window-booking" element={<ProtectedRoute adminOnly><WindowBooking /></ProtectedRoute>} />
+      <Route path="/admin/scanner" element={<ProtectedRoute adminOnly><Scanner /></ProtectedRoute>} /> {/* ✅ NEW */}
 
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

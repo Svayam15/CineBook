@@ -2,15 +2,142 @@ import { useEffect, useState } from "react";
 import AdminLayout from "../../components/admin/AdminLayout";
 import api from "../../api/axios";
 import toast from "react-hot-toast";
-import { Users as UsersIcon, Trash2, ChevronLeft, ChevronRight } from "lucide-react";
+import { Users as UsersIcon, Trash2, ChevronLeft, ChevronRight, Plus, X, ShieldCheck } from "lucide-react";
 import Spinner from "../../components/common/Spinner";
 
+// ─── Create Staff Modal ───────────────────────────────────────────────────────
+const CreateStaffModal = ({ onClose, onCreated }) => {
+  const [form, setForm] = useState({
+    name: "", surname: "", username: "", email: "", password: "",
+  });
+  const [creating, setCreating] = useState(false);
+
+  const set = (key, val) => setForm((f) => ({ ...f, [key]: val }));
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setCreating(true);
+    try {
+      await api.post("/admin/staff", form);
+      toast.success("Staff account created!");
+      onCreated();
+      onClose();
+    } catch (err) {
+      toast.error(err?.response?.data?.message || "Failed to create staff");
+    } finally {
+      setCreating(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm px-4">
+      <div className="bg-card border border-border rounded-2xl w-full max-w-md shadow-2xl">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-border">
+          <div className="flex items-center gap-2">
+            <ShieldCheck size={18} className="text-primary" />
+            <span className="font-heading font-semibold text-white">Create Staff Account</span>
+          </div>
+          <button onClick={onClose} className="text-muted hover:text-white transition">
+            <X size={18} />
+          </button>
+        </div>
+
+        <form onSubmit={handleSubmit} className="p-5 space-y-3">
+          <p className="text-muted text-xs">
+            Staff accounts can only access the ticket scanner. They cannot manage movies, shows or bookings.
+          </p>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div className="flex flex-col gap-1.5">
+              <label className="text-xs text-muted font-medium">First Name</label>
+              <input
+                type="text"
+                value={form.name}
+                onChange={(e) => set("name", e.target.value)}
+                required
+                placeholder="Rahul"
+                className="bg-dark border border-border text-white rounded-xl px-3 py-2 outline-none focus:border-primary text-sm placeholder:text-muted"
+              />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <label className="text-xs text-muted font-medium">Last Name</label>
+              <input
+                type="text"
+                value={form.surname}
+                onChange={(e) => set("surname", e.target.value)}
+                required
+                placeholder="Sharma"
+                className="bg-dark border border-border text-white rounded-xl px-3 py-2 outline-none focus:border-primary text-sm placeholder:text-muted"
+              />
+            </div>
+          </div>
+
+          <div className="flex flex-col gap-1.5">
+            <label className="text-xs text-muted font-medium">Username</label>
+            <input
+              type="text"
+              value={form.username}
+              onChange={(e) => set("username", e.target.value)}
+              required
+              placeholder="rahul_staff"
+              className="bg-dark border border-border text-white rounded-xl px-3 py-2 outline-none focus:border-primary text-sm placeholder:text-muted"
+            />
+          </div>
+
+          <div className="flex flex-col gap-1.5">
+            <label className="text-xs text-muted font-medium">Email</label>
+            <input
+              type="email"
+              value={form.email}
+              onChange={(e) => set("email", e.target.value)}
+              required
+              placeholder="rahul@cinebook.com"
+              className="bg-dark border border-border text-white rounded-xl px-3 py-2 outline-none focus:border-primary text-sm placeholder:text-muted"
+            />
+          </div>
+
+          <div className="flex flex-col gap-1.5">
+            <label className="text-xs text-muted font-medium">Password</label>
+            <input
+              type="password"
+              value={form.password}
+              onChange={(e) => set("password", e.target.value)}
+              required
+              placeholder="Min 6 characters"
+              className="bg-dark border border-border text-white rounded-xl px-3 py-2 outline-none focus:border-primary text-sm placeholder:text-muted"
+            />
+          </div>
+
+          <div className="flex gap-3 pt-2">
+            <button
+              type="submit"
+              disabled={creating}
+              className="flex-1 flex items-center justify-center gap-2 bg-primary hover:bg-primary-dark text-white py-2.5 rounded-xl text-sm font-medium transition disabled:opacity-50"
+            >
+              {creating ? <Spinner text="Creating..." /> : "Create Staff Account"}
+            </button>
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-4 py-2.5 rounded-xl border border-border text-muted hover:text-white text-sm transition"
+            >
+              Cancel
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+};
+
+// ─── Main Component ───────────────────────────────────────────────────────────
 const Users = () => {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [deleting, setDeleting] = useState(null);
   const [page, setPage] = useState(1);
   const [pagination, setPagination] = useState({});
+  const [showCreateStaff, setShowCreateStaff] = useState(false);
 
   const fetchUsers = async (p = 1) => {
     setLoading(true);
@@ -41,11 +168,41 @@ const Users = () => {
     }
   };
 
+  const roleBadge = (role) => {
+    const map = {
+      ADMIN: "bg-primary/10 text-primary border border-primary/20",
+      STAFF: "bg-yellow-500/10 text-yellow-400 border border-yellow-500/20",
+      USER: "bg-zinc-500/10 text-zinc-400 border border-zinc-500/20",
+    };
+    return (
+      <span className={`text-xs px-2 py-0.5 rounded-full border ${map[role] || map.USER}`}>
+        {role}
+      </span>
+    );
+  };
+
   return (
     <AdminLayout>
-      <div className="mb-6">
-        <h1 className="font-heading text-2xl font-bold text-white">Users</h1>
-        <p className="text-muted text-sm mt-1">{pagination.total || 0} total users</p>
+      {showCreateStaff && (
+        <CreateStaffModal
+          onClose={() => setShowCreateStaff(false)}
+          onCreated={() => fetchUsers(page)}
+        />
+      )}
+
+      <div className="flex items-center justify-between mb-6 gap-4 flex-wrap">
+        <div>
+          <h1 className="font-heading text-2xl font-bold text-white">Users</h1>
+          <p className="text-muted text-sm mt-1">{pagination.total || 0} total users</p>
+        </div>
+        {/* ✅ Create Staff button */}
+        <button
+          onClick={() => setShowCreateStaff(true)}
+          className="flex items-center gap-2 bg-primary hover:bg-primary-dark text-white px-4 py-2 rounded-xl text-sm font-medium transition"
+        >
+          <Plus size={16} />
+          Create Staff
+        </button>
       </div>
 
       {loading ? (
@@ -65,13 +222,11 @@ const Users = () => {
             {users.map((user) => (
               <div key={user.id} className="bg-card border border-border rounded-2xl px-5 py-4 flex items-center justify-between">
                 <div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 flex-wrap">
                     <p className="text-white font-medium">{user.name} {user.surname}</p>
-                    <span className={`text-xs px-2 py-0.5 rounded-full ${user.role === "ADMIN" ? "bg-primary/10 text-primary" : "bg-zinc-500/10 text-zinc-400"}`}>
-                      {user.role}
-                    </span>
+                    {roleBadge(user.role)}
                   </div>
-                  <p className="text-muted text-sm">@{user.username} • {user.email}</p>
+                  <p className="text-muted text-sm">@{user.username} · {user.email}</p>
                 </div>
                 {user.role !== "ADMIN" && (
                   <button
@@ -87,7 +242,6 @@ const Users = () => {
             ))}
           </div>
 
-          {/* Pagination */}
           <div className="flex items-center justify-between mt-6">
             <p className="text-muted text-sm">
               Page {pagination.page} of {pagination.totalPages}

@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback } from "react";
 import AdminLayout from "../../components/admin/AdminLayout";
 import api from "../../api/axios";
 import toast from "react-hot-toast";
-import { BookOpen, ChevronLeft, ChevronRight, Search, X } from "lucide-react";
+import { BookOpen, ChevronLeft, ChevronRight, Search, X, CheckCircle2, Clock } from "lucide-react";
 
 const statusColors = {
   PAID:      "bg-green-500/10 text-green-400 border border-green-500/20",
@@ -13,10 +13,21 @@ const statusColors = {
 
 const paymentColors = {
   CARD: "bg-primary/10 text-primary border border-primary/20",
-  CASH: "bg-golden/10 text-golden border border-golden/20",
+  CASH: "bg-yellow-500/10 text-yellow-400 border border-yellow-500/20",
 };
 
-// ─── Confirm Modal ────────────────────────────────────────────────────────────
+const formatIST = (dateStr) => {
+  if (!dateStr) return null;
+  return new Date(dateStr).toLocaleString("en-IN", {
+    timeZone: "Asia/Kolkata",
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+  });
+};
+
 const ConfirmModal = ({ booking, onConfirm, onCancel }) => (
   <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
     <div className="bg-card border border-border rounded-2xl p-6 w-full max-w-sm mx-4 shadow-2xl">
@@ -41,7 +52,6 @@ const ConfirmModal = ({ booking, onConfirm, onCancel }) => (
   </div>
 );
 
-// ─── Main Component ───────────────────────────────────────────────────────────
 const Bookings = () => {
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -67,9 +77,7 @@ const Bookings = () => {
     }
   }, [appliedSearch]);
 
-  useEffect(() => {
-    fetchBookings(page).catch(console.error);
-  }, [page, fetchBookings]);
+  useEffect(() => { fetchBookings(page).catch(console.error); }, [page, fetchBookings]);
 
   const applySearch = () => {
     setAppliedSearch(searchInput);
@@ -109,7 +117,6 @@ const Bookings = () => {
         />
       )}
 
-      {/* Header */}
       <div className="flex items-center justify-between mb-6 gap-4 flex-wrap">
         <div>
           <h1 className="font-heading text-2xl font-bold text-white">Bookings</h1>
@@ -120,7 +127,6 @@ const Bookings = () => {
         </div>
       </div>
 
-      {/* Smart Search */}
       <div className="flex gap-2 mb-2">
         <div className="relative flex-1 max-w-sm">
           <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted" />
@@ -133,29 +139,20 @@ const Bookings = () => {
             className="w-full bg-dark border border-border text-white rounded-xl pl-9 pr-4 py-2.5 outline-none focus:border-primary text-sm placeholder:text-muted"
           />
         </div>
-        <button
-          onClick={applySearch}
-          className="bg-primary hover:bg-primary-dark text-white px-4 py-2.5 rounded-xl text-sm font-medium transition"
-        >
+        <button onClick={applySearch} className="bg-primary hover:bg-primary-dark text-white px-4 py-2.5 rounded-xl text-sm font-medium transition">
           Search
         </button>
         {appliedSearch && (
-          <button
-            onClick={clearSearch}
-            className="flex items-center gap-1.5 border border-border text-muted hover:text-white px-4 py-2.5 rounded-xl text-sm transition"
-          >
-            <X size={14} />
-            Clear
+          <button onClick={clearSearch} className="flex items-center gap-1.5 border border-border text-muted hover:text-white px-4 py-2.5 rounded-xl text-sm transition">
+            <X size={14} /> Clear
           </button>
         )}
       </div>
 
-      {/* Search hint */}
       <p className="text-muted text-xs mb-5">
         Tip: Use a number for booking/user ID, <span className="text-primary">@username</span> for username, or type an email address.
       </p>
 
-      {/* List */}
       {loading ? (
         <div className="space-y-3">
           {[...Array(5)].map((_, i) => (
@@ -175,10 +172,7 @@ const Bookings = () => {
             {bookings.map((booking) => {
               const showStarted = new Date() >= new Date(booking.show?.startTime);
               return (
-                <div
-                  key={booking.id}
-                  className="bg-card border border-border rounded-2xl px-5 py-4 flex items-center justify-between gap-4"
-                >
+                <div key={booking.id} className="bg-card border border-border rounded-2xl px-5 py-4 flex items-center justify-between gap-4">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
                       <p className="text-white font-medium text-sm">
@@ -194,16 +188,37 @@ const Bookings = () => {
                         {booking.paymentType}
                       </span>
                     </div>
+
                     <p className="text-muted text-xs sm:text-sm mt-1 truncate">
                       {booking.show?.movie?.title} &nbsp;·&nbsp;
                       {booking.show?.theatre?.name} &nbsp;·&nbsp;
                       {booking.seats?.length} seat{booking.seats?.length !== 1 ? "s" : ""} &nbsp;·&nbsp;
                       ₹{booking.totalAmount ?? "—"}
                     </p>
+
                     {booking.refundAmount > 0 && (
-                      <p className="text-golden text-xs mt-0.5">
+                      <p className="text-yellow-400 text-xs mt-0.5">
                         Refunded: ₹{booking.refundAmount}
                       </p>
+                    )}
+
+                    {/* ✅ Ticket used status */}
+                    {booking.status === "PAID" && (
+                      <div className="flex items-center gap-1.5 mt-1">
+                        {booking.isUsed ? (
+                          <>
+                            <CheckCircle2 size={12} className="text-green-400" />
+                            <span className="text-green-400 text-xs">
+                              Ticket used · {formatIST(booking.usedAt)}
+                            </span>
+                          </>
+                        ) : (
+                          <>
+                            <Clock size={12} className="text-muted" />
+                            <span className="text-muted text-xs">Ticket not yet scanned</span>
+                          </>
+                        )}
+                      </div>
                     )}
                   </div>
 
@@ -227,24 +242,13 @@ const Bookings = () => {
             })}
           </div>
 
-          {/* Pagination */}
           <div className="flex items-center justify-between mt-6">
-            <p className="text-muted text-sm">
-              Page {pagination.page} of {pagination.totalPages}
-            </p>
+            <p className="text-muted text-sm">Page {pagination.page} of {pagination.totalPages}</p>
             <div className="flex gap-2">
-              <button
-                onClick={() => setPage((p) => p - 1)}
-                disabled={page === 1}
-                className="p-2 bg-card border border-border rounded-xl text-muted hover:text-white transition disabled:opacity-50"
-              >
+              <button onClick={() => setPage((p) => p - 1)} disabled={page === 1} className="p-2 bg-card border border-border rounded-xl text-muted hover:text-white transition disabled:opacity-50">
                 <ChevronLeft size={16} />
               </button>
-              <button
-                onClick={() => setPage((p) => p + 1)}
-                disabled={page === pagination.totalPages}
-                className="p-2 bg-card border border-border rounded-xl text-muted hover:text-white transition disabled:opacity-50"
-              >
+              <button onClick={() => setPage((p) => p + 1)} disabled={page === pagination.totalPages} className="p-2 bg-card border border-border rounded-xl text-muted hover:text-white transition disabled:opacity-50">
                 <ChevronRight size={16} />
               </button>
             </div>

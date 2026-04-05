@@ -7,10 +7,6 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-///////////////////////
-// ENUMS
-///////////////////////
-
 enum SeatStatus {
   AVAILABLE
   LOCKED
@@ -36,6 +32,7 @@ enum PaymentType {
 
 enum Role {
   USER
+  STAFF // ✅ NEW
   ADMIN
 }
 
@@ -45,17 +42,12 @@ enum OTPType {
   FORGOT_PASSWORD
 }
 
-// ✅ NEW
 enum MovieRating {
   U
   UA
   A
   S
 }
-
-///////////////////////
-// MODELS
-///////////////////////
 
 model User {
   id        Int      @id @default(autoincrement())
@@ -99,7 +91,6 @@ model Movie {
   id          Int         @id @default(autoincrement())
   title       String
   duration    Int
-  // ✅ NEW fields
   posterUrl   String
   language    String
   rating      MovieRating
@@ -173,6 +164,8 @@ model Booking {
   refundId     String?
   refundAmount Float?
   cancelledAt  DateTime?
+  isUsed       Boolean       @default(false) // ✅ NEW
+  usedAt       DateTime? // ✅ NEW
   createdAt    DateTime      @default(now())
 
   user  User          @relation(fields: [userId], references: [id], onDelete: Cascade)

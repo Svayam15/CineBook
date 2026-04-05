@@ -8,6 +8,7 @@ import {
   sendBookingCancelledEmail,
 } from "../services/email_service.js";
 import logger from "../config/logger.js";
+import bcrypt from "bcryptjs";
 import { broadcastToShow } from "../utils/sseManager.js";
 
 // 👥 GET ALL USERS (with pagination)
@@ -629,5 +630,69 @@ export const getDashboardStats = asyncHandler(async (req, res) => {
       todayBookings,
       todayRevenue,
     },
+  });
+});
+
+// 👷 CREATE STAFF ACCOUNT (ADMIN ONLY)
+export const createStaff = asyncHandler(async (req, res) => {
+  const { name, surname, username, email, password } = req.body;
+
+  if (!name || !surname || !username || !email || !password) {
+    const error = new Error("All fields are required: name, surname, username, email, password");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  if (password.length < 6) {
+    const error = new Error("Password must be at least 6 characters");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  // Check if email or username already exists
+  const existing = await prisma.user.findFirst({
+    where: {
+      OR: [{ email }, { username }],
+    },
+  });
+
+  if (existing) {
+    const error = new Error(
+      existing.email === email
+        ? "Email already in use"
+        : "Username already taken"
+    );
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const hashedPassword = await bcrypt.hash(password, 10);
+
+  const staff = await prisma.user.create({
+    data: {
+      name,
+      surname,
+      username,
+      email,
+      password: hashedPassword,
+      role: "STAFF",
+    },
+    select: {
+      id: true,
+      name: true,
+      surname: true,
+      username: true,
+      email: true,
+      role: true,
+      createdAt: true,
+    },
+  });
+
+  logger.info(`Staff account created: ${staff.email} by admin ${req.user.userId}`);
+
+  res.status(201).json({
+    success: true,
+    message: "Staff account created successfully",
+    staff,
   });
 });
