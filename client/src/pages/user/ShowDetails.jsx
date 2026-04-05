@@ -5,13 +5,6 @@ import api from "../../api/axios";
 import toast from "react-hot-toast";
 import useAuthStore from "../../store/authStore";
 
-const RATING_COLORS = {
-  U: "bg-green-500/20 text-green-400",
-  UA: "bg-yellow-500/20 text-yellow-400",
-  A: "bg-red-500/20 text-red-400",
-  S: "bg-blue-500/20 text-blue-400",
-};
-
 const ShowDetails = () => {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -20,8 +13,6 @@ const ShowDetails = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [selectedSeats, setSelectedSeats] = useState([]);
-
-    // ✅ NEW: prevent duplicate bookings
   const [bookingLoading, setBookingLoading] = useState(false);
 
   const { isAuthenticated } = useAuthStore();
@@ -45,48 +36,67 @@ const ShowDetails = () => {
     fetchShow().catch(console.error);
   }, [id]);
 
-  // ✅ SSE — real-time seat updates
-useEffect(() => {
-  if (!id) return;
+  // ✅ SSE — real-time seat updates with auto-retry
+  useEffect(() => {
+    if (!id) return;
 
-  const apiBase = import.meta.env.VITE_API_URL || "";
-  const eventSource = new EventSource(`${apiBase}/shows/${id}/seat-updates`);
+    const apiBase = import.meta.env.VITE_API_URL;
+    if (!apiBase) return;
 
-  eventSource.onmessage = (e) => {
-    const data = JSON.parse(e.data);
-    if (data.type === "connected") return; // initial handshake
+    let eventSource = null;
+    let retryTimeout = null;
+    let destroyed = false;
 
-    // Update just that one seat in local state
-    setSeats((prev) =>
-      prev.map((seat) =>
-        seat.id === data.seatId ? { ...seat, status: data.status } : seat
-      )
-    );
+    const connect = () => {
+      if (destroyed) return;
 
-    // If a seat we had selected just got locked/booked by someone else, deselect it
-    if (data.status === "LOCKED" || data.status === "BOOKED") {
-      setSelectedSeats((prev) => prev.filter((s) => s.id !== data.seatId));
-    }
-  };
+      eventSource = new EventSource(`${apiBase}/shows/${id}/seat-updates`, {
+        withCredentials: false,
+      });
 
-  eventSource.onerror = () => {
-    eventSource.close();
-  };
+      eventSource.onmessage = (e) => {
+        try {
+          const data = JSON.parse(e.data);
+          if (data.type === "connected") return;
 
-  return () => {
-    eventSource.close();
-  };
-}, [id]);
+          setSeats((prev) =>
+            prev.map((seat) =>
+              seat.id === data.seatId ? { ...seat, status: data.status } : seat
+            )
+          );
 
+          if (data.status === "LOCKED" || data.status === "BOOKED") {
+            setSelectedSeats((prev) => prev.filter((s) => s.id !== data.seatId));
+          }
+        } catch {
+          // ignore parse errors
+        }
+      };
 
+      eventSource.onerror = () => {
+        eventSource.close();
+        // ✅ Auto-retry after 3 seconds if not intentionally destroyed
+        if (!destroyed) {
+          retryTimeout = setTimeout(connect, 3000);
+        }
+      };
+    };
 
-  // Check if show has already started
+    connect();
+
+    return () => {
+      destroyed = true;
+      clearTimeout(retryTimeout);
+      if (eventSource) eventSource.close();
+    };
+  }, [id]);
+
   const isShowStarted = show?.rawStartTime ? new Date(show.rawStartTime) <= new Date() : false;
 
   const toggleSeat = (seat) => {
     if (seat.status !== "AVAILABLE") return;
     if (isShowStarted) return;
-      if (bookingLoading) return;
+    if (bookingLoading) return;
     setSelectedSeats((prev) =>
       prev.find((s) => s.id === seat.id)
         ? prev.filter((s) => s.id !== seat.id)
@@ -95,32 +105,25 @@ useEffect(() => {
   };
 
   const totalAmount = selectedSeats.reduce((sum, seat) => {
-    const price =
-      seat.type === "GOLDEN" ? show?.goldenPrice : show?.regularPrice;
+    const price = seat.type === "GOLDEN" ? show?.goldenPrice : show?.regularPrice;
     return sum + (price || 0);
   }, 0);
 
   const handleProceed = async () => {
     if (selectedSeats.length === 0) return;
 
-    // 🚫 Check if show has already started
     if (isShowStarted) {
       toast.error("Show has already started. Booking is not allowed.");
       return;
     }
 
-    // If not logged in → redirect to log in with redirect back
     if (!isAuthenticated) {
-      navigate("/login", {
-        state: { redirect: `/shows/${id}` },
-      });
+      navigate("/login", { state: { redirect: `/shows/${id}` } });
       return;
     }
 
     try {
-
-      setBookingLoading(true); // ✅ prevent multiple clicks
-
+      setBookingLoading(true);
       const res = await api.post("/bookings", {
         showId: parseInt(id),
         seatIds: selectedSeats.map((s) => s.id),
@@ -136,13 +139,11 @@ useEffect(() => {
       });
     } catch (err) {
       toast.error(err.message);
-    }
-    finally{
+    } finally {
       setBookingLoading(false);
     }
   };
 
-  // Group seats by row
   const seatsByRow = seats.reduce((acc, seat) => {
     if (!acc[seat.row]) acc[seat.row] = [];
     acc[seat.row].push(seat);
@@ -165,19 +166,15 @@ useEffect(() => {
       <div style={styles.errorWrap}>
         <span style={styles.errorIcon}>✕</span>
         <p style={styles.errorText}>{error}</p>
-        <button style={styles.backBtn} onClick={() => navigate(-1)}>
-          Go Back
-        </button>
+        <button style={styles.backBtn} onClick={() => navigate(-1)}>Go Back</button>
       </div>
     );
   }
 
   return (
     <div style={styles.page}>
-      {/* Ambient background */}
       <div style={styles.ambientBg} />
 
-        {/* ✅ NEW: Movie Poster + Info Header */}
       {show?.movie?.posterUrl && (
         <div style={styles.posterHeader}>
           <div style={styles.posterBg}>
@@ -217,12 +214,8 @@ useEffect(() => {
         </div>
       )}
 
-
-      {/* Header */}
       <div style={styles.header}>
-        <button style={styles.backBtn} onClick={() => navigate(-1)}>
-          ← Back
-        </button>
+        <button style={styles.backBtn} onClick={() => navigate(-1)}>← Back</button>
         <div style={styles.headerInfo}>
           <h1 style={styles.movieTitle}>{show?.movie?.title}</h1>
           <div style={styles.badges}>
@@ -232,7 +225,6 @@ useEffect(() => {
         </div>
       </div>
 
-      {/* Show Info Bar */}
       <div style={styles.infoBar}>
         <div style={styles.infoItem}>
           <span style={styles.infoLabel}>THEATRE</span>
@@ -255,14 +247,12 @@ useEffect(() => {
         </div>
       </div>
 
-      {/* Show Started Banner */}
       {isShowStarted && (
         <div style={styles.startedBanner}>
           ⚠️ This show has already started. Booking is no longer available.
         </div>
       )}
 
-      {/* Pricing */}
       <div style={styles.pricingRow}>
         <div style={styles.priceCard}>
           <span style={styles.priceLabel}>REGULAR</span>
@@ -271,14 +261,11 @@ useEffect(() => {
         {show?.hasGoldenSeats && (
           <div style={{ ...styles.priceCard, ...styles.goldenCard }}>
             <span style={styles.priceLabel}>GOLDEN ✦</span>
-            <span style={{ ...styles.priceValue, color: "#f5c842" }}>
-              ₹{show?.goldenPrice}
-            </span>
+            <span style={{ ...styles.priceValue, color: "#f5c842" }}>₹{show?.goldenPrice}</span>
           </div>
         )}
       </div>
 
-      {/* Screen */}
       <div style={styles.screenWrap}>
         <div style={styles.screen}>
           <span style={styles.screenText}>SCREEN</span>
@@ -286,7 +273,6 @@ useEffect(() => {
         <div style={styles.screenGlow} />
       </div>
 
-      {/* Seat Map */}
       <div style={styles.seatMapWrap}>
         {rows.map((row) => (
           <div key={row} style={styles.seatRow}>
@@ -330,7 +316,6 @@ useEffect(() => {
         ))}
       </div>
 
-      {/* Legend */}
       <div style={styles.legend}>
         {[
           { style: styles.seatAvailable, label: "Available" },
@@ -346,39 +331,35 @@ useEffect(() => {
         ))}
       </div>
 
-{/* Sticky Bottom Bar — hidden if show has started */}
-{selectedSeats.length > 0 && !isShowStarted && (
-  <div style={styles.bottomBar}>
-    <div style={styles.bottomInfo}>
-      <span style={styles.bottomSeats}>
-        {selectedSeats.length} seat{selectedSeats.length > 1 ? "s" : ""} selected
-      </span>
-      <span style={styles.bottomSeatNames}>
-        {selectedSeats.map((s) => `${s.row}${s.number}`).join(", ")}
-      </span>
-    </div>
-
-    <div style={styles.bottomRight}>
-      <span style={styles.totalAmount}>₹{totalAmount}</span>
-
-      <button
-        style={{
-          ...styles.proceedBtn,
-          opacity: bookingLoading ? 0.7 : 1,
-          cursor: bookingLoading ? "not-allowed" : "pointer",
-        }}
-        onClick={handleProceed}
-        disabled={bookingLoading}
-      >
-        {bookingLoading ? "Processing..." : "Proceed →"}
-      </button>
-    </div>
-  </div>
-)}
+      {selectedSeats.length > 0 && !isShowStarted && (
+        <div style={styles.bottomBar}>
+          <div style={styles.bottomInfo}>
+            <span style={styles.bottomSeats}>
+              {selectedSeats.length} seat{selectedSeats.length > 1 ? "s" : ""} selected
+            </span>
+            <span style={styles.bottomSeatNames}>
+              {selectedSeats.map((s) => `${s.row}${s.number}`).join(", ")}
+            </span>
+          </div>
+          <div style={styles.bottomRight}>
+            <span style={styles.totalAmount}>₹{totalAmount}</span>
+            <button
+              style={{
+                ...styles.proceedBtn,
+                opacity: bookingLoading ? 0.7 : 1,
+                cursor: bookingLoading ? "not-allowed" : "pointer",
+              }}
+              onClick={handleProceed}
+              disabled={bookingLoading}
+            >
+              {bookingLoading ? "Processing..." : "Proceed →"}
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
-
 
 const styles = {
   page: {
@@ -401,7 +382,6 @@ const styles = {
     pointerEvents: "none",
     zIndex: 0,
   },
-  // ✅ NEW poster header styles
   posterHeader: {
     position: "relative",
     width: "100%",
@@ -519,11 +499,7 @@ const styles = {
     borderRadius: "50%",
     animation: "spin 0.8s linear infinite",
   },
-  loadingText: {
-    color: "#666",
-    fontSize: "14px",
-    letterSpacing: "0.05em",
-  },
+  loadingText: { color: "#666", fontSize: "14px", letterSpacing: "0.05em" },
   errorWrap: {
     minHeight: "100vh",
     display: "flex",
@@ -533,14 +509,8 @@ const styles = {
     backgroundColor: "#0a0a0f",
     gap: "16px",
   },
-  errorIcon: {
-    fontSize: "32px",
-    color: "#ef4444",
-  },
-  errorText: {
-    color: "#ef4444",
-    fontSize: "16px",
-  },
+  errorIcon: { fontSize: "32px", color: "#ef4444" },
+  errorText: { color: "#ef4444", fontSize: "16px" },
   header: {
     position: "relative",
     zIndex: 1,
@@ -562,11 +532,7 @@ const styles = {
     marginTop: "4px",
     transition: "background 0.2s",
   },
-  headerInfo: {
-    display: "flex",
-    flexDirection: "column",
-    gap: "10px",
-  },
+  headerInfo: { display: "flex", flexDirection: "column", gap: "10px" },
   movieTitle: {
     fontSize: "clamp(24px, 4vw, 40px)",
     fontWeight: "700",
@@ -577,11 +543,7 @@ const styles = {
     WebkitBackgroundClip: "text",
     WebkitTextFillColor: "transparent",
   },
-  badges: {
-    display: "flex",
-    gap: "8px",
-    alignItems: "center",
-  },
+  badges: { display: "flex", gap: "8px", alignItems: "center" },
   badge: {
     background: "rgba(99,102,241,0.2)",
     border: "1px solid rgba(99,102,241,0.4)",
@@ -592,10 +554,7 @@ const styles = {
     fontWeight: "600",
     letterSpacing: "0.08em",
   },
-  badgeDim: {
-    color: "#555",
-    fontSize: "13px",
-  },
+  badgeDim: { color: "#555", fontSize: "13px" },
   infoBar: {
     position: "relative",
     zIndex: 1,
@@ -615,22 +574,9 @@ const styles = {
     gap: "4px",
     padding: "16px 24px",
   },
-  infoLabel: {
-    fontSize: "10px",
-    letterSpacing: "0.12em",
-    color: "#555",
-    fontWeight: "600",
-  },
-  infoValue: {
-    fontSize: "14px",
-    color: "#c8c8d8",
-    fontWeight: "500",
-  },
-  infoDivider: {
-    width: "1px",
-    background: "rgba(255,255,255,0.06)",
-    margin: "12px 0",
-  },
+  infoLabel: { fontSize: "10px", letterSpacing: "0.12em", color: "#555", fontWeight: "600" },
+  infoValue: { fontSize: "14px", color: "#c8c8d8", fontWeight: "500" },
+  infoDivider: { width: "1px", background: "rgba(255,255,255,0.06)", margin: "12px 0" },
   startedBanner: {
     position: "relative",
     zIndex: 1,
@@ -645,13 +591,7 @@ const styles = {
     textAlign: "center",
     letterSpacing: "0.02em",
   },
-  pricingRow: {
-    position: "relative",
-    zIndex: 1,
-    display: "flex",
-    gap: "12px",
-    padding: "0 40px 32px",
-  },
+  pricingRow: { position: "relative", zIndex: 1, display: "flex", gap: "12px", padding: "0 40px 32px" },
   priceCard: {
     display: "flex",
     flexDirection: "column",
@@ -666,17 +606,8 @@ const styles = {
     background: "rgba(245,200,66,0.05)",
     border: "1px solid rgba(245,200,66,0.2)",
   },
-  priceLabel: {
-    fontSize: "10px",
-    letterSpacing: "0.12em",
-    color: "#555",
-    fontWeight: "600",
-  },
-  priceValue: {
-    fontSize: "20px",
-    fontWeight: "700",
-    color: "#e8e8f0",
-  },
+  priceLabel: { fontSize: "10px", letterSpacing: "0.12em", color: "#555", fontWeight: "600" },
+  priceValue: { fontSize: "20px", fontWeight: "700", color: "#e8e8f0" },
   screenWrap: {
     position: "relative",
     zIndex: 1,
@@ -696,14 +627,7 @@ const styles = {
     justifyContent: "center",
     position: "relative",
   },
-  screenText: {
-    position: "absolute",
-    top: "-20px",
-    fontSize: "10px",
-    letterSpacing: "0.2em",
-    color: "#444",
-    fontWeight: "600",
-  },
+  screenText: { position: "absolute", top: "-20px", fontSize: "10px", letterSpacing: "0.2em", color: "#444", fontWeight: "600" },
   screenGlow: {
     width: "min(500px, 80%)",
     height: "40px",
@@ -719,25 +643,9 @@ const styles = {
     gap: "6px",
     padding: "0 16px",
   },
-  seatRow: {
-    display: "flex",
-    alignItems: "center",
-    gap: "8px",
-  },
-  rowLabel: {
-    width: "20px",
-    fontSize: "11px",
-    color: "#444",
-    fontWeight: "600",
-    textAlign: "right",
-    letterSpacing: "0.05em",
-  },
-  seatsInRow: {
-    display: "flex",
-    gap: "5px",
-    flexWrap: "wrap",
-    justifyContent: "center",
-  },
+  seatRow: { display: "flex", alignItems: "center", gap: "8px" },
+  rowLabel: { width: "20px", fontSize: "11px", color: "#444", fontWeight: "600", textAlign: "right", letterSpacing: "0.05em" },
+  seatsInRow: { display: "flex", gap: "5px", flexWrap: "wrap", justifyContent: "center" },
   seat: {
     width: "28px",
     height: "26px",
@@ -751,35 +659,18 @@ const styles = {
     alignItems: "center",
     justifyContent: "center",
   },
-  seatAvailable: {
-    background: "rgba(255,255,255,0.08)",
-    color: "#888",
-  },
-  seatGolden: {
-    background: "rgba(245,200,66,0.15)",
-    color: "#f5c842",
-    border: "1px solid rgba(245,200,66,0.3)",
-  },
-  seatSelected: {
-    background: "#6366f1",
-    color: "#fff",
-    transform: "scale(1.1)",
-  },
-  seatSelectedGolden: {
-    background: "#f5c842",
-    color: "#0a0a0f",
-    transform: "scale(1.1)",
-  },
-  seatBooked: {
-    background: "rgba(255,255,255,0.03)",
-    color: "#2a2a3a",
-    cursor: "not-allowed",
-  },
+  seatAvailable: { background: "rgba(255,255,255,0.08)", color: "#888" },
+  seatGolden: { background: "rgba(245,200,66,0.15)", color: "#f5c842", border: "1px solid rgba(245,200,66,0.3)" },
+  seatSelected: { background: "#6366f1", color: "#fff", transform: "scale(1.1)" },
+  seatSelectedGolden: { background: "#f5c842", color: "#0a0a0f", transform: "scale(1.1)" },
+  seatBooked: { background: "rgba(255,255,255,0.03)", color: "#2a2a3a", cursor: "not-allowed" },
+  // ✅ Locked — red on both user and admin
   seatLocked: {
-    background: "rgba(239,68,68,0.1)",
+    background: "rgba(239,68,68,0.15)",
     color: "#ef4444",
+    border: "1px solid rgba(239,68,68,0.3)",
     cursor: "not-allowed",
-    opacity: 0.5,
+    opacity: 0.8,
   },
   legend: {
     position: "relative",
@@ -791,20 +682,9 @@ const styles = {
     padding: "24px 40px",
     marginTop: "16px",
   },
-  legendItem: {
-    display: "flex",
-    alignItems: "center",
-    gap: "8px",
-  },
-  legendDot: {
-    width: "20px",
-    height: "18px",
-    borderRadius: "4px 4px 2px 2px",
-  },
-  legendLabel: {
-    fontSize: "12px",
-    color: "#555",
-  },
+  legendItem: { display: "flex", alignItems: "center", gap: "8px" },
+  legendDot: { width: "20px", height: "18px", borderRadius: "4px 4px 2px 2px" },
+  legendLabel: { fontSize: "12px", color: "#555" },
   bottomBar: {
     position: "fixed",
     bottom: 0,
@@ -820,31 +700,11 @@ const styles = {
     justifyContent: "space-between",
     gap: "16px",
   },
-  bottomInfo: {
-    display: "flex",
-    flexDirection: "column",
-    gap: "4px",
-  },
-  bottomSeats: {
-    fontSize: "14px",
-    fontWeight: "600",
-    color: "#e8e8f0",
-  },
-  bottomSeatNames: {
-    fontSize: "12px",
-    color: "#6366f1",
-    letterSpacing: "0.05em",
-  },
-  bottomRight: {
-    display: "flex",
-    alignItems: "center",
-    gap: "20px",
-  },
-  totalAmount: {
-    fontSize: "24px",
-    fontWeight: "700",
-    color: "#e8e8f0",
-  },
+  bottomInfo: { display: "flex", flexDirection: "column", gap: "4px" },
+  bottomSeats: { fontSize: "14px", fontWeight: "600", color: "#e8e8f0" },
+  bottomSeatNames: { fontSize: "12px", color: "#6366f1", letterSpacing: "0.05em" },
+  bottomRight: { display: "flex", alignItems: "center", gap: "20px" },
+  totalAmount: { fontSize: "24px", fontWeight: "700", color: "#e8e8f0" },
   proceedBtn: {
     background: "linear-gradient(135deg, #6366f1, #818cf8)",
     border: "none",

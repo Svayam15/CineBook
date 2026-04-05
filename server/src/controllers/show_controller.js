@@ -167,12 +167,10 @@ export const updateShow = async (req, res) => {
       return res.status(400).json({ message: "Cannot edit a cancelled show" });
     }
 
-    // 🚫 Block if show has already started
     if (new Date(show.startTime) <= new Date()) {
       return res.status(400).json({ message: "Cannot edit a show that has already started" });
     }
 
-    // 🚫 Block if any bookings exist
     const existingBooking = await prisma.booking.findFirst({
       where: {
         showId: parseInt(id),
@@ -218,7 +216,7 @@ export const updateShow = async (req, res) => {
   }
 };
 
-// 📅 RESCHEDULE SHOW (ADMIN) — allowed even with bookings, emails sent
+// 📅 RESCHEDULE SHOW (ADMIN)
 export const rescheduleShow = async (req, res) => {
   try {
     const { id } = req.params;
@@ -251,25 +249,19 @@ export const rescheduleShow = async (req, res) => {
     });
 
     if (!show) return res.status(404).json({ message: "Show not found" });
+    if (!show.isActive) return res.status(400).json({ message: "Cannot reschedule a cancelled show" });
 
-    if (!show.isActive) {
-      return res.status(400).json({ message: "Cannot reschedule a cancelled show" });
-    }
-
-    // 🚫 Block if show has already started
     if (new Date(show.startTime) <= new Date()) {
       return res.status(400).json({ message: "Cannot reschedule a show that has already started" });
     }
 
     const oldStartTime = show.startTime;
 
-    // ✅ Update the start time
     const updated = await prisma.show.update({
       where: { id: parseInt(id) },
       data: { startTime: new Date(startTime) },
     });
 
-    // ✅ Notify all paid booked users via email
     for (const booking of show.bookings) {
       sendShowRescheduledEmail({
         user: booking.user,
@@ -447,7 +439,6 @@ export const getAdminShows = asyncHandler(async (req, res) => {
 
   const now = new Date();
 
-  // ✅ FIXED: filter at DB level, not JS level
   const whereClause = statusFilter === "UPCOMING"
     ? { startTime: { gt: now } }
     : statusFilter === "COMPLETED"
@@ -473,7 +464,6 @@ export const getAdminShows = asyncHandler(async (req, res) => {
     return "COMPLETED";
   };
 
-  // Handle ONGOING separately since it can't be done purely at DB level
   let enriched = shows.map((show) => ({ ...show, status: getStatus(show) }));
 
   if (statusFilter === "ONGOING") {
@@ -492,24 +482,26 @@ export const getAdminShows = asyncHandler(async (req, res) => {
   });
 });
 
-// 📡 SSE — real-time seat updates for a show
+// ✅ 📡 SSE — real-time seat updates for a show
 export const seatUpdatesSSE = async (req, res) => {
   const showId = parseInt(req.params.id);
 
-  // SSE headers
+  // ✅ CORS headers — required for cross-origin SSE (svayam.dev → api.svayam.dev)
   res.setHeader("Content-Type", "text/event-stream");
   res.setHeader("Cache-Control", "no-cache");
   res.setHeader("Connection", "keep-alive");
-  res.setHeader("X-Accel-Buffering", "no"); // important for Render/Nginx
+  res.setHeader("X-Accel-Buffering", "no");
+  res.setHeader("Access-Control-Allow-Origin", req.headers.origin || "https://svayam.dev");
+  res.setHeader("Access-Control-Allow-Credentials", "true");
   res.flushHeaders();
 
-  // Send a heartbeat immediately so client knows it's connected
+  // Send connected handshake
   res.write(`data: ${JSON.stringify({ type: "connected", showId })}\n\n`);
 
-  // Register this connection
+  // Register connection
   addConnection(showId, res);
 
-  // Heartbeat every 25s to keep connection alive through proxies
+  // Heartbeat every 25s — keeps connection alive through Render proxy
   const heartbeat = setInterval(() => {
     try {
       res.write(`: heartbeat\n\n`);
@@ -518,7 +510,7 @@ export const seatUpdatesSSE = async (req, res) => {
     }
   }, 25000);
 
-  // Cleanup on disconnect
+  // Cleanup on client disconnect
   req.on("close", () => {
     clearInterval(heartbeat);
     removeConnection(showId, res);

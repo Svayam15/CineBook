@@ -30,38 +30,60 @@ const WindowBooking = () => {
     fetchShows().catch(console.error);
   }, []);
 
-  // ✅ SSE — real-time seat updates for selected show
-useEffect(() => {
-  if (!selectedShow) return;
+  // ✅ SSE — real-time seat updates with auto-retry
+  useEffect(() => {
+    if (!selectedShow) return;
 
-  const apiBase = import.meta.env.VITE_API_URL || "";
-  const eventSource = new EventSource(`${apiBase}/shows/${selectedShow.id}/seat-updates`);
+    const apiBase = import.meta.env.VITE_API_URL;
+    if (!apiBase) return;
 
-  eventSource.onmessage = (e) => {
-    const data = JSON.parse(e.data);
-    if (data.type === "connected") return;
+    let eventSource = null;
+    let retryTimeout = null;
+    let destroyed = false;
 
-    setSeats((prev) =>
-      prev.map((seat) =>
-        seat.id === data.seatId ? { ...seat, status: data.status } : seat
-      )
-    );
+    const connect = () => {
+      if (destroyed) return;
 
-    // Deselect if someone else locked/booked it
-    if (data.status === "LOCKED" || data.status === "BOOKED") {
-      setSelectedSeats((prev) => prev.filter((id) => id !== data.seatId));
-    }
-  };
+      eventSource = new EventSource(
+        `${apiBase}/shows/${selectedShow.id}/seat-updates`,
+        { withCredentials: false }
+      );
 
-  eventSource.onerror = () => {
-    eventSource.close();
-  };
+      eventSource.onmessage = (e) => {
+        try {
+          const data = JSON.parse(e.data);
+          if (data.type === "connected") return;
 
-  return () => {
-    eventSource.close();
-  };
-}, [selectedShow?.id]);
+          setSeats((prev) =>
+            prev.map((seat) =>
+              seat.id === data.seatId ? { ...seat, status: data.status } : seat
+            )
+          );
 
+          if (data.status === "LOCKED" || data.status === "BOOKED") {
+            setSelectedSeats((prev) => prev.filter((id) => id !== data.seatId));
+          }
+        } catch {
+          // ignore parse errors
+        }
+      };
+
+      eventSource.onerror = () => {
+        eventSource.close();
+        if (!destroyed) {
+          retryTimeout = setTimeout(connect, 3000);
+        }
+      };
+    };
+
+    connect();
+
+    return () => {
+      destroyed = true;
+      clearTimeout(retryTimeout);
+      if (eventSource) eventSource.close();
+    };
+  }, [selectedShow]);
 
   const handleShowSelect = async (show) => {
     if (new Date(show.rawStartTime) <= new Date()) return;
@@ -107,12 +129,12 @@ useEffect(() => {
 
       toast.success("Booking queued!");
 
-const jobId = res.data.jobId;
-let attempts = 0;
-const maxAttempts = 60; // ✅ 60 seconds total
+      const jobId = res.data.jobId;
+      let attempts = 0;
+      const maxAttempts = 60;
 
-const pollInterval = setInterval(async () => {
-  attempts++;
+      const pollInterval = setInterval(async () => {
+        attempts++;
         try {
           const statusRes = await api.get(`/bookings/status-rest/${jobId}`);
           const { status, reason } = statusRes.data;
@@ -153,12 +175,7 @@ const pollInterval = setInterval(async () => {
   const totalAmount = selectedSeats.reduce((sum, seatId) => {
     const seat = seats.find((s) => s.id === seatId);
     if (!seat) return sum;
-    return (
-      sum +
-      (seat.type === "GOLDEN"
-        ? selectedShow?.goldenPrice || 0
-        : selectedShow?.regularPrice || 0)
-    );
+    return sum + (seat.type === "GOLDEN" ? selectedShow?.goldenPrice || 0 : selectedShow?.regularPrice || 0);
   }, 0);
 
   return (
@@ -227,12 +244,10 @@ const pollInterval = setInterval(async () => {
             </div>
           ) : (
             <div className="bg-card border border-border rounded-2xl p-5">
-              {/* Screen */}
               <div className="w-full bg-primary/10 border border-primary/20 rounded-lg py-2 text-center text-primary text-xs font-medium mb-6">
                 🎬 SCREEN
               </div>
 
-              {/* Seats — centered so any gap is symmetric on both sides */}
               <div className="space-y-2 mb-6 flex flex-col items-center">
                 {Object.entries(seatsByRow).map(([row, rowSeats]) => (
                   <div key={row} className="flex items-center gap-2">
@@ -247,7 +262,7 @@ const pollInterval = setInterval(async () => {
                             ${seat.status === "BOOKED"
                               ? "bg-zinc-700 text-zinc-500 cursor-not-allowed"
                               : seat.status === "LOCKED"
-                              ? "bg-yellow-500/20 text-yellow-500 cursor-not-allowed"
+                              ? "bg-red-500/20 text-red-400 border border-red-500/30 cursor-not-allowed"
                               : selectedSeats.includes(seat.id)
                               ? "bg-primary text-white"
                               : seat.type === "GOLDEN"
@@ -263,7 +278,7 @@ const pollInterval = setInterval(async () => {
                 ))}
               </div>
 
-              {/* Legend */}
+              {/* Legend — updated locked to red */}
               <div className="flex flex-wrap gap-4 mb-6 text-xs text-muted">
                 <span className="flex items-center gap-1.5">
                   <span className="w-4 h-4 rounded bg-zinc-800 inline-block" />Available
@@ -278,11 +293,10 @@ const pollInterval = setInterval(async () => {
                   <span className="w-4 h-4 rounded bg-zinc-700 inline-block" />Booked
                 </span>
                 <span className="flex items-center gap-1.5">
-                  <span className="w-4 h-4 rounded bg-yellow-500/20 inline-block" />Locked
+                  <span className="w-4 h-4 rounded bg-red-500/20 border border-red-500/30 inline-block" />Locked
                 </span>
               </div>
 
-              {/* Booking Summary */}
               {selectedSeats.length > 0 && (
                 <div className="border-t border-border pt-4">
                   <div className="flex items-center justify-between mb-3">
@@ -290,7 +304,6 @@ const pollInterval = setInterval(async () => {
                     <p className="text-white font-bold">₹{totalAmount}</p>
                   </div>
 
-                  {/* Payment Type */}
                   <div className="flex gap-3 mb-4">
                     {["CASH", "CARD"].map((type) => (
                       <button
