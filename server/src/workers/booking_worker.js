@@ -80,9 +80,10 @@ const worker = new Worker(
     // ✅ Broadcast AFTER transaction commits
     if (result._type === "CASH") {
       seatIds.forEach((seatId) => broadcastToShow(showId, { seatId, status: "BOOKED" }));
+      logger.info(`✅ BOOKED broadcast sent for showId=${showId}`);
     } else {
-      // ✅ CARD — broadcast LOCKED so admin sees seats turn red immediately
       seatIds.forEach((seatId) => broadcastToShow(showId, { seatId, status: "LOCKED" }));
+      logger.info(`✅ LOCKED broadcast sent for showId=${showId} seats=${seatIds.join(",")}`);
     }
 
     return result;
