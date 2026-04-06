@@ -2,14 +2,52 @@ import { useEffect, useState } from "react";
 import AdminLayout from "../../components/admin/AdminLayout";
 import api from "../../api/axios";
 import toast from "react-hot-toast";
-import { Plus, Trash2, Building2 } from "lucide-react";
+import { Plus, Trash2, Building2, X } from "lucide-react";
 import Spinner from "../../components/common/Spinner";
 
+// ─── Delete Confirm Modal ─────────────────────────────────────────────────────
+const DeleteModal = ({ theatre, onClose, onConfirm, deleting }) => (
+  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm px-4">
+    <div className="bg-card border border-border rounded-2xl w-full max-w-sm shadow-2xl overflow-hidden">
+      <div className="flex items-center justify-between px-5 py-4 border-b border-border">
+        <span className="font-heading font-semibold text-white">Delete Theatre?</span>
+        <button onClick={onClose} className="text-muted hover:text-white transition">
+          <X size={18} />
+        </button>
+      </div>
+      <div className="p-5 space-y-4">
+        <p className="text-muted text-sm">
+          Are you sure you want to delete{" "}
+          <span className="text-white font-semibold">"{theatre.name}"</span>?
+          This will also delete all associated shows.
+        </p>
+        <div className="flex gap-3">
+          <button
+            onClick={onClose}
+            className="flex-1 py-2.5 rounded-xl border border-border text-muted hover:text-white text-sm transition"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={onConfirm}
+            disabled={deleting}
+            className="flex-1 py-2.5 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 text-sm font-medium transition disabled:opacity-50"
+          >
+            {deleting ? "Deleting..." : "Delete"}
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+);
+
+// ─── Main Component ───────────────────────────────────────────────────────────
 const Theatres = () => {
   const [theatres, setTheatres] = useState([]);
   const [loading, setLoading] = useState(true);
   const [adding, setAdding] = useState(false);
   const [deleting, setDeleting] = useState(null);
+  const [deleteTarget, setDeleteTarget] = useState(null); // ✅ replaces window.confirm
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({ name: "", location: "" });
 
@@ -42,15 +80,16 @@ const Theatres = () => {
     }
   };
 
-  const handleDelete = async (id) => {
-    if (!confirm("Delete this theatre?")) return;
-    setDeleting(id);
+  const handleDelete = async () => {
+    if (!deleteTarget) return;
+    setDeleting(deleteTarget.id);
     try {
-      await api.delete(`/theatres/${id}`);
+      await api.delete(`/theatres/${deleteTarget.id}`);
       toast.success("Theatre deleted!");
+      setDeleteTarget(null);
       await fetchTheatres();
     } catch (err) {
-      toast.error(err.message);
+      toast.error(err.response?.data?.message || err.message);
     } finally {
       setDeleting(null);
     }
@@ -58,6 +97,17 @@ const Theatres = () => {
 
   return (
     <AdminLayout>
+
+      {/* ✅ Custom delete modal */}
+      {deleteTarget && (
+        <DeleteModal
+          theatre={deleteTarget}
+          onClose={() => setDeleteTarget(null)}
+          onConfirm={handleDelete}
+          deleting={!!deleting}
+        />
+      )}
+
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="font-heading text-2xl font-bold text-white">Theatres</h1>
@@ -125,7 +175,7 @@ const Theatres = () => {
                 <p className="text-muted text-sm">📍 {theatre.location}</p>
               </div>
               <button
-                onClick={() => handleDelete(theatre.id)}
+                onClick={() => setDeleteTarget(theatre)}
                 disabled={deleting === theatre.id}
                 className="flex items-center gap-2 text-red-400 hover:text-red-300 text-sm transition disabled:opacity-50"
               >
