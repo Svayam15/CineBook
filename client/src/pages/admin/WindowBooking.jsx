@@ -1,11 +1,149 @@
 /// <reference types="vite/client" />
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import AdminLayout from "../../components/admin/AdminLayout";
 import api from "../../api/axios";
 import toast from "react-hot-toast";
-import { Ticket } from "lucide-react";
+import { Ticket, X, Printer } from "lucide-react";
 import Spinner from "../../components/common/Spinner";
+import { QRCodeSVG } from "qrcode.react";
 
+// ─── QR Modal ─────────────────────────────────────────────────────────────────
+const QRModal = ({ booking, show, onClose }) => {
+  const printRef = useRef();
+  const qrValue = `CINEBOOK-${booking.id}-${booking.showId}`;
+
+  const handlePrint = () => {
+    const content = printRef.current;
+    const printWindow = window.open("", "_blank");
+    printWindow.document.write(`
+      <html>
+        <head>
+          <title>CineBook Ticket — Booking #${booking.id}</title>
+          <style>
+            body { font-family: Arial, sans-serif; display: flex; justify-content: center; padding: 40px; }
+            .ticket { border: 2px dashed #333; border-radius: 16px; padding: 32px; max-width: 360px; text-align: center; }
+            h1 { font-size: 24px; margin-bottom: 4px; }
+            p { color: #555; font-size: 14px; margin: 4px 0; }
+            .qr { margin: 24px auto; }
+            .seats { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin: 12px 0; }
+            .seat { border: 1px solid #333; border-radius: 8px; padding: 4px 10px; font-size: 13px; font-weight: bold; }
+            .divider { border-top: 1px dashed #ccc; margin: 16px 0; }
+            .total { font-size: 22px; font-weight: bold; }
+            .footer { font-size: 11px; color: #999; margin-top: 16px; }
+          </style>
+        </head>
+        <body>
+          ${content.innerHTML}
+        </body>
+      </html>
+    `);
+    printWindow.document.close();
+    printWindow.focus();
+    printWindow.print();
+    printWindow.close();
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm px-4">
+      <div className="bg-card border border-border rounded-2xl w-full max-w-sm shadow-2xl overflow-hidden">
+
+        {/* Header */}
+        <div className="flex items-center justify-between px-5 py-4 border-b border-border">
+          <div className="flex items-center gap-2">
+            <Ticket size={18} className="text-primary" />
+            <span className="font-heading font-semibold text-white">Booking Confirmed!</span>
+          </div>
+          <button onClick={onClose} className="text-muted hover:text-white transition">
+            <X size={18} />
+          </button>
+        </div>
+
+        {/* Ticket Body — printable */}
+        <div className="p-5">
+          <div ref={printRef}>
+            <div className="ticket" style={{ fontFamily: "Arial, sans-serif", textAlign: "center" }}>
+              {/* Movie */}
+              <h1 className="font-heading text-lg font-bold text-white mb-1">
+                {show?.movie?.title}
+              </h1>
+              <p className="text-muted text-sm">{show?.showType} · {show?.movie?.language}</p>
+
+              {/* Divider */}
+              <div className="border-t border-dashed border-border my-4" />
+
+              {/* Details */}
+              <div className="space-y-1.5 text-sm text-muted mb-4">
+                <p>🏛️ {show?.theatre?.name}, {show?.theatre?.location}</p>
+                <p>🕐 {show?.startTime}</p>
+                <p>💳 {booking.paymentType} Payment</p>
+              </div>
+
+              {/* Seats */}
+              <div className="flex flex-wrap gap-2 justify-center mb-4">
+                {booking.seats?.map((seat, i) => (
+                  <span
+                    key={i}
+                    className={`text-xs px-2.5 py-1 rounded-lg border font-medium
+                      ${seat.type === "GOLDEN"
+                        ? "bg-yellow-500/10 text-yellow-400 border-yellow-500/20"
+                        : "bg-zinc-800 text-zinc-300 border-zinc-700"
+                      }`}
+                  >
+                    {seat.row}{seat.number}
+                  </span>
+                ))}
+              </div>
+
+              {/* Amount */}
+              <div className="bg-dark rounded-xl px-4 py-3 mb-4 flex justify-between items-center">
+                <span className="text-muted text-sm">Total</span>
+                <span className="text-white font-bold text-lg">₹{booking.totalAmount}</span>
+              </div>
+
+              {/* Divider */}
+              <div className="border-t border-dashed border-border my-4" />
+
+              {/* QR Code */}
+              <div className="flex flex-col items-center gap-3">
+                <div className="bg-white p-3 rounded-2xl">
+                  <QRCodeSVG
+                    value={qrValue}
+                    size={160}
+                    bgColor="#ffffff"
+                    fgColor="#0D0D0D"
+                    level="H"
+                  />
+                </div>
+                <p className="text-muted text-xs font-mono tracking-wide">
+                  {qrValue}
+                </p>
+                <p className="text-muted text-xs">Booking #{booking.id} · Show this at entrance</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Print Button */}
+          <button
+            onClick={handlePrint}
+            className="w-full mt-4 flex items-center justify-center gap-2 bg-primary hover:bg-primary-dark text-white font-semibold py-3 rounded-xl transition"
+          >
+            <Printer size={16} />
+            Print Ticket
+          </button>
+
+          <button
+            onClick={onClose}
+            className="w-full mt-2 bg-card border border-border text-muted hover:text-white py-2.5 rounded-xl text-sm transition"
+          >
+            Close
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// ─── Main Component ───────────────────────────────────────────────────────────
 const WindowBooking = () => {
   const [shows, setShows] = useState([]);
   const [seats, setSeats] = useState([]);
@@ -15,6 +153,7 @@ const WindowBooking = () => {
   const [loadingShows, setLoadingShows] = useState(true);
   const [loadingSeats, setLoadingSeats] = useState(false);
   const [booking, setBooking] = useState(false);
+  const [confirmedBooking, setConfirmedBooking] = useState(null); // ✅ QR modal state
 
   useEffect(() => {
     const fetchShows = async () => {
@@ -30,7 +169,7 @@ const WindowBooking = () => {
     fetchShows().catch(console.error);
   }, []);
 
-  // ✅ SSE — real-time seat updates with auto-retry
+  // ✅ SSE — real-time seat updates
   useEffect(() => {
     if (!selectedShow) return;
 
@@ -43,41 +182,31 @@ const WindowBooking = () => {
 
     const connect = () => {
       if (destroyed) return;
-
       eventSource = new EventSource(
         `${apiBase}/shows/${selectedShow.id}/seat-updates`,
         { withCredentials: false }
       );
-
       eventSource.onmessage = (e) => {
         try {
           const data = JSON.parse(e.data);
           if (data.type === "connected") return;
-
           setSeats((prev) =>
             prev.map((seat) =>
               seat.id === data.seatId ? { ...seat, status: data.status } : seat
             )
           );
-
           if (data.status === "LOCKED" || data.status === "BOOKED") {
             setSelectedSeats((prev) => prev.filter((id) => id !== data.seatId));
           }
-        } catch {
-          // ignore parse errors
-        }
+        } catch { /* ignore */ }
       };
-
       eventSource.onerror = () => {
         eventSource.close();
-        if (!destroyed) {
-          retryTimeout = setTimeout(connect, 3000);
-        }
+        if (!destroyed) retryTimeout = setTimeout(connect, 3000);
       };
     };
 
     connect();
-
     return () => {
       destroyed = true;
       clearTimeout(retryTimeout);
@@ -113,7 +242,6 @@ const WindowBooking = () => {
       toast.error("Select a show and at least one seat");
       return;
     }
-
     if (new Date(selectedShow.rawStartTime) <= new Date()) {
       toast.error("Show has already started. Booking is not allowed.");
       return;
@@ -128,7 +256,6 @@ const WindowBooking = () => {
       });
 
       toast.success("Booking queued!");
-
       const jobId = res.data.jobId;
       let attempts = 0;
       const maxAttempts = 60;
@@ -137,16 +264,45 @@ const WindowBooking = () => {
         attempts++;
         try {
           const statusRes = await api.get(`/bookings/status-rest/${jobId}`);
-          const { status, reason } = statusRes.data;
+          const { status, booking: bookingData, reason } = statusRes.data;
 
-          if (status === "success" || statusRes.data.booking) {
+          if (status === "success" && bookingData) {
             clearInterval(pollInterval);
             toast.success("Booking confirmed! 🎉");
+
+            // ✅ Build booking object for QR modal
+            // Fetch full booking details to get seats
+            try {
+              const bookingRes = await api.get(`/admin/bookings?search=${bookingData.id}`);
+              const fullBooking = bookingRes.data.bookings?.find(
+                (b) => b.id === bookingData.id
+              );
+
+              setConfirmedBooking({
+                id: bookingData.id,
+                showId: selectedShow.id,
+                totalAmount: bookingData.totalAmount,
+                paymentType,
+                seats: fullBooking?.seats?.map((bs) => ({
+                  row: bs.showSeat?.row,
+                  number: bs.showSeat?.number,
+                  type: bs.seatType,
+                })) || [],
+              });
+            } catch {
+              // ✅ fallback if fetch fails — still show QR with basic info
+              setConfirmedBooking({
+                id: bookingData.id,
+                showId: selectedShow.id,
+                totalAmount: bookingData.totalAmount,
+                paymentType,
+                seats: [],
+              });
+            }
+
             setSelectedSeats([]);
 
-            // ✅ Only re-fetch seats — do NOT call handleShowSelect
-            // Calling handleShowSelect resets selectedShow object
-            // which triggers SSE useEffect to close and reopen connection
+            // ✅ Refresh seats
             try {
               const seatsRes = await api.get(`/shows/${selectedShow.id}/seats`);
               setSeats(seatsRes.data);
@@ -192,6 +348,15 @@ const WindowBooking = () => {
 
   return (
     <AdminLayout>
+      {/* ✅ QR Modal */}
+      {confirmedBooking && (
+        <QRModal
+          booking={confirmedBooking}
+          show={selectedShow}
+          onClose={() => setConfirmedBooking(null)}
+        />
+      )}
+
       <div className="mb-6">
         <h1 className="font-heading text-2xl font-bold text-white">Window Booking</h1>
         <p className="text-muted text-sm mt-1">Book tickets for walk-in customers</p>
@@ -256,7 +421,6 @@ const WindowBooking = () => {
             </div>
           ) : (
             <div className="bg-card border border-border rounded-2xl p-5">
-
               <div className="w-full bg-primary/10 border border-primary/20 rounded-lg py-2 text-center text-primary text-xs font-medium mb-6">
                 🎬 SCREEN
               </div>
