@@ -67,7 +67,6 @@ export const LANGUAGES = [
   "Marathi",
   "Bengali",
   "Punjabi",
-  "Other",
 ];
 
 export const GENRES = [
@@ -85,5 +84,4 @@ export const GENRES = [
   "Thriller",
   "Biography",
   "Documentary",
-  "Other",
 ];

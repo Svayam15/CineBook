@@ -7,8 +7,8 @@ export default {
   theme: {
     extend: {
       fontFamily: {
-        sans: ["DM Sans", "sans-serif"],
-        heading: ["Sora", "sans-serif"],
+        sans: ["Manrope", "sans-serif"],
+        heading: ["Plus Jakarta Sans", "sans-serif"],
       },
       colors: {
         primary: "#7C3AED",

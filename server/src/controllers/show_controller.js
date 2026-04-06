@@ -21,12 +21,10 @@ const formatToIST = (date) => {
   });
 };
 
-// ⏰ Helper — calculate end time
 const getEndTime = (startTime, durationMinutes) => {
   return new Date(new Date(startTime).getTime() + durationMinutes * 60 * 1000);
 };
 
-// ⏰ Helper — format full show response
 const formatShow = (show) => {
   if (!show.startTime) return show;
   const endTime = getEndTime(show.startTime, show.movie?.duration || 0);
@@ -39,7 +37,6 @@ const formatShow = (show) => {
   };
 };
 
-// ✅ Helper — check if show has ended
 const hasShowEnded = (show) => {
   const endTime = getEndTime(show.startTime, show.movie?.duration || 0);
   return new Date() > endTime;
@@ -54,24 +51,19 @@ export const createShow = async (req, res) => {
       startTime,
       totalSeats,
       showType,
+      language,
       regularPrice,
       hasGoldenSeats,
       goldenSeats,
       goldenPrice,
     } = req.body;
 
-    if (!movieId || !theatreId || !startTime || !totalSeats || !showType || !regularPrice) {
-      return res.status(400).json({ message: "All fields are required" });
-    }
-
-    if (!Object.values(SHOW_TYPE).includes(showType)) {
-      return res.status(400).json({ message: "showType must be 2D, 3D or 4D" });
+    if (!movieId || !theatreId || !startTime || !totalSeats || !showType || !language || !regularPrice) {
+      return res.status(400).json({ message: "All fields are required including showType and language" });
     }
 
     if (!ALLOWED_SEAT_COUNTS.includes(totalSeats)) {
-      return res.status(400).json({
-        message: "Total seats must be one of: 120, 180, 240, 300",
-      });
+      return res.status(400).json({ message: "Total seats must be one of: 120, 180, 240, 300" });
     }
 
     if (!startTime.includes("+05:30")) {
@@ -103,21 +95,30 @@ export const createShow = async (req, res) => {
       }
     }
 
-    // ✅ NEW — fetch movie and validate release date
+    // ✅ Fetch movie and validate
     const movie = await prisma.movie.findUnique({
       where: { id: movieId },
-      select: { id: true, title: true, releaseDate: true, isDeleted: true },
+      select: { id: true, title: true, releaseDate: true, isDeleted: true, formats: true, languages: true },
     });
 
-    if (!movie) {
-      return res.status(404).json({ message: "Movie not found" });
+    if (!movie) return res.status(404).json({ message: "Movie not found" });
+    if (movie.isDeleted) return res.status(400).json({ message: "Cannot create show for a deleted movie" });
+
+    // ✅ Validate showType against movie's formats
+    if (!movie.formats.includes(showType)) {
+      return res.status(400).json({
+        message: `showType "${showType}" is not available for this movie. Available formats: ${movie.formats.join(", ")}`,
+      });
     }
 
-    if (movie.isDeleted) {
-      return res.status(400).json({ message: "Cannot create show for a deleted movie" });
+    // ✅ Validate language against movie's languages
+    if (!movie.languages.includes(language)) {
+      return res.status(400).json({
+        message: `Language "${language}" is not available for this movie. Available languages: ${movie.languages.join(", ")}`,
+      });
     }
 
-    // ✅ NEW — block if show date is before movie release date
+    // ✅ Block if show date is before movie release date
     if (movie.releaseDate && new Date(startTime) < new Date(movie.releaseDate)) {
       return res.status(400).json({
         message: `Cannot create show before movie release date (${formatToIST(movie.releaseDate)})`,
@@ -131,6 +132,7 @@ export const createShow = async (req, res) => {
         startTime: new Date(startTime),
         totalSeats,
         showType,
+        language,
         regularPrice,
         hasGoldenSeats: hasGoldenSeats || false,
         goldenSeats: hasGoldenSeats ? goldenSeats : null,
@@ -153,6 +155,7 @@ export const createShow = async (req, res) => {
       show: {
         id: show.id,
         showType: show.showType,
+        language: show.language,
         totalSeats: show.totalSeats,
         regularPrice: show.regularPrice,
         hasGoldenSeats: show.hasGoldenSeats,
@@ -180,6 +183,7 @@ export const updateShow = async (req, res) => {
 
     const show = await prisma.show.findUnique({
       where: { id: parseInt(id) },
+      include: { movie: true },
     });
 
     if (!show) return res.status(404).json({ message: "Show not found" });
@@ -189,10 +193,7 @@ export const updateShow = async (req, res) => {
     }
 
     const existingBooking = await prisma.booking.findFirst({
-      where: {
-        showId: parseInt(id),
-        status: { in: ["PENDING", "PAID"] },
-      },
+      where: { showId: parseInt(id), status: { in: ["PENDING", "PAID"] } },
     });
 
     if (existingBooking) {
@@ -201,8 +202,11 @@ export const updateShow = async (req, res) => {
       });
     }
 
-    if (showType && !Object.values(SHOW_TYPE).includes(showType)) {
-      return res.status(400).json({ message: "showType must be 2D, 3D or 4D" });
+    // ✅ Validate showType against movie's formats
+    if (showType && !show.movie.formats.includes(showType)) {
+      return res.status(400).json({
+        message: `showType "${showType}" not available for this movie. Formats: ${show.movie.formats.join(", ")}`,
+      });
     }
 
     if (regularPrice !== undefined && regularPrice <= 0) {
@@ -226,7 +230,7 @@ export const updateShow = async (req, res) => {
     });
 
     logger.info(`Show ${id} updated`);
-    res.json({ message: "Show updated successfully", show: formatShow(updated) });
+    res.json({ message: "Show updated successfully", show: formatShow({ ...updated, movie: show.movie }) });
   } catch (err) {
     logger.error(`Update show error: ${err.message}`);
     res.status(500).json({ message: "Failed to update show" });
@@ -267,6 +271,13 @@ export const rescheduleShow = async (req, res) => {
     if (!show.isActive) return res.status(400).json({ message: "Cannot reschedule a cancelled show" });
     if (new Date(show.startTime) <= new Date()) {
       return res.status(400).json({ message: "Cannot reschedule a show that has already started" });
+    }
+
+    // ✅ Block if new startTime is before movie release date
+    if (show.movie.releaseDate && new Date(startTime) < new Date(show.movie.releaseDate)) {
+      return res.status(400).json({
+        message: `Cannot reschedule before movie release date (${formatToIST(show.movie.releaseDate)})`,
+      });
     }
 
     const oldStartTime = show.startTime;

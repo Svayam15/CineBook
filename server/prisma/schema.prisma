@@ -32,7 +32,7 @@ enum PaymentType {
 
 enum Role {
   USER
-  STAFF // ✅ NEW
+  STAFF
   ADMIN
 }
 
@@ -92,9 +92,10 @@ model Movie {
   title       String
   duration    Int
   posterUrl   String
-  language    String
+  languages   String[] // ✅ array — e.g. ["Hindi", "English"]
+  formats     String[] // ✅ array — e.g. ["2D", "3D"]
   rating      MovieRating
-  genre       String
+  genres      String[] // ✅ array — e.g. ["Action", "Thriller"], max 4
   description String
   releaseDate DateTime
   director    String?
@@ -119,7 +120,8 @@ model Show {
   theatreId      Int
   startTime      DateTime
   totalSeats     Int
-  showType       String
+  showType       String // must be from movie.formats
+  language       String // ✅ new — must be from movie.languages
   regularPrice   Float
   hasGoldenSeats Boolean  @default(false)
   goldenSeats    Int?
@@ -164,8 +166,8 @@ model Booking {
   refundId     String?
   refundAmount Float?
   cancelledAt  DateTime?
-  isUsed       Boolean       @default(false) // ✅ NEW
-  usedAt       DateTime? // ✅ NEW
+  isUsed       Boolean       @default(false)
+  usedAt       DateTime?
   createdAt    DateTime      @default(now())
 
   user  User          @relation(fields: [userId], references: [id], onDelete: Cascade)

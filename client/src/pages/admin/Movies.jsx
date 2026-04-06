@@ -9,8 +9,10 @@ const CLOUD_NAME = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME;
 const UPLOAD_PRESET = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET;
 
 const RATINGS = ["U", "UA", "A", "S"];
-const LANGUAGES = ["Hindi", "English", "Tamil", "Telugu", "Kannada", "Malayalam", "Marathi", "Bengali", "Punjabi", "Other"];
-const GENRES = ["Action", "Adventure", "Animation", "Comedy", "Crime", "Drama", "Fantasy", "Horror", "Mystery", "Romance", "Sci-Fi", "Thriller", "Biography", "Documentary", "Other"];
+const RATING_LABELS = { U: "U — Universal", UA: "UA — Parental Guidance", A: "A — Adults Only", S: "S — Special" };
+const LANGUAGES = ["Hindi", "English", "Tamil", "Telugu", "Kannada", "Malayalam", "Marathi", "Bengali", "Punjabi"];
+const GENRES = ["Action", "Adventure", "Animation", "Comedy", "Crime", "Drama", "Fantasy", "Horror", "Mystery", "Romance", "Sci-Fi", "Thriller", "Biography", "Documentary"];
+const FORMATS = ["2D", "3D", "4D"];
 
 const RATING_COLORS = {
   U: "bg-green-500/20 text-green-400 border-green-500/30",
@@ -19,7 +21,50 @@ const RATING_COLORS = {
   S: "bg-blue-500/20 text-blue-400 border-blue-500/30",
 };
 
-// ─── Poster Upload Component ──────────────────────────────────────────────────
+// ─── Multi Select Chips ───────────────────────────────────────────────────────
+const ChipSelect = ({ label, options, selected, onChange, max, required }) => {
+  const toggle = (opt) => {
+    if (selected.includes(opt)) {
+      onChange(selected.filter((s) => s !== opt));
+    } else {
+      if (max && selected.length >= max) {
+        toast.error(`Maximum ${max} selections allowed`);
+        return;
+      }
+      onChange([...selected, opt]);
+    }
+  };
+
+  return (
+    <div className="flex flex-col gap-2">
+      <label className="text-sm text-muted font-medium">
+        {label} {required && <span className="text-red-400">*</span>}
+        {max && <span className="text-muted/60 text-xs ml-1">(max {max})</span>}
+      </label>
+      <div className="flex flex-wrap gap-2">
+        {options.map((opt) => (
+          <button
+            key={opt}
+            type="button"
+            onClick={() => toggle(opt)}
+            className={`px-3 py-1.5 rounded-xl text-xs font-medium border transition
+              ${selected.includes(opt)
+                ? "bg-primary border-primary text-white"
+                : "bg-dark border-border text-muted hover:border-primary/50 hover:text-white"
+              }`}
+          >
+            {opt}
+          </button>
+        ))}
+      </div>
+      {selected.length > 0 && (
+        <p className="text-muted text-xs">Selected: {selected.join(", ")}</p>
+      )}
+    </div>
+  );
+};
+
+// ─── Poster Upload ────────────────────────────────────────────────────────────
 const PosterUpload = ({ value, onChange }) => {
   const inputRef = useRef();
   const [uploading, setUploading] = useState(false);
@@ -62,7 +107,7 @@ const PosterUpload = ({ value, onChange }) => {
 
   return (
     <div className="flex flex-col gap-2">
-      <label className="text-sm text-muted font-medium">Movie Poster *</label>
+      <label className="text-sm text-muted font-medium">Movie Poster <span className="text-red-400">*</span></label>
       <div
         onClick={() => !uploading && inputRef.current?.click()}
         className={`relative w-full h-48 rounded-2xl border-2 border-dashed flex flex-col items-center justify-center cursor-pointer transition overflow-hidden
@@ -106,9 +151,10 @@ const MovieForm = ({ initial, onSubmit, onCancel, submitting }) => {
     title: initial?.title || "",
     duration: initial?.duration ? String(initial.duration) : "",
     posterUrl: initial?.posterUrl || "",
-    language: initial?.language || "",
+    languages: initial?.languages || [],
+    formats: initial?.formats || [],
     rating: initial?.rating || "",
-    genre: initial?.genre || "",
+    genres: initial?.genres || [],
     description: initial?.description || "",
     releaseDate: initial?.releaseDate ? new Date(initial.releaseDate).toISOString().split("T")[0] : "",
     director: initial?.director || "",
@@ -120,21 +166,21 @@ const MovieForm = ({ initial, onSubmit, onCancel, submitting }) => {
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!form.posterUrl) return toast.error("Please upload a poster");
-    onSubmit({
-      ...form,
-      duration: parseInt(form.duration),
-    });
+    if (form.languages.length === 0) return toast.error("Select at least one language");
+    if (form.genres.length === 0) return toast.error("Select at least one genre");
+    if (form.formats.length === 0) return toast.error("Select at least one format (2D/3D/4D)");
+    onSubmit({ ...form, duration: parseInt(form.duration) });
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
+    <form onSubmit={handleSubmit} className="space-y-5">
       {/* Poster */}
       <PosterUpload value={form.posterUrl} onChange={(url) => set("posterUrl", url)} />
 
       {/* Title + Duration */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div className="flex flex-col gap-1.5">
-          <label className="text-sm text-muted font-medium">Title *</label>
+          <label className="text-sm text-muted font-medium">Title <span className="text-red-400">*</span></label>
           <input
             type="text"
             value={form.title}
@@ -145,7 +191,7 @@ const MovieForm = ({ initial, onSubmit, onCancel, submitting }) => {
           />
         </div>
         <div className="flex flex-col gap-1.5">
-          <label className="text-sm text-muted font-medium">Duration (mins) *</label>
+          <label className="text-sm text-muted font-medium">Duration (mins) <span className="text-red-400">*</span></label>
           <input
             type="number"
             value={form.duration}
@@ -159,22 +205,38 @@ const MovieForm = ({ initial, onSubmit, onCancel, submitting }) => {
         </div>
       </div>
 
-      {/* Language + Rating + Genre */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+      {/* Formats — chip select */}
+      <ChipSelect
+        label="Available Formats"
+        options={FORMATS}
+        selected={form.formats}
+        onChange={(v) => set("formats", v)}
+        required
+      />
+
+      {/* Languages — chip select */}
+      <ChipSelect
+        label="Languages"
+        options={LANGUAGES}
+        selected={form.languages}
+        onChange={(v) => set("languages", v)}
+        required
+      />
+
+      {/* Genres — chip select, max 4 */}
+      <ChipSelect
+        label="Genres"
+        options={GENRES}
+        selected={form.genres}
+        onChange={(v) => set("genres", v)}
+        max={4}
+        required
+      />
+
+      {/* Rating + Release Date */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div className="flex flex-col gap-1.5">
-          <label className="text-sm text-muted font-medium">Language *</label>
-          <select
-            value={form.language}
-            onChange={(e) => set("language", e.target.value)}
-            required
-            className="bg-dark border border-border text-white rounded-xl px-4 py-2.5 outline-none focus:border-primary text-sm"
-          >
-            <option value="">Select language</option>
-            {LANGUAGES.map((l) => <option key={l} value={l}>{l}</option>)}
-          </select>
-        </div>
-        <div className="flex flex-col gap-1.5">
-          <label className="text-sm text-muted font-medium">Rating *</label>
+          <label className="text-sm text-muted font-medium">Rating <span className="text-red-400">*</span></label>
           <select
             value={form.rating}
             onChange={(e) => set("rating", e.target.value)}
@@ -182,41 +244,26 @@ const MovieForm = ({ initial, onSubmit, onCancel, submitting }) => {
             className="bg-dark border border-border text-white rounded-xl px-4 py-2.5 outline-none focus:border-primary text-sm"
           >
             <option value="">Select rating</option>
-            <option value="U">U — Universal</option>
-            <option value="UA">UA — Parental Guidance</option>
-            <option value="A">A — Adults Only</option>
-            <option value="S">S — Special</option>
+            {RATINGS.map((r) => (
+              <option key={r} value={r}>{RATING_LABELS[r]}</option>
+            ))}
           </select>
         </div>
         <div className="flex flex-col gap-1.5">
-          <label className="text-sm text-muted font-medium">Genre *</label>
-          <select
-            value={form.genre}
-            onChange={(e) => set("genre", e.target.value)}
+          <label className="text-sm text-muted font-medium">Release Date <span className="text-red-400">*</span></label>
+          <input
+            type="date"
+            value={form.releaseDate}
+            onChange={(e) => set("releaseDate", e.target.value)}
             required
             className="bg-dark border border-border text-white rounded-xl px-4 py-2.5 outline-none focus:border-primary text-sm"
-          >
-            <option value="">Select genre</option>
-            {GENRES.map((g) => <option key={g} value={g}>{g}</option>)}
-          </select>
+          />
         </div>
-      </div>
-
-      {/* Release Date */}
-      <div className="flex flex-col gap-1.5">
-        <label className="text-sm text-muted font-medium">Release Date *</label>
-        <input
-          type="date"
-          value={form.releaseDate}
-          onChange={(e) => set("releaseDate", e.target.value)}
-          required
-          className="bg-dark border border-border text-white rounded-xl px-4 py-2.5 outline-none focus:border-primary text-sm"
-        />
       </div>
 
       {/* Description */}
       <div className="flex flex-col gap-1.5">
-        <label className="text-sm text-muted font-medium">Description *</label>
+        <label className="text-sm text-muted font-medium">Description <span className="text-red-400">*</span></label>
         <textarea
           value={form.description}
           onChange={(e) => set("description", e.target.value)}
@@ -227,10 +274,10 @@ const MovieForm = ({ initial, onSubmit, onCancel, submitting }) => {
         />
       </div>
 
-      {/* Director + Cast (optional) */}
+      {/* Director + Cast */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div className="flex flex-col gap-1.5">
-          <label className="text-sm text-muted font-medium">Director <span className="text-muted/60">(optional)</span></label>
+          <label className="text-sm text-muted font-medium">Director <span className="text-muted/60 text-xs">(optional)</span></label>
           <input
             type="text"
             value={form.director}
@@ -240,7 +287,7 @@ const MovieForm = ({ initial, onSubmit, onCancel, submitting }) => {
           />
         </div>
         <div className="flex flex-col gap-1.5">
-          <label className="text-sm text-muted font-medium">Cast <span className="text-muted/60">(optional)</span></label>
+          <label className="text-sm text-muted font-medium">Cast <span className="text-muted/60 text-xs">(optional)</span></label>
           <input
             type="text"
             value={form.cast}
@@ -279,12 +326,8 @@ const ConfirmModal = ({ title, message, confirmLabel, confirmClass, onConfirm, o
       <h3 className="text-white font-semibold text-lg mb-2">{title}</h3>
       <p className="text-muted text-sm mb-6">{message}</p>
       <div className="flex gap-3 justify-end">
-        <button onClick={onCancel} className="px-4 py-2 rounded-xl border border-border text-muted hover:text-white text-sm transition">
-          Cancel
-        </button>
-        <button onClick={onConfirm} className={`px-4 py-2 rounded-xl text-white text-sm font-medium transition ${confirmClass}`}>
-          {confirmLabel}
-        </button>
+        <button onClick={onCancel} className="px-4 py-2 rounded-xl border border-border text-muted hover:text-white text-sm transition">Cancel</button>
+        <button onClick={onConfirm} className={`px-4 py-2 rounded-xl text-white text-sm font-medium transition ${confirmClass}`}>{confirmLabel}</button>
       </div>
     </div>
   </div>
@@ -295,9 +338,8 @@ const MovieCard = ({ movie, onEdit, onDelete, onRestore, deleting, restoring }) 
   const isDeleted = movie.isDeleted;
 
   return (
-    <div className={`border rounded-2xl overflow-hidden transition-all ${isDeleted ? "bg-dark/40 border-border/40 opacity-60" : "bg-card border-border hover:border-border/80"}`}>
+    <div className={`border rounded-2xl overflow-hidden transition-all ${isDeleted ? "bg-dark/40 border-border/40 opacity-60" : "bg-card border-border"}`}>
       <div className="flex gap-4 p-4">
-        {/* Poster */}
         <div className="w-16 h-20 rounded-xl overflow-hidden flex-shrink-0 bg-dark border border-border">
           {movie.posterUrl ? (
             <img src={movie.posterUrl} alt={movie.title} className="w-full h-full object-cover" />
@@ -308,38 +350,37 @@ const MovieCard = ({ movie, onEdit, onDelete, onRestore, deleting, restoring }) 
           )}
         </div>
 
-        {/* Info */}
         <div className="flex-1 min-w-0">
-          <div className="flex items-start justify-between gap-2">
-            <p className={`font-semibold truncate text-sm ${isDeleted ? "text-muted line-through" : "text-white"}`}>
+          <div className="flex items-start justify-between gap-2 mb-1.5">
+            <p className={`font-semibold text-sm truncate ${isDeleted ? "text-muted line-through" : "text-white"}`}>
               {movie.title}
             </p>
             {isDeleted && (
-              <span className="text-xs bg-red-500/10 text-red-400 px-2 py-0.5 rounded-full flex-shrink-0">
-                Deleted
-              </span>
+              <span className="text-xs bg-red-500/10 text-red-400 px-2 py-0.5 rounded-full flex-shrink-0">Deleted</span>
             )}
           </div>
 
-          <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
+          <div className="flex flex-wrap gap-1.5 mb-1.5">
             {movie.rating && (
               <span className={`text-xs px-2 py-0.5 rounded-full border font-medium ${RATING_COLORS[movie.rating] || "bg-zinc-800 text-zinc-400"}`}>
                 {movie.rating}
               </span>
             )}
-            {movie.language && (
-              <span className="text-xs bg-zinc-800 text-zinc-300 px-2 py-0.5 rounded-full">
-                {movie.language}
-              </span>
-            )}
-            {movie.genre && (
-              <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full">
-                {movie.genre}
-              </span>
-            )}
+            {movie.formats?.map((f) => (
+              <span key={f} className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full">{f}</span>
+            ))}
+            {movie.genres?.slice(0, 2).map((g) => (
+              <span key={g} className="text-xs bg-zinc-800 text-zinc-300 px-2 py-0.5 rounded-full">{g}</span>
+            ))}
           </div>
 
-          <div className="flex items-center gap-3 mt-1.5">
+          <div className="flex flex-wrap gap-1.5 mb-1.5">
+            {movie.languages?.map((l) => (
+              <span key={l} className="text-xs bg-golden/10 text-golden px-2 py-0.5 rounded-full">{l}</span>
+            ))}
+          </div>
+
+          <div className="flex items-center gap-3">
             <span className="flex items-center gap-1 text-muted text-xs">
               <Clock size={10} /> {movie.duration} mins
             </span>
@@ -350,32 +391,29 @@ const MovieCard = ({ movie, onEdit, onDelete, onRestore, deleting, restoring }) 
         </div>
       </div>
 
-      {/* Actions */}
       <div className="px-4 pb-4 flex gap-2">
         {isDeleted ? (
           <button
             onClick={() => onRestore(movie.id)}
             disabled={restoring === movie.id}
-            className="flex items-center gap-1.5 text-green-400 hover:text-green-300 border border-green-400/20 hover:border-green-400/40 px-3 py-1.5 rounded-xl text-xs transition disabled:opacity-50"
+            className="flex items-center gap-1.5 text-green-400 hover:text-green-300 border border-green-400/20 px-3 py-1.5 rounded-xl text-xs transition disabled:opacity-50"
           >
-            {restoring === movie.id ? <Spinner /> : <RotateCcw size={12} />}
-            Restore
+            {restoring === movie.id ? <Spinner /> : <RotateCcw size={12} />} Restore
           </button>
         ) : (
           <>
             <button
               onClick={() => onEdit(movie)}
-              className="flex items-center gap-1.5 text-muted hover:text-white border border-border hover:border-border/60 px-3 py-1.5 rounded-xl text-xs transition"
+              className="flex items-center gap-1.5 text-muted hover:text-white border border-border px-3 py-1.5 rounded-xl text-xs transition"
             >
               <Pencil size={12} /> Edit
             </button>
             <button
               onClick={() => onDelete(movie)}
               disabled={deleting === movie.id}
-              className="flex items-center gap-1.5 text-red-400 hover:text-red-300 border border-red-400/10 hover:border-red-400/30 px-3 py-1.5 rounded-xl text-xs transition disabled:opacity-50"
+              className="flex items-center gap-1.5 text-red-400 hover:text-red-300 border border-red-400/10 px-3 py-1.5 rounded-xl text-xs transition disabled:opacity-50"
             >
-              {deleting === movie.id ? <Spinner /> : <Trash2 size={12} />}
-              Delete
+              {deleting === movie.id ? <Spinner /> : <Trash2 size={12} />} Delete
             </button>
           </>
         )}
@@ -482,7 +520,6 @@ const Movies = () => {
         />
       )}
 
-      {/* Header */}
       <div className="flex items-center justify-between mb-6 gap-4 flex-wrap">
         <div>
           <h1 className="font-heading text-2xl font-bold text-white">Movies</h1>
@@ -509,7 +546,6 @@ const Movies = () => {
         </div>
       </div>
 
-      {/* Add Form */}
       {showForm && !editingMovie && (
         <div className="bg-card border border-border rounded-2xl p-5 mb-6">
           <h2 className="font-heading text-base font-semibold text-white mb-4">New Movie</h2>
@@ -517,7 +553,6 @@ const Movies = () => {
         </div>
       )}
 
-      {/* Edit Form */}
       {editingMovie && (
         <div className="bg-card border border-primary/30 rounded-2xl p-5 mb-6">
           <h2 className="font-heading text-base font-semibold text-white mb-4">Edit — {editingMovie.title}</h2>
@@ -530,7 +565,6 @@ const Movies = () => {
         </div>
       )}
 
-      {/* List */}
       {loading ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {[...Array(6)].map((_, i) => (
