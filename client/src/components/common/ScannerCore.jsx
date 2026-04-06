@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from "react";
-import api from "../../api/axios";
 import toast from "react-hot-toast";
 import jsQR from "jsqr";
-import { ScanLine, CheckCircle2, XCircle, AlertTriangle, Camera, MapPin, Clock, User, Armchair } from "lucide-react";
+import { ScanLine, CheckCircle2, XCircle, AlertTriangle, Camera, MapPin, Clock, User } from "lucide-react";
+
+const API_URL = import.meta.env.VITE_API_URL;
 
 // ─── Result Display ───────────────────────────────────────────────────────────
 const ResultCard = ({ result, onConfirm, onReset, confirming }) => {
@@ -10,7 +11,6 @@ const ResultCard = ({ result, onConfirm, onReset, confirming }) => {
 
   const { valid, reason, message, booking, usedAt, entryOpenTime } = result;
 
-  // ❌ Already used
   if (reason === "ALREADY_USED") {
     return (
       <div className="bg-red-500/5 border border-red-500/30 rounded-2xl p-6 text-center">
@@ -31,7 +31,6 @@ const ResultCard = ({ result, onConfirm, onReset, confirming }) => {
     );
   }
 
-  // ⚠️ Too early
   if (reason === "TOO_EARLY") {
     return (
       <div className="bg-yellow-500/5 border border-yellow-500/30 rounded-2xl p-6 text-center">
@@ -39,6 +38,14 @@ const ResultCard = ({ result, onConfirm, onReset, confirming }) => {
         <h2 className="text-yellow-400 font-heading text-xl font-bold mb-1">Too Early</h2>
         <p className="text-muted text-sm mb-1">{message}</p>
         <p className="text-muted text-xs">Entry opens: {entryOpenTime}</p>
+        {booking && (
+          <div className="mt-4 text-left bg-dark rounded-xl p-4 space-y-1">
+            <p className="text-white text-sm font-medium">{booking.show?.movie}</p>
+            <p className="text-muted text-xs">{booking.user?.name} {booking.user?.surname}</p>
+            <p className="text-muted text-xs">{booking.show?.theatre}</p>
+            <p className="text-muted text-xs">{booking.show?.startTime}</p>
+          </div>
+        )}
         <button onClick={onReset} className="mt-4 w-full bg-card border border-border text-muted hover:text-white py-2.5 rounded-xl text-sm transition">
           Scan Next Ticket
         </button>
@@ -46,7 +53,6 @@ const ResultCard = ({ result, onConfirm, onReset, confirming }) => {
     );
   }
 
-  // ❌ Show ended / not paid / not found
   if (!valid) {
     return (
       <div className="bg-red-500/5 border border-red-500/30 rounded-2xl p-6 text-center">
@@ -60,10 +66,8 @@ const ResultCard = ({ result, onConfirm, onReset, confirming }) => {
     );
   }
 
-  // ✅ Valid — show full details + Mark as Used button
   return (
     <div className="space-y-4">
-      {/* Valid banner */}
       <div className="bg-green-500/10 border border-green-500/30 rounded-2xl p-4 flex items-center gap-3">
         <CheckCircle2 size={28} className="text-green-400 flex-shrink-0" />
         <div>
@@ -72,10 +76,7 @@ const ResultCard = ({ result, onConfirm, onReset, confirming }) => {
         </div>
       </div>
 
-      {/* Booking Details */}
       <div className="bg-card border border-border rounded-2xl p-5 space-y-4">
-
-        {/* Movie */}
         <div>
           <h2 className="font-heading text-xl font-bold text-white">{booking.show?.movie}</h2>
           <div className="flex items-center gap-2 mt-1 flex-wrap">
@@ -97,7 +98,6 @@ const ResultCard = ({ result, onConfirm, onReset, confirming }) => {
           </div>
         </div>
 
-        {/* User */}
         <div className="flex items-center gap-2 text-sm">
           <User size={14} className="text-primary flex-shrink-0" />
           <span className="text-white font-medium">
@@ -106,11 +106,10 @@ const ResultCard = ({ result, onConfirm, onReset, confirming }) => {
           <span className="text-muted">@{booking.user?.username}</span>
         </div>
 
-        {/* Theatre + Time */}
         <div className="space-y-2">
           <div className="flex items-center gap-2 text-sm text-muted">
             <MapPin size={13} className="text-primary flex-shrink-0" />
-            <span>{booking.show?.theatre}, {booking.show?.location}</span>
+            <span>{booking.show?.theatre}{booking.show?.location ? `, ${booking.show.location}` : ""}</span>
           </div>
           <div className="flex items-center gap-2 text-sm text-muted">
             <Clock size={13} className="text-primary flex-shrink-0" />
@@ -118,13 +117,10 @@ const ResultCard = ({ result, onConfirm, onReset, confirming }) => {
           </div>
         </div>
 
-        {/* Seats */}
         <div>
-          <p className="text-muted text-xs uppercase tracking-wide mb-2 flex items-center gap-1.5">
-            <Armchair size={11} /> Seats
-          </p>
+          <p className="text-muted text-xs uppercase tracking-wide mb-2">Seats</p>
           <div className="flex flex-wrap gap-2">
-            {booking.seats?.map((seat, i) => (
+            {Array.isArray(booking.seats) && booking.seats.map((seat, i) => (
               <span
                 key={i}
                 className={`text-xs px-2.5 py-1 rounded-lg border font-medium
@@ -139,7 +135,6 @@ const ResultCard = ({ result, onConfirm, onReset, confirming }) => {
           </div>
         </div>
 
-        {/* Amount */}
         <div className="flex justify-between items-center bg-dark rounded-xl px-4 py-3">
           <span className="text-muted text-sm">Total Paid</span>
           <div className="text-right">
@@ -148,11 +143,9 @@ const ResultCard = ({ result, onConfirm, onReset, confirming }) => {
           </div>
         </div>
 
-        {/* Booking ID */}
         <p className="text-muted text-xs text-center">Booking #{booking.id}</p>
       </div>
 
-      {/* Mark as Used button */}
       <button
         onClick={onConfirm}
         disabled={confirming}
@@ -186,7 +179,6 @@ const ScannerCore = () => {
   const scannedRef = useRef(false);
 
   const [cameraActive, setCameraActive] = useState(false);
-  const [scanning, setScanning] = useState(false);
   const [result, setResult] = useState(null);
   const [confirming, setConfirming] = useState(false);
   const [currentBookingId, setCurrentBookingId] = useState(null);
@@ -196,13 +188,12 @@ const ScannerCore = () => {
     setCameraError(null);
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: "environment" }, // ✅ use back camera on mobile
+        video: { facingMode: "environment" },
       });
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
         await videoRef.current.play();
         setCameraActive(true);
-        setScanning(true);
         scannedRef.current = false;
         scanLoop();
       }
@@ -218,7 +209,6 @@ const ScannerCore = () => {
     }
     if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
     setCameraActive(false);
-    setScanning(false);
   };
 
   const scanLoop = () => {
@@ -250,7 +240,6 @@ const ScannerCore = () => {
   };
 
   const handleQRData = async (qrData) => {
-    // Parse: CINEBOOK-{bookingId}-{showId}
     const parts = qrData.split("-");
     if (parts.length < 3 || parts[0] !== "CINEBOOK") {
       setResult({ valid: false, reason: "INVALID_FORMAT", message: "Invalid QR code format. Not a CineBook ticket." });
@@ -266,15 +255,18 @@ const ScannerCore = () => {
     setCurrentBookingId(bookingId);
 
     try {
-      const res = await api.get(`/bookings/scan/${bookingId}`);
-      setResult(res.data);
-    } catch (err) {
-      const data = err.response?.data;
-      if (data) {
-        setResult(data);
-      } else {
-        setResult({ valid: false, reason: "ERROR", message: "Failed to verify ticket. Check connection." });
-      }
+      // ✅ Use native fetch — bypasses axios interceptor completely
+      const res = await fetch(`${API_URL}/bookings/scan/${bookingId}`, {
+        credentials: "include",
+      });
+      const data = await res.json();
+      setResult(data);
+    } catch {
+      setResult({
+        valid: false,
+        reason: "ERROR",
+        message: "Failed to verify ticket. Check connection.",
+      });
     }
   };
 
@@ -282,18 +274,21 @@ const ScannerCore = () => {
     if (!currentBookingId) return;
     setConfirming(true);
     try {
-      await api.post(`/bookings/scan/${currentBookingId}/confirm`);
-      toast.success("Ticket verified and marked as used! ✅");
-      setResult({
-        ...result,
-        confirmed: true,
+      const res = await fetch(`${API_URL}/bookings/scan/${currentBookingId}/confirm`, {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
       });
-      // Auto reset after 3 seconds
-      setTimeout(() => {
-        handleReset();
-      }, 3000);
-    } catch (err) {
-      toast.error(err?.response?.data?.message || "Failed to confirm ticket");
+      const data = await res.json();
+      if (res.ok) {
+        toast.success("Ticket verified and marked as used! ✅");
+        setResult((prev) => ({ ...prev, confirmed: true }));
+        setTimeout(() => { handleReset(); }, 3000);
+      } else {
+        toast.error(data?.message || "Failed to confirm ticket");
+      }
+    } catch {
+      toast.error("Failed to confirm ticket. Check connection.");
     } finally {
       setConfirming(false);
     }
@@ -307,9 +302,7 @@ const ScannerCore = () => {
   };
 
   useEffect(() => {
-    return () => {
-      stopCamera();
-    };
+    return () => { stopCamera(); };
   }, []);
 
   return (
@@ -333,20 +326,13 @@ const ScannerCore = () => {
         </div>
       )}
 
-      {/* Camera / Result */}
+      {/* Camera */}
       {!result && (
         <div className="space-y-4">
-          {/* Camera view */}
           <div className="relative bg-dark border border-border rounded-2xl overflow-hidden aspect-square">
-            <video
-              ref={videoRef}
-              className="w-full h-full object-cover"
-              playsInline
-              muted
-            />
+            <video ref={videoRef} className="w-full h-full object-cover" playsInline muted />
             <canvas ref={canvasRef} className="hidden" />
 
-            {/* Overlay when camera not active */}
             {!cameraActive && (
               <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-dark">
                 <Camera size={48} className="text-muted" />
@@ -356,7 +342,6 @@ const ScannerCore = () => {
               </div>
             )}
 
-            {/* Scanning overlay */}
             {cameraActive && (
               <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                 <div className="w-48 h-48 relative">
@@ -372,14 +357,12 @@ const ScannerCore = () => {
             )}
           </div>
 
-          {/* Camera error */}
           {cameraError && (
             <div className="bg-red-500/10 border border-red-500/30 rounded-xl px-4 py-3">
               <p className="text-red-400 text-sm">{cameraError}</p>
             </div>
           )}
 
-          {/* Controls */}
           {!cameraActive ? (
             <button
               onClick={startCamera}
