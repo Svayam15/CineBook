@@ -3,138 +3,259 @@ import { useEffect, useState, useRef } from "react";
 import AdminLayout from "../../components/admin/AdminLayout";
 import api from "../../api/axios";
 import toast from "react-hot-toast";
-import html2canvas from "html2canvas";
-import jsPDF from "jspdf";
 import { Ticket, X, Printer, Download, MapPin, Clock } from "lucide-react";
 import Spinner from "../../components/common/Spinner";
 import { QRCodeSVG } from "qrcode.react";
 
+// ─── Generate professional ticket HTML ───────────────────────────────────────
+const generateTicketHTML = ({ booking, show, qrSvgString, forPDF = false }) => {
+  const seats = booking.seats || [];
+  const regularSeats = seats.filter(s => s.type !== "GOLDEN");
+  const goldenSeats = seats.filter(s => s.type === "GOLDEN");
+
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <title>CineBook Ticket — #${booking.id}</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap');
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'DM Sans', Arial, sans-serif;
+      background: #f0f0f0;
+      display: flex;
+      justify-content: center;
+      padding: 40px 20px;
+      min-height: 100vh;
+    }
+    .tw { width: 420px; }
+
+    /* Header */
+    .th {
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+      border-radius: 20px 20px 0 0;
+      padding: 28px 32px 24px;
+      position: relative;
+      overflow: hidden;
+    }
+    .th::before {
+      content: '';
+      position: absolute;
+      top: -40px; right: -40px;
+      width: 160px; height: 160px;
+      border-radius: 50%;
+      background: rgba(124, 58, 237, 0.15);
+    }
+    .th::after {
+      content: '';
+      position: absolute;
+      bottom: -20px; left: 20px;
+      width: 100px; height: 100px;
+      border-radius: 50%;
+      background: rgba(124, 58, 237, 0.08);
+    }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 20px;
+      position: relative;
+      z-index: 1;
+    }
+    .brand-icon {
+      width: 32px; height: 32px;
+      background: #7c3aed;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+    }
+    .brand-name { font-size: 18px; font-weight: 700; color: #fff; }
+    .brand-name span { color: #a78bfa; }
+    .movie-title {
+      font-size: 26px;
+      font-weight: 700;
+      color: #ffffff;
+      line-height: 1.2;
+      margin-bottom: 10px;
+      position: relative;
+      z-index: 1;
+    }
+    .badges { display: flex; gap: 8px; flex-wrap: wrap; position: relative; z-index: 1; }
+    .badge { padding: 3px 10px; border-radius: 100px; font-size: 11px; font-weight: 600; }
+    .bp { background: rgba(124,58,237,0.3); border: 1px solid rgba(124,58,237,0.5); color: #c4b5fd; }
+    .bo { background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15); color: rgba(255,255,255,0.7); }
+    .bU  { background: rgba(34,197,94,0.2);  border: 1px solid rgba(34,197,94,0.4);  color: #86efac; }
+    .bUA { background: rgba(234,179,8,0.2);  border: 1px solid rgba(234,179,8,0.4);  color: #fde047; }
+    .bA  { background: rgba(239,68,68,0.2);  border: 1px solid rgba(239,68,68,0.4);  color: #fca5a5; }
+
+    /* Tear line */
+    .tear { background: #f0f0f0; height: 28px; position: relative; display: flex; align-items: center; }
+    .tc { width: 28px; height: 28px; background: #f0f0f0; border-radius: 50%; position: absolute; z-index: 2; }
+    .tcl { left: -14px; }
+    .tcr { right: -14px; }
+    .td { flex: 1; border-top: 2px dashed #d1d5db; margin: 0 20px; }
+
+    /* Body */
+    .tb { background: #ffffff; padding: 24px 32px; }
+    .ig { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px; }
+    .ii { display: flex; flex-direction: column; gap: 3px; }
+    .il { font-size: 10px; font-weight: 600; letter-spacing: 0.8px; color: #9ca3af; text-transform: uppercase; }
+    .iv { font-size: 13px; font-weight: 600; color: #111827; }
+    .divider { border: none; border-top: 1px dashed #e5e7eb; margin: 16px 0; }
+    .sl { font-size: 10px; font-weight: 600; letter-spacing: 0.8px; color: #9ca3af; text-transform: uppercase; margin-bottom: 10px; }
+    .sg { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; }
+    .sc { padding: 5px 12px; border-radius: 8px; font-size: 13px; font-weight: 700; border: 1.5px solid #d1d5db; color: #374151; background: #f9fafb; }
+    .scg { background: #fffbeb; border-color: #d97706; color: #92400e; }
+    .tr-row { display: flex; justify-content: space-between; align-items: center; background: #f9fafb; border-radius: 12px; padding: 12px 16px; margin-bottom: 8px; }
+    .tl { font-size: 13px; color: #6b7280; font-weight: 500; }
+    .ta { font-size: 22px; font-weight: 700; color: #111827; }
+    .pt { font-size: 11px; color: #9ca3af; font-weight: 500; }
+
+    /* QR section */
+    .qs { background: #ffffff; border-radius: 0 0 20px 20px; padding: 24px 32px; display: flex; flex-direction: column; align-items: center; gap: 12px; }
+    .qb { padding: 14px; background: white; border: 2px solid #e5e7eb; border-radius: 16px; display: inline-block; }
+    .qt { font-family: 'Courier New', monospace; font-size: 10px; color: #9ca3af; letter-spacing: 0.5px; text-align: center; }
+    .br { font-size: 12px; color: #6b7280; text-align: center; }
+    .fn { font-size: 11px; color: #9ca3af; text-align: center; margin-top: 4px; }
+
+    @media print {
+      body { background: white; padding: 0; }
+      .tw { width: 100%; max-width: 420px; margin: 0 auto; }
+    }
+    ${forPDF ? "@page { size: A5 portrait; margin: 10mm; }" : ""}
+  </style>
+</head>
+<body>
+<div class="tw">
+
+  <!-- Header -->
+  <div class="th">
+    <div class="brand">
+      <div class="brand-icon">🎬</div>
+      <div class="brand-name">Cine<span>Book</span></div>
+    </div>
+    <div class="movie-title">${show?.movie?.title || "Movie"}</div>
+    <div class="badges">
+      <span class="badge bp">${show?.showType || "2D"}</span>
+      ${show?.movie?.language ? `<span class="badge bo">${show.movie.language}</span>` : ""}
+      ${show?.movie?.rating ? `<span class="badge b${show.movie.rating}">${show.movie.rating}</span>` : ""}
+    </div>
+  </div>
+
+  <!-- Tear line 1 -->
+  <div class="tear">
+    <div class="tc tcl"></div>
+    <div class="td"></div>
+    <div class="tc tcr"></div>
+  </div>
+
+  <!-- Body -->
+  <div class="tb">
+    <div class="ig">
+      <div class="ii" style="grid-column: 1 / -1;">
+        <div class="il">Theatre</div>
+        <div class="iv">${show?.theatre?.name || "—"}</div>
+      </div>
+      <div class="ii" style="grid-column: 1 / -1;">
+        <div class="il">Location</div>
+        <div class="iv">${show?.theatre?.location || "—"}</div>
+      </div>
+      <div class="ii">
+        <div class="il">Show Time</div>
+        <div class="iv">${show?.startTime || "—"}</div>
+      </div>
+      <div class="ii">
+        <div class="il">Booking ID</div>
+        <div class="iv">#${booking.id}</div>
+      </div>
+      <div class="ii">
+        <div class="il">Payment</div>
+        <div class="iv">${booking.paymentType}</div>
+      </div>
+      <div class="ii">
+        <div class="il">Total Seats</div>
+        <div class="iv">${seats.length} seat${seats.length !== 1 ? "s" : ""}</div>
+      </div>
+    </div>
+
+    <hr class="divider" />
+
+    <div class="sl">Your Seats</div>
+    <div class="sg">
+      ${regularSeats.map(s => `<div class="sc">${s.row}${s.number}</div>`).join("")}
+      ${goldenSeats.map(s => `<div class="sc scg">${s.row}${s.number} ✦</div>`).join("")}
+    </div>
+
+    <hr class="divider" />
+
+    <div class="tr-row">
+      <div>
+        <div class="tl">Total Paid</div>
+        <div class="pt">${booking.paymentType} Payment</div>
+      </div>
+      <div class="ta">₹${booking.totalAmount}</div>
+    </div>
+  </div>
+
+  <!-- Tear line 2 -->
+  <div class="tear">
+    <div class="tc tcl"></div>
+    <div class="td"></div>
+    <div class="tc tcr"></div>
+  </div>
+
+  <!-- QR section -->
+  <div class="qs">
+    <div class="br">Show this QR at the entrance</div>
+    <div class="qb">${qrSvgString}</div>
+    <div class="qt">CINEBOOK-${booking.id}-${booking.showId}</div>
+    <div class="fn">Booking #${booking.id} · Valid for one entry only · CineBook</div>
+  </div>
+
+</div>
+</body>
+</html>`;
+};
+
 // ─── QR Modal ─────────────────────────────────────────────────────────────────
 const QRModal = ({ booking, show, onClose }) => {
-  const ticketRef = useRef();
-  const qrRef = useRef(); // ✅ dedicated ref for QR box
+  const qrRef = useRef(null);
   const qrValue = `CINEBOOK-${booking.id}-${booking.showId}`;
 
-  // ✅ Print — grabs QR SVG from qrRef directly
-  const handlePrint = () => {
-    const qrSvg = qrRef.current?.querySelector("svg")?.outerHTML || "";
-
-    const printWindow = window.open("", "_blank");
-    printWindow.document.write(`
-      <html lang="en">
-        <head>
-          <title>CineBook Ticket — Booking #${booking.id}</title>
-          <style>
-            * { box-sizing: border-box; margin: 0; padding: 0; }
-            body { font-family: Arial, sans-serif; background: #fff; display: flex; justify-content: center; padding: 40px; }
-            .ticket { border: 2px dashed #333; border-radius: 16px; padding: 32px; max-width: 400px; width: 100%; }
-            .title { font-size: 22px; font-weight: bold; margin-bottom: 4px; }
-            .subtitle { color: #666; font-size: 13px; margin-bottom: 16px; }
-            .divider { border-top: 1px dashed #ccc; margin: 16px 0; }
-            .row { display: flex; justify-content: space-between; margin: 6px 0; font-size: 13px; }
-            .label { color: #888; }
-            .value { font-weight: 600; color: #111; }
-            .seats { display: flex; gap: 8px; flex-wrap: wrap; margin: 12px 0; }
-            .seat { border: 1px solid #333; border-radius: 8px; padding: 4px 10px; font-size: 12px; font-weight: bold; }
-            .seat.golden { border-color: #b8860b; color: #b8860b; }
-            .total { font-size: 20px; font-weight: bold; text-align: center; margin: 12px 0; }
-            .qr-wrap { display: flex; flex-direction: column; align-items: center; gap: 8px; margin-top: 16px; }
-            .qr-code { font-size: 10px; color: #999; font-family: monospace; }
-            .footer { font-size: 11px; color: #aaa; text-align: center; margin-top: 8px; }
-          </style>
-        </head>
-        <body>
-          <div class="ticket">
-            <div class="title">${show?.movie?.title || "Movie"}</div>
-            <div class="subtitle">${show?.showType || ""} · ${show?.language || ""}</div>
-            <div class="divider"></div>
-            <div class="row"><span class="label">Theatre</span><span class="value">${show?.theatre?.name || ""}</span></div>
-            <div class="row"><span class="label">Location</span><span class="value">${show?.theatre?.location || ""}</span></div>
-            <div class="row"><span class="label">Show Time</span><span class="value">${show?.startTime || ""}</span></div>
-            <div class="row"><span class="label">Payment</span><span class="value">${booking.paymentType}</span></div>
-            <div class="divider"></div>
-            <div class="label" style="font-size:12px;margin-bottom:8px;">SEATS</div>
-            <div class="seats">
-              ${(booking.seats || []).map(s => `<span class="seat ${s.type === "GOLDEN" ? "golden" : ""}">${s.row}${s.number}</span>`).join("")}
-            </div>
-            <div class="divider"></div>
-            <div class="total">₹${booking.totalAmount}</div>
-            <div class="divider"></div>
-            <div class="qr-wrap">
-              ${qrSvg}
-              <div class="qr-code">${qrValue}</div>
-              <div class="footer">Booking #${booking.id} · Show this at the entrance</div>
-            </div>
-          </div>
-        </body>
-      </html>
-    `);
-    printWindow.document.close();
-    printWindow.focus();
-    printWindow.print();
-    printWindow.close();
+  const getQRSvg = () => {
+    const svg = qrRef.current?.querySelector("svg");
+    if (!svg) return "";
+    const clone = svg.cloneNode(true);
+    clone.setAttribute("width", "180");
+    clone.setAttribute("height", "180");
+    return clone.outerHTML;
   };
 
-  // ✅ Download — converts SVG → PNG first so html2canvas can capture it
-  const handleDownload = async () => {
-    if (!ticketRef.current) return;
-    try {
-      toast.loading("Generating PDF...", { id: "pdf" });
-
-      const svgEl = qrRef.current?.querySelector("svg");
-      let qrDataUrl = null;
-
-      if (svgEl) {
-        const svgData = new XMLSerializer().serializeToString(svgEl);
-        const svgBlob = new Blob([svgData], { type: "image/svg+xml;charset=utf-8" });
-        const svgUrl = URL.createObjectURL(svgBlob);
-        qrDataUrl = await new Promise((resolve) => {
-          const img = new Image();
-          img.onload = () => {
-            const c = document.createElement("canvas");
-            c.width = img.width || 180;
-            c.height = img.height || 180;
-            c.getContext("2d").drawImage(img, 0, 0);
-            resolve(c.toDataURL("image/png"));
-            URL.revokeObjectURL(svgUrl);
-          };
-          img.src = svgUrl;
-        });
-      }
-
-      if (qrDataUrl && qrRef.current) {
-        const existingSvg = qrRef.current.querySelector("svg");
-        const tempImg = document.createElement("img");
-        tempImg.src = qrDataUrl;
-        tempImg.width = 180;
-        tempImg.height = 180;
-        existingSvg.replaceWith(tempImg);
-
-        const canvas = await html2canvas(ticketRef.current, {
-          backgroundColor: "#0D0D0D",
-          scale: 2,
-          useCORS: true,
-          allowTaint: true,
-        });
-
-        // Restore SVG after capture
-        tempImg.replaceWith(existingSvg);
-
-        const imgData = canvas.toDataURL("image/png");
-        const pdf = new jsPDF({
-          orientation: "portrait",
-          unit: "px",
-          format: [canvas.width / 2, canvas.height / 2],
-        });
-        pdf.addImage(imgData, "PNG", 0, 0, canvas.width / 2, canvas.height / 2);
-        pdf.save(`CineBook-Ticket-${booking.id}.pdf`);
-        toast.success("Ticket downloaded!", { id: "pdf" });
-      } else {
-        throw new Error("QR not ready");
-      }
-    } catch {
-      toast.error("Failed to generate PDF", { id: "pdf" });
+  const openTicketWindow = (forPDF) => {
+    const qrSvgString = getQRSvg();
+    if (!qrSvgString) {
+      toast.error("QR not ready. Try again.");
+      return;
     }
+    const html = generateTicketHTML({ booking, show, qrSvgString, forPDF });
+    const w = window.open("", "_blank");
+    if (!w) {
+      toast.error("Popup blocked. Please allow popups for this site.");
+      return;
+    }
+    w.document.write(html);
+    w.document.close();
+    w.focus();
+    if (forPDF) {
+      toast("In the print dialog → Destination → Save as PDF", {
+        icon: "ℹ️",
+        duration: 5000,
+      });
+    }
+    setTimeout(() => { w.print(); }, 800);
   };
 
   return (
@@ -153,22 +274,19 @@ const QRModal = ({ booking, show, onClose }) => {
         </div>
 
         <div className="max-h-[80vh] overflow-y-auto">
-          {/* Two column on desktop */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-0" ref={ticketRef}>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-0">
 
             {/* Left — ticket details */}
             <div className="p-5 space-y-4 md:border-r md:border-border">
               <div>
-                <h3 className="font-heading text-lg font-bold text-white">
-                  {show?.movie?.title}
-                </h3>
+                <h3 className="font-heading text-lg font-bold text-white">{show?.movie?.title}</h3>
                 <div className="flex gap-2 mt-1 flex-wrap">
                   <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full">
                     {show?.showType}
                   </span>
-                  {show?.language && (
+                  {show?.movie?.language && (
                     <span className="text-xs bg-zinc-800 text-zinc-300 px-2 py-0.5 rounded-full">
-                      {show.language}
+                      {show.movie.language}
                     </span>
                   )}
                   {show?.movie?.rating && (
@@ -204,7 +322,7 @@ const QRModal = ({ booking, show, onClose }) => {
                           : "bg-zinc-800 text-zinc-300 border-zinc-700"
                         }`}
                     >
-                      {seat.row}{seat.number}
+                      {seat.row}{seat.number} {seat.type === "GOLDEN" ? "✦" : ""}
                     </span>
                   ))}
                 </div>
@@ -216,13 +334,11 @@ const QRModal = ({ booking, show, onClose }) => {
                 <span className="text-muted text-sm">Total Paid</span>
                 <span className="text-white font-bold text-lg">₹{booking.totalAmount}</span>
               </div>
-
-              <div className="flex justify-between items-center text-sm">
+              <div className="flex justify-between text-sm">
                 <span className="text-muted">Payment</span>
                 <span className="text-white">{booking.paymentType}</span>
               </div>
-
-              <div className="flex justify-between items-center text-sm">
+              <div className="flex justify-between text-sm">
                 <span className="text-muted">Booking ID</span>
                 <span className="text-white font-mono">#{booking.id}</span>
               </div>
@@ -232,7 +348,6 @@ const QRModal = ({ booking, show, onClose }) => {
             <div className="p-5 flex flex-col items-center justify-center gap-4 bg-dark/30">
               <div className="border-t border-dashed border-border w-full md:hidden" />
               <p className="text-muted text-xs text-center">Show this QR at the entrance</p>
-              {/* ✅ qrRef is here — on the white box wrapping the SVG */}
               <div className="bg-white p-4 rounded-2xl" ref={qrRef}>
                 <QRCodeSVG
                   value={qrValue}
@@ -245,20 +360,24 @@ const QRModal = ({ booking, show, onClose }) => {
               <p className="text-muted text-xs font-mono tracking-wide text-center break-all">
                 {qrValue}
               </p>
+              <div className="bg-primary/5 border border-primary/20 rounded-xl px-4 py-3 w-full text-center">
+                <p className="text-primary text-xs font-medium">Booking #{booking.id}</p>
+                <p className="text-muted text-xs mt-0.5">{booking.paymentType} Payment</p>
+              </div>
             </div>
           </div>
 
           {/* Action buttons */}
           <div className="p-5 pt-0 flex flex-col gap-2">
             <button
-              onClick={handleDownload}
+              onClick={() => openTicketWindow(true)}
               className="w-full flex items-center justify-center gap-2 bg-primary/10 hover:bg-primary/20 border border-primary/20 text-primary font-semibold py-3 rounded-xl transition text-sm"
             >
               <Download size={16} />
               Download Ticket PDF
             </button>
             <button
-              onClick={handlePrint}
+              onClick={() => openTicketWindow(false)}
               className="w-full flex items-center justify-center gap-2 bg-card border border-border text-muted hover:text-white font-semibold py-3 rounded-xl transition text-sm"
             >
               <Printer size={16} />
@@ -303,10 +422,9 @@ const WindowBooking = () => {
     fetchShows().catch(console.error);
   }, []);
 
-  // SSE — real-time seat updates
+  // ✅ SSE — real-time seat updates with auto-retry
   useEffect(() => {
     if (!selectedShow) return;
-
     const apiBase = import.meta.env.VITE_API_URL;
     if (!apiBase) return;
 
@@ -365,10 +483,11 @@ const WindowBooking = () => {
 
   const toggleSeat = (seat) => {
     if (seat.status !== "AVAILABLE") return;
-    setSelectedSeats((prev) => {
-      if (prev.includes(seat.id)) return prev.filter((id) => id !== seat.id);
-      return [...prev, seat.id];
-    });
+    setSelectedSeats((prev) =>
+      prev.includes(seat.id)
+        ? prev.filter((id) => id !== seat.id)
+        : [...prev, seat.id]
+    );
   };
 
   const handleBook = async () => {
@@ -404,12 +523,12 @@ const WindowBooking = () => {
             clearInterval(pollInterval);
             toast.success("Booking confirmed! 🎉");
 
+            // ✅ Fetch full booking details to get seat info for ticket
             try {
               const bookingRes = await api.get(`/admin/bookings?search=${bookingData.id}`);
               const fullBooking = bookingRes.data.bookings?.find(
                 (b) => b.id === bookingData.id
               );
-
               setConfirmedBooking({
                 id: bookingData.id,
                 showId: selectedShow.id,
@@ -422,7 +541,7 @@ const WindowBooking = () => {
                 })) || [],
               });
             } catch {
-              // fallback if fetch fails — still show QR with basic info
+              // Fallback with basic info
               setConfirmedBooking({
                 id: bookingData.id,
                 showId: selectedShow.id,
@@ -434,12 +553,11 @@ const WindowBooking = () => {
 
             setSelectedSeats([]);
 
+            // Refresh seat map
             try {
               const seatsRes = await api.get(`/shows/${selectedShow.id}/seats`);
               setSeats(seatsRes.data);
-            } catch (err) {
-              toast.error(err.message);
-            }
+            } catch { /* ignore */ }
 
             setBooking(false);
           } else if (status === "failed") {
@@ -479,7 +597,7 @@ const WindowBooking = () => {
 
   return (
     <AdminLayout>
-      {/* QR Modal */}
+      {/* ✅ QR + Professional Ticket Modal */}
       {confirmedBooking && (
         <QRModal
           booking={confirmedBooking}
@@ -552,6 +670,7 @@ const WindowBooking = () => {
             </div>
           ) : (
             <div className="bg-card border border-border rounded-2xl p-5">
+
               <div className="w-full bg-primary/10 border border-primary/20 rounded-lg py-2 text-center text-primary text-xs font-medium mb-6">
                 🎬 SCREEN
               </div>
