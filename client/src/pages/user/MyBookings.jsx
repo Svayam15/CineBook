@@ -146,7 +146,9 @@ const TicketModal = ({ booking, onClose }) => {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm px-4">
-      <div className="bg-card border border-border rounded-2xl w-full max-w-sm shadow-2xl overflow-hidden">
+      <div className="bg-card border border-border rounded-2xl w-full max-w-sm md:max-w-2xl shadow-2xl overflow-hidden">
+
+        {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-border">
           <div className="flex items-center gap-2">
             <Ticket size={18} className="text-primary" />
@@ -157,102 +159,104 @@ const TicketModal = ({ booking, onClose }) => {
           </button>
         </div>
 
-        <div className="p-5 space-y-4 max-h-[80vh] overflow-y-auto">
-          <div>
-            <h3 className="font-heading text-lg font-bold text-white leading-tight">
-              {booking.show?.movie?.title}
-            </h3>
-            <div className="flex items-center gap-2 mt-1 flex-wrap">
-              <span className={`text-xs px-2 py-0.5 rounded-full border ${statusColors[booking.status]}`}>
-                {booking.status}
-              </span>
-              {/* ✅ USED badge */}
-              {booking.isUsed && (
-                <span className="text-xs px-2 py-0.5 rounded-full border bg-zinc-500/10 text-zinc-400 border-zinc-500/20 flex items-center gap-1">
-                  <CheckCircle2 size={10} />
-                  USED
-                </span>
+        <div className="max-h-[80vh] overflow-y-auto">
+          {/* ✅ Two column on desktop */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-0">
+
+            {/* Left column — ticket info */}
+            <div className="p-5 space-y-4 md:border-r md:border-border">
+              <div>
+                <h3 className="font-heading text-lg font-bold text-white leading-tight">
+                  {booking.show?.movie?.title}
+                </h3>
+                <div className="flex items-center gap-2 mt-1 flex-wrap">
+                  <span className={`text-xs px-2 py-0.5 rounded-full border ${statusColors[booking.status]}`}>
+                    {booking.status}
+                  </span>
+                  {booking.isUsed && (
+                    <span className="text-xs px-2 py-0.5 rounded-full border bg-zinc-500/10 text-zinc-400 border-zinc-500/20 flex items-center gap-1">
+                      <CheckCircle2 size={10} />
+                      USED
+                    </span>
+                  )}
+                  <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full">
+                    {booking.show?.showType}
+                  </span>
+                </div>
+              </div>
+
+              <div className="border-t border-dashed border-border" />
+
+              <div className="space-y-2 text-sm">
+                <div className="flex items-start gap-2 text-muted">
+                  <MapPin size={13} className="mt-0.5 shrink-0 text-primary" />
+                  <span>{booking.show?.theatre?.name}, {booking.show?.theatre?.location}</span>
+                </div>
+                <div className="flex items-center gap-2 text-muted">
+                  <Clock size={13} className="shrink-0 text-primary" />
+                  <span>{formatIST(booking.show?.rawStartTime || booking.show?.startTime)}</span>
+                </div>
+                <div className="flex items-center gap-2 text-muted">
+                  <Calendar size={13} className="shrink-0 text-primary" />
+                  <span>Booked on {formatDate(booking.createdAt)}</span>
+                </div>
+              </div>
+
+              <div>
+                <p className="text-muted text-xs mb-2">Seats</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {booking.seats?.map((bs) => (
+                    <span
+                      key={bs.id}
+                      className={`text-xs px-2.5 py-1 rounded-lg border font-medium
+                        ${bs.seatType === "GOLDEN"
+                          ? "bg-golden/10 text-golden border-golden/20"
+                          : "bg-zinc-800 text-zinc-300 border-zinc-700"
+                        }`}
+                    >
+                      {bs.showSeat?.row}{bs.showSeat?.number}
+                    </span>
+                  ))}
+                </div>
+              </div>
+
+              <div className="flex justify-between items-center bg-dark rounded-xl px-4 py-3">
+                <span className="text-muted text-sm">Total Paid</span>
+                <span className="text-white font-bold text-lg">₹{booking.totalAmount}</span>
+              </div>
+
+              {booking.isUsed && booking.usedAt && (
+                <div className="bg-zinc-500/10 border border-zinc-500/20 rounded-xl px-4 py-3">
+                  <p className="text-zinc-400 text-xs flex items-center gap-1.5">
+                    <CheckCircle2 size={12} />
+                    Used at {formatIST(booking.usedAt)}
+                  </p>
+                </div>
               )}
-              <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full">
-                {booking.show?.showType}
-              </span>
             </div>
-          </div>
 
-          <div className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded-full bg-dark border border-border -ml-7" />
-            <div className="flex-1 border-t border-dashed border-border" />
-            <div className="w-3 h-3 rounded-full bg-dark border border-border -mr-7" />
-          </div>
-
-          <div className="space-y-2 text-sm">
-            <div className="flex items-start gap-2 text-muted">
-              <MapPin size={13} className="mt-0.5 shrink-0 text-primary" />
-              <span>{booking.show?.theatre?.name}, {booking.show?.theatre?.location}</span>
-            </div>
-            <div className="flex items-center gap-2 text-muted">
-              <Clock size={13} className="shrink-0 text-primary" />
-              <span>{formatIST(booking.show?.rawStartTime || booking.show?.startTime)}</span>
-            </div>
-            <div className="flex items-center gap-2 text-muted">
-              <Calendar size={13} className="shrink-0 text-primary" />
-              <span>Booked on {formatDate(booking.createdAt)}</span>
-            </div>
-          </div>
-
-          <div>
-            <p className="text-muted text-xs mb-2">Seats</p>
-            <div className="flex flex-wrap gap-1.5">
-              {booking.seats?.map((bs) => (
-                <span
-                  key={bs.id}
-                  className={`text-xs px-2.5 py-1 rounded-lg border font-medium
-                    ${bs.seatType === "GOLDEN"
-                      ? "bg-golden/10 text-golden border-golden/20"
-                      : "bg-zinc-800 text-zinc-300 border-zinc-700"
-                    }`}
-                >
-                  {bs.showSeat?.row}{bs.showSeat?.number}
-                </span>
-              ))}
-            </div>
-          </div>
-
-          <div className="flex justify-between items-center bg-dark rounded-xl px-4 py-3">
-            <span className="text-muted text-sm">Total Paid</span>
-            <span className="text-white font-bold text-lg">₹{booking.totalAmount}</span>
-          </div>
-
-          {/* ✅ Used At info */}
-          {booking.isUsed && booking.usedAt && (
-            <div className="bg-zinc-500/10 border border-zinc-500/20 rounded-xl px-4 py-3">
-              <p className="text-zinc-400 text-xs flex items-center gap-1.5">
-                <CheckCircle2 size={12} />
-                Used at {formatIST(booking.usedAt)}
+            {/* Right column — QR code */}
+            <div className="p-5 flex flex-col items-center justify-center gap-4 bg-dark/30">
+              <div className="border-t border-dashed border-border w-full md:hidden" />
+              <p className="text-muted text-xs text-center">Show this QR at the entrance</p>
+              <div className="bg-white p-4 rounded-2xl">
+                <QRCodeSVG
+                  value={qrValue}
+                  size={180}
+                  bgColor="#ffffff"
+                  fgColor="#0D0D0D"
+                  level="H"
+                />
+              </div>
+              <p className="text-muted text-xs font-mono tracking-wide text-center break-all">
+                {qrValue}
               </p>
+              <div className="bg-primary/5 border border-primary/20 rounded-xl px-4 py-3 w-full text-center">
+                <p className="text-primary text-xs font-medium">Booking #{booking.id}</p>
+                <p className="text-muted text-xs mt-0.5">{booking.paymentType} Payment</p>
+              </div>
             </div>
-          )}
 
-          <div className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded-full bg-dark border border-border -ml-7" />
-            <div className="flex-1 border-t border-dashed border-border" />
-            <div className="w-3 h-3 rounded-full bg-dark border border-border -mr-7" />
-          </div>
-
-          <div className="flex flex-col items-center gap-3">
-            <div className="bg-white p-3 rounded-2xl">
-              <QRCodeSVG
-                value={qrValue}
-                size={160}
-                bgColor="#ffffff"
-                fgColor="#0D0D0D"
-                level="H"
-              />
-            </div>
-            <p className="text-muted text-xs font-mono tracking-wide text-center">
-              {qrValue}
-            </p>
-            <p className="text-muted text-xs">Show this at the entrance</p>
           </div>
         </div>
       </div>

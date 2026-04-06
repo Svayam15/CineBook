@@ -311,7 +311,7 @@ const ScannerCore = () => {
     setCameraError(null);
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: "environment" },
+        video: {facingMode: "environment"},
       });
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
@@ -407,13 +407,15 @@ const ScannerCore = () => {
       const res = await fetch(`${API_URL}/bookings/scan/${currentBookingId}/confirm`, {
         method: "POST",
         credentials: "include",
-        headers: { "Content-Type": "application/json" },
+        headers: {"Content-Type": "application/json"},
       });
       const data = await res.json();
       if (res.ok) {
         toast.success("Ticket verified and marked as used! ✅");
-        setResult((prev) => ({ ...prev, confirmed: true }));
-        setTimeout(() => { handleReset(); }, 3000);
+        setResult((prev) => ({...prev, confirmed: true}));
+        setTimeout(() => {
+          handleReset();
+        }, 3000);
       } else {
         toast.error(data?.message || "Failed to confirm ticket");
       }
@@ -432,96 +434,137 @@ const ScannerCore = () => {
   };
 
   useEffect(() => {
-    return () => { stopCamera(); };
+    return () => {
+      stopCamera();
+    };
   }, []);
 
   return (
-    <div className="max-w-md mx-auto">
-      <div className="mb-6">
-        <h1 className="font-heading text-2xl font-bold text-white flex items-center gap-2">
-          <ScanLine size={24} className="text-primary" />
-          Ticket Scanner
-        </h1>
-        <p className="text-muted text-sm mt-1">
-          Scan customer's QR code to verify their ticket
-        </p>
-      </div>
-
-      {/* Confirmed state */}
-      {result?.confirmed && (
-        <div className="bg-green-500/10 border border-green-500/30 rounded-2xl p-8 text-center">
-          <CheckCircle2 size={64} className="text-green-400 mx-auto mb-4" />
-          <h2 className="text-green-400 font-heading text-2xl font-bold mb-2">Verified!</h2>
-          <p className="text-muted text-sm">Ticket marked as used. Resetting scanner...</p>
+      <div className="max-w-md md:max-w-4xl mx-auto">
+        <div className="mb-6">
+          <h1 className="font-heading text-2xl font-bold text-white flex items-center gap-2">
+            <ScanLine size={24} className="text-primary"/>
+            Ticket Scanner
+          </h1>
+          <p className="text-muted text-sm mt-1">
+            Scan customer's QR code to verify their ticket
+          </p>
         </div>
-      )}
 
-      {/* Camera */}
-      {!result && (
-        <div className="space-y-4">
-          <div className="relative bg-dark border border-border rounded-2xl overflow-hidden aspect-square">
-            <video ref={videoRef} className="w-full h-full object-cover" playsInline muted />
-            <canvas ref={canvasRef} className="hidden" />
-
-            {!cameraActive && (
-              <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-dark">
-                <Camera size={48} className="text-muted" />
-                <p className="text-muted text-sm text-center px-4">
-                  {cameraError || "Camera inactive. Press Start Scanning to begin."}
-                </p>
-              </div>
-            )}
-
-            {cameraActive && (
-              <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                <div className="w-48 h-48 relative">
-                  <div className="absolute top-0 left-0 w-8 h-8 border-t-2 border-l-2 border-primary rounded-tl-lg" />
-                  <div className="absolute top-0 right-0 w-8 h-8 border-t-2 border-r-2 border-primary rounded-tr-lg" />
-                  <div className="absolute bottom-0 left-0 w-8 h-8 border-b-2 border-l-2 border-primary rounded-bl-lg" />
-                  <div className="absolute bottom-0 right-0 w-8 h-8 border-b-2 border-r-2 border-primary rounded-br-lg" />
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <div className="w-full h-0.5 bg-primary/60 animate-pulse" />
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
-
-          {cameraError && (
-            <div className="bg-red-500/10 border border-red-500/30 rounded-xl px-4 py-3">
-              <p className="text-red-400 text-sm">{cameraError}</p>
+        {/* Confirmed state */}
+        {result?.confirmed && (
+            <div className="bg-green-500/10 border border-green-500/30 rounded-2xl p-8 text-center max-w-md mx-auto">
+              <CheckCircle2 size={64} className="text-green-400 mx-auto mb-4"/>
+              <h2 className="text-green-400 font-heading text-2xl font-bold mb-2">Verified!</h2>
+              <p className="text-muted text-sm">Ticket marked as used. Resetting scanner...</p>
             </div>
+        )}
+
+        {/* ✅ On desktop — camera left, result right side by side */}
+        <div className={`${result && !result.confirmed ? "md:grid md:grid-cols-2 md:gap-6" : ""}`}>
+
+          {/* Camera */}
+          {!result && (
+              <div className="space-y-4 max-w-md mx-auto md:mx-0">
+                <div className="relative bg-dark border border-border rounded-2xl overflow-hidden aspect-square">
+                  <video ref={videoRef} className="w-full h-full object-cover" playsInline muted/>
+                  <canvas ref={canvasRef} className="hidden"/>
+
+                  {!cameraActive && (
+                      <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-dark">
+                        <Camera size={48} className="text-muted"/>
+                        <p className="text-muted text-sm text-center px-4">
+                          {cameraError || "Camera inactive. Press Start Scanning to begin."}
+                        </p>
+                      </div>
+                  )}
+
+                  {cameraActive && (
+                      <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                        <div className="w-48 h-48 relative">
+                          <div
+                              className="absolute top-0 left-0 w-8 h-8 border-t-2 border-l-2 border-primary rounded-tl-lg"/>
+                          <div
+                              className="absolute top-0 right-0 w-8 h-8 border-t-2 border-r-2 border-primary rounded-tr-lg"/>
+                          <div
+                              className="absolute bottom-0 left-0 w-8 h-8 border-b-2 border-l-2 border-primary rounded-bl-lg"/>
+                          <div
+                              className="absolute bottom-0 right-0 w-8 h-8 border-b-2 border-r-2 border-primary rounded-br-lg"/>
+                          <div className="absolute inset-0 flex items-center justify-center">
+                            <div className="w-full h-0.5 bg-primary/60 animate-pulse"/>
+                          </div>
+                        </div>
+                      </div>
+                  )}
+                </div>
+
+                {cameraError && (
+                    <div className="bg-red-500/10 border border-red-500/30 rounded-xl px-4 py-3">
+                      <p className="text-red-400 text-sm">{cameraError}</p>
+                    </div>
+                )}
+
+                {!cameraActive ? (
+                    <button
+                        onClick={startCamera}
+                        className="w-full bg-primary hover:bg-primary-dark text-white font-semibold py-4 rounded-2xl text-base transition flex items-center justify-center gap-2"
+                    >
+                      <Camera size={20}/>
+                      Start Scanning
+                    </button>
+                ) : (
+                    <button
+                        onClick={stopCamera}
+                        className="w-full bg-card border border-border text-muted hover:text-white py-4 rounded-2xl text-base transition"
+                    >
+                      Stop Camera
+                    </button>
+                )}
+              </div>
           )}
 
-          {!cameraActive ? (
-            <button
-              onClick={startCamera}
-              className="w-full bg-primary hover:bg-primary-dark text-white font-semibold py-4 rounded-2xl text-base transition flex items-center justify-center gap-2"
-            >
-              <Camera size={20} />
-              Start Scanning
-            </button>
-          ) : (
-            <button
-              onClick={stopCamera}
-              className="w-full bg-card border border-border text-muted hover:text-white py-4 rounded-2xl text-base transition"
-            >
-              Stop Camera
-            </button>
+          {/* ✅ On desktop with result — show camera again on left, result on right */}
+          {result && !result.confirmed && (
+              <>
+                {/* Left — mini camera reactivate panel on desktop */}
+                <div className="hidden md:flex flex-col items-center justify-start gap-4">
+                  <div
+                      className="relative bg-dark border border-border rounded-2xl overflow-hidden w-full aspect-square">
+                    <video ref={videoRef} className="w-full h-full object-cover" playsInline muted/>
+                    <canvas ref={canvasRef} className="hidden"/>
+                    {!cameraActive && (
+                        <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-dark">
+                          <Camera size={40} className="text-muted"/>
+                          <p className="text-muted text-sm text-center px-4">Camera stopped after scan</p>
+                        </div>
+                    )}
+                  </div>
+                  <button
+                      onClick={() => {
+                        handleReset();
+                        startCamera();
+                      }}
+                      className="w-full bg-card border border-border text-muted hover:text-white py-3 rounded-2xl text-sm transition flex items-center justify-center gap-2"
+                  >
+                    <Camera size={16}/>
+                    Scan Another Ticket
+                  </button>
+                </div>
+
+                {/* Right — result */}
+                <div className="overflow-y-auto max-h-[calc(100vh-200px)]">
+                  <ResultCard
+                      result={result}
+                      onConfirm={handleConfirm}
+                      onReset={handleReset}
+                      confirming={confirming}
+                  />
+                </div>
+              </>
           )}
+
         </div>
-      )}
-
-      {/* Result */}
-      {result && !result.confirmed && (
-        <ResultCard
-          result={result}
-          onConfirm={handleConfirm}
-          onReset={handleReset}
-          confirming={confirming}
-        />
-      )}
-    </div>
+      </div>
   );
 };
 
