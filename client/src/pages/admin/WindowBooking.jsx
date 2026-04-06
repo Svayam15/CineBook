@@ -10,36 +10,15 @@ import Spinner from "../../components/common/Spinner";
 import { QRCodeSVG } from "qrcode.react";
 
 // ─── QR Modal ─────────────────────────────────────────────────────────────────
-const downloadTicketPDF = async (ticketRef, bookingId) => {
-  if (!ticketRef.current) return;
-  try {
-    toast.loading("Generating PDF...", { id: "pdf" });
-    const canvas = await html2canvas(ticketRef.current, {
-      backgroundColor: "#0D0D0D",
-      scale: 2,
-      useCORS: true,
-      allowTaint: true,
-    });
-    const imgData = canvas.toDataURL("image/png");
-    const pdf = new jsPDF({
-      orientation: "portrait",
-      unit: "px",
-      format: [canvas.width / 2, canvas.height / 2],
-    });
-    pdf.addImage(imgData, "PNG", 0, 0, canvas.width / 2, canvas.height / 2);
-    pdf.save(`CineBook-Ticket-${bookingId}.pdf`);
-    toast.success("Ticket downloaded!", { id: "pdf" });
-  } catch {
-    toast.error("Failed to generate PDF", { id: "pdf" });
-  }
-};
-
 const QRModal = ({ booking, show, onClose }) => {
-  const printRef = useRef();
   const ticketRef = useRef();
+  const qrRef = useRef(); // ✅ dedicated ref for QR box
   const qrValue = `CINEBOOK-${booking.id}-${booking.showId}`;
 
+  // ✅ Print — grabs QR SVG from qrRef directly
   const handlePrint = () => {
+    const qrSvg = qrRef.current?.querySelector("svg")?.outerHTML || "";
+
     const printWindow = window.open("", "_blank");
     printWindow.document.write(`
       <html lang="en">
@@ -67,7 +46,7 @@ const QRModal = ({ booking, show, onClose }) => {
         <body>
           <div class="ticket">
             <div class="title">${show?.movie?.title || "Movie"}</div>
-            <div class="subtitle">${show?.showType || ""} · ${show?.movie?.language || ""}</div>
+            <div class="subtitle">${show?.showType || ""} · ${show?.language || ""}</div>
             <div class="divider"></div>
             <div class="row"><span class="label">Theatre</span><span class="value">${show?.theatre?.name || ""}</span></div>
             <div class="row"><span class="label">Location</span><span class="value">${show?.theatre?.location || ""}</span></div>
@@ -82,7 +61,7 @@ const QRModal = ({ booking, show, onClose }) => {
             <div class="total">₹${booking.totalAmount}</div>
             <div class="divider"></div>
             <div class="qr-wrap">
-              ${printRef.current?.querySelector("svg")?.outerHTML || ""}
+              ${qrSvg}
               <div class="qr-code">${qrValue}</div>
               <div class="footer">Booking #${booking.id} · Show this at the entrance</div>
             </div>
@@ -94,6 +73,68 @@ const QRModal = ({ booking, show, onClose }) => {
     printWindow.focus();
     printWindow.print();
     printWindow.close();
+  };
+
+  // ✅ Download — converts SVG → PNG first so html2canvas can capture it
+  const handleDownload = async () => {
+    if (!ticketRef.current) return;
+    try {
+      toast.loading("Generating PDF...", { id: "pdf" });
+
+      const svgEl = qrRef.current?.querySelector("svg");
+      let qrDataUrl = null;
+
+      if (svgEl) {
+        const svgData = new XMLSerializer().serializeToString(svgEl);
+        const svgBlob = new Blob([svgData], { type: "image/svg+xml;charset=utf-8" });
+        const svgUrl = URL.createObjectURL(svgBlob);
+        qrDataUrl = await new Promise((resolve) => {
+          const img = new Image();
+          img.onload = () => {
+            const c = document.createElement("canvas");
+            c.width = img.width || 180;
+            c.height = img.height || 180;
+            c.getContext("2d").drawImage(img, 0, 0);
+            resolve(c.toDataURL("image/png"));
+            URL.revokeObjectURL(svgUrl);
+          };
+          img.src = svgUrl;
+        });
+      }
+
+      if (qrDataUrl && qrRef.current) {
+        const existingSvg = qrRef.current.querySelector("svg");
+        const tempImg = document.createElement("img");
+        tempImg.src = qrDataUrl;
+        tempImg.width = 180;
+        tempImg.height = 180;
+        existingSvg.replaceWith(tempImg);
+
+        const canvas = await html2canvas(ticketRef.current, {
+          backgroundColor: "#0D0D0D",
+          scale: 2,
+          useCORS: true,
+          allowTaint: true,
+        });
+
+        // Restore SVG after capture
+        tempImg.replaceWith(existingSvg);
+
+        const imgData = canvas.toDataURL("image/png");
+        const pdf = new jsPDF({
+          orientation: "portrait",
+          unit: "px",
+          format: [canvas.width / 2, canvas.height / 2],
+        });
+        pdf.addImage(imgData, "PNG", 0, 0, canvas.width / 2, canvas.height / 2);
+        pdf.save(`CineBook-Ticket-${booking.id}.pdf`);
+        toast.success("Ticket downloaded!", { id: "pdf" });
+      } else {
+        throw new Error("QR not ready");
+      }
+    } catch {
+      toast.error("Failed to generate PDF", { id: "pdf" });
+    }
   };
 
   return (
@@ -112,11 +153,11 @@ const QRModal = ({ booking, show, onClose }) => {
         </div>
 
         <div className="max-h-[80vh] overflow-y-auto">
-          {/* ✅ Two column on desktop */}
+          {/* Two column on desktop */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-0" ref={ticketRef}>
 
             {/* Left — ticket details */}
-            <div className="p-5 space-y-4 md:border-r md:border-border" ref={printRef}>
+            <div className="p-5 space-y-4 md:border-r md:border-border">
               <div>
                 <h3 className="font-heading text-lg font-bold text-white">
                   {show?.movie?.title}
@@ -125,9 +166,9 @@ const QRModal = ({ booking, show, onClose }) => {
                   <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full">
                     {show?.showType}
                   </span>
-                  {show?.movie?.language && (
+                  {show?.language && (
                     <span className="text-xs bg-zinc-800 text-zinc-300 px-2 py-0.5 rounded-full">
-                      {show.movie.language}
+                      {show.language}
                     </span>
                   )}
                   {show?.movie?.rating && (
@@ -191,7 +232,8 @@ const QRModal = ({ booking, show, onClose }) => {
             <div className="p-5 flex flex-col items-center justify-center gap-4 bg-dark/30">
               <div className="border-t border-dashed border-border w-full md:hidden" />
               <p className="text-muted text-xs text-center">Show this QR at the entrance</p>
-              <div className="bg-white p-4 rounded-2xl">
+              {/* ✅ qrRef is here — on the white box wrapping the SVG */}
+              <div className="bg-white p-4 rounded-2xl" ref={qrRef}>
                 <QRCodeSVG
                   value={qrValue}
                   size={180}
@@ -206,10 +248,10 @@ const QRModal = ({ booking, show, onClose }) => {
             </div>
           </div>
 
-          {/* ✅ Action buttons */}
+          {/* Action buttons */}
           <div className="p-5 pt-0 flex flex-col gap-2">
             <button
-              onClick={() => downloadTicketPDF(ticketRef, booking.id)}
+              onClick={handleDownload}
               className="w-full flex items-center justify-center gap-2 bg-primary/10 hover:bg-primary/20 border border-primary/20 text-primary font-semibold py-3 rounded-xl transition text-sm"
             >
               <Download size={16} />
@@ -245,7 +287,7 @@ const WindowBooking = () => {
   const [loadingShows, setLoadingShows] = useState(true);
   const [loadingSeats, setLoadingSeats] = useState(false);
   const [booking, setBooking] = useState(false);
-  const [confirmedBooking, setConfirmedBooking] = useState(null); // ✅ QR modal state
+  const [confirmedBooking, setConfirmedBooking] = useState(null);
 
   useEffect(() => {
     const fetchShows = async () => {
@@ -261,7 +303,7 @@ const WindowBooking = () => {
     fetchShows().catch(console.error);
   }, []);
 
-  // ✅ SSE — real-time seat updates
+  // SSE — real-time seat updates
   useEffect(() => {
     if (!selectedShow) return;
 
@@ -362,8 +404,6 @@ const WindowBooking = () => {
             clearInterval(pollInterval);
             toast.success("Booking confirmed! 🎉");
 
-            // ✅ Build booking object for QR modal
-            // Fetch full booking details to get seats
             try {
               const bookingRes = await api.get(`/admin/bookings?search=${bookingData.id}`);
               const fullBooking = bookingRes.data.bookings?.find(
@@ -382,7 +422,7 @@ const WindowBooking = () => {
                 })) || [],
               });
             } catch {
-              // ✅ fallback if fetch fails — still show QR with basic info
+              // fallback if fetch fails — still show QR with basic info
               setConfirmedBooking({
                 id: bookingData.id,
                 showId: selectedShow.id,
@@ -394,7 +434,6 @@ const WindowBooking = () => {
 
             setSelectedSeats([]);
 
-            // ✅ Refresh seats
             try {
               const seatsRes = await api.get(`/shows/${selectedShow.id}/seats`);
               setSeats(seatsRes.data);
@@ -440,7 +479,7 @@ const WindowBooking = () => {
 
   return (
     <AdminLayout>
-      {/* ✅ QR Modal */}
+      {/* QR Modal */}
       {confirmedBooking && (
         <QRModal
           booking={confirmedBooking}
