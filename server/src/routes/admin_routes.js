@@ -8,7 +8,8 @@ import {
   adminCancelBooking,
   adminCancelMovie,
   getAdminShows,
-  getDashboardStats
+  getDashboardStats,
+  createStaff,           // ✅ NEW
 } from "../controllers/admin_controller.js";
 import { authMiddleware } from "../middlewares/auth_middleware.js";
 import { requireAdmin } from "../middlewares/role_middleware.js";
@@ -21,6 +22,7 @@ router.use(authMiddleware, requireAdmin);
 // 👥 Users
 router.get("/users", getAllUsers);
 router.delete("/users/:id", deleteUser);
+router.post("/staff", createStaff); // ✅ NEW
 
 // 📋 Bookings
 router.get("/bookings", getAllBookings);
