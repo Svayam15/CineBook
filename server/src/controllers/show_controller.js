@@ -103,6 +103,27 @@ export const createShow = async (req, res) => {
       }
     }
 
+    // ✅ NEW — fetch movie and validate release date
+    const movie = await prisma.movie.findUnique({
+      where: { id: movieId },
+      select: { id: true, title: true, releaseDate: true, isDeleted: true },
+    });
+
+    if (!movie) {
+      return res.status(404).json({ message: "Movie not found" });
+    }
+
+    if (movie.isDeleted) {
+      return res.status(400).json({ message: "Cannot create show for a deleted movie" });
+    }
+
+    // ✅ NEW — block if show date is before movie release date
+    if (movie.releaseDate && new Date(startTime) < new Date(movie.releaseDate)) {
+      return res.status(400).json({
+        message: `Cannot create show before movie release date (${formatToIST(movie.releaseDate)})`,
+      });
+    }
+
     const show = await prisma.show.create({
       data: {
         movieId,
@@ -145,7 +166,7 @@ export const createShow = async (req, res) => {
   }
 };
 
-// ✏️ UPDATE SHOW (ADMIN) — only price/showType, only if no bookings yet
+// ✏️ UPDATE SHOW (ADMIN)
 export const updateShow = async (req, res) => {
   try {
     const { id } = req.params;
@@ -162,11 +183,7 @@ export const updateShow = async (req, res) => {
     });
 
     if (!show) return res.status(404).json({ message: "Show not found" });
-
-    if (!show.isActive) {
-      return res.status(400).json({ message: "Cannot edit a cancelled show" });
-    }
-
+    if (!show.isActive) return res.status(400).json({ message: "Cannot edit a cancelled show" });
     if (new Date(show.startTime) <= new Date()) {
       return res.status(400).json({ message: "Cannot edit a show that has already started" });
     }
@@ -222,9 +239,7 @@ export const rescheduleShow = async (req, res) => {
     const { id } = req.params;
     const { startTime } = req.body;
 
-    if (!startTime) {
-      return res.status(400).json({ message: "New startTime is required" });
-    }
+    if (!startTime) return res.status(400).json({ message: "New startTime is required" });
 
     if (!startTime.includes("+05:30")) {
       return res.status(400).json({
@@ -250,7 +265,6 @@ export const rescheduleShow = async (req, res) => {
 
     if (!show) return res.status(404).json({ message: "Show not found" });
     if (!show.isActive) return res.status(400).json({ message: "Cannot reschedule a cancelled show" });
-
     if (new Date(show.startTime) <= new Date()) {
       return res.status(400).json({ message: "Cannot reschedule a show that has already started" });
     }
@@ -288,10 +302,7 @@ export const rescheduleShow = async (req, res) => {
 export const getShows = async (req, res) => {
   try {
     const shows = await prisma.show.findMany({
-      where: {
-        isActive: true,
-        startTime: { gt: new Date() },
-      },
+      where: { isActive: true, startTime: { gt: new Date() } },
       include: { movie: true, theatre: true },
       orderBy: { startTime: "asc" },
     });
@@ -306,16 +317,13 @@ export const getShows = async (req, res) => {
 export const getShowById = async (req, res) => {
   try {
     const { id } = req.params;
-
     const show = await prisma.show.findUnique({
       where: { id: parseInt(id) },
       include: { movie: true, theatre: true },
     });
-
     if (!show) return res.status(404).json({ message: "Show not found" });
     if (!show.isActive) return res.status(400).json({ message: "This show has been cancelled" });
     if (hasShowEnded(show)) return res.status(400).json({ message: "This show has already ended" });
-
     res.json(formatShow(show));
   } catch (err) {
     logger.error(`Get show error: ${err.message}`);
@@ -327,16 +335,13 @@ export const getShowById = async (req, res) => {
 export const getShowSeats = async (req, res) => {
   try {
     const { id } = req.params;
-
     const show = await prisma.show.findUnique({
       where: { id: parseInt(id) },
       include: { movie: true },
     });
-
     if (!show) return res.status(404).json({ message: "Show not found" });
     if (!show.isActive) return res.status(400).json({ message: "This show has been cancelled" });
     if (hasShowEnded(show)) return res.status(400).json({ message: "This show has already ended" });
-
     const seats = await seatService.getShowSeats(id);
     res.json(seats);
   } catch (err) {
@@ -349,16 +354,13 @@ export const getShowSeats = async (req, res) => {
 export const getAvailableSeats = async (req, res) => {
   try {
     const { id } = req.params;
-
     const show = await prisma.show.findUnique({
       where: { id: parseInt(id) },
       include: { movie: true },
     });
-
     if (!show) return res.status(404).json({ message: "Show not found" });
     if (!show.isActive) return res.status(400).json({ message: "This show has been cancelled" });
     if (hasShowEnded(show)) return res.status(400).json({ message: "This show has already ended" });
-
     const seats = await seatService.getAvailableSeats(id);
     res.json(seats);
   } catch (err) {
@@ -371,7 +373,6 @@ export const getAvailableSeats = async (req, res) => {
 export const deleteShow = async (req, res) => {
   try {
     const { id } = req.params;
-
     const show = await prisma.show.findUnique({
       where: { id: parseInt(id) },
       include: {
@@ -383,10 +384,8 @@ export const deleteShow = async (req, res) => {
         },
       },
     });
-
     if (!show) return res.status(404).json({ message: "Show not found" });
     if (!show.isActive) return res.status(400).json({ message: "Show already cancelled" });
-
     if (new Date(show.startTime) <= new Date()) {
       return res.status(400).json({ message: "Cannot cancel a show that has already started or ended" });
     }
@@ -396,12 +395,10 @@ export const deleteShow = async (req, res) => {
         where: { showId: parseInt(id) },
         data: { status: "AVAILABLE", lockedAt: null, pendingBookingId: null },
       });
-
       await tx.booking.updateMany({
         where: { showId: parseInt(id), status: { in: ["PENDING", "PAID"] } },
         data: { status: "CANCELLED", cancelledAt: new Date() },
       });
-
       await tx.show.update({
         where: { id: parseInt(id) },
         data: { isActive: false },
@@ -436,7 +433,6 @@ export const getAdminShows = asyncHandler(async (req, res) => {
   const limit = parseInt(req.query.limit) || 20;
   const skip = (page - 1) * limit;
   const statusFilter = req.query.status?.toUpperCase();
-
   const now = new Date();
 
   const whereClause = statusFilter === "UPCOMING"
@@ -465,7 +461,6 @@ export const getAdminShows = asyncHandler(async (req, res) => {
   };
 
   let enriched = shows.map((show) => ({ ...show, status: getStatus(show) }));
-
   if (statusFilter === "ONGOING") {
     enriched = enriched.filter((s) => s.status === "ONGOING");
   }
@@ -473,20 +468,14 @@ export const getAdminShows = asyncHandler(async (req, res) => {
   res.json({
     success: true,
     shows: enriched,
-    pagination: {
-      total,
-      page,
-      limit,
-      totalPages: Math.ceil(total / limit),
-    },
+    pagination: { total, page, limit, totalPages: Math.ceil(total / limit) },
   });
 });
 
-// ✅ 📡 SSE — real-time seat updates for a show
+// 📡 SSE — real-time seat updates
 export const seatUpdatesSSE = async (req, res) => {
   const showId = parseInt(req.params.id);
 
-  // ✅ CORS headers — required for cross-origin SSE (svayam.dev → api.svayam.dev)
   res.setHeader("Content-Type", "text/event-stream");
   res.setHeader("Cache-Control", "no-cache");
   res.setHeader("Connection", "keep-alive");
@@ -495,22 +484,14 @@ export const seatUpdatesSSE = async (req, res) => {
   res.setHeader("Access-Control-Allow-Credentials", "true");
   res.flushHeaders();
 
-  // Send connected handshake
   res.write(`data: ${JSON.stringify({ type: "connected", showId })}\n\n`);
-
-  // Register connection
   addConnection(showId, res);
 
-  // Heartbeat every 25s — keeps connection alive through Render proxy
   const heartbeat = setInterval(() => {
-    try {
-      res.write(`: heartbeat\n\n`);
-    } catch {
-      clearInterval(heartbeat);
-    }
+    try { res.write(`: heartbeat\n\n`); }
+    catch { clearInterval(heartbeat); }
   }, 25000);
 
-  // Cleanup on client disconnect
   req.on("close", () => {
     clearInterval(heartbeat);
     removeConnection(showId, res);
