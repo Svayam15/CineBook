@@ -18,6 +18,9 @@ import MovieDetails from "./pages/user/MovieDetails.jsx";
 import Payment from "./pages/user/Payment";
 import MyBookings from "./pages/user/MyBookings";
 import BookingConfirm from "./pages/user/BookingConfirm";
+import Profile from "./pages/user/Profile";
+import Terms from "./pages/user/Terms";
+import Privacy from "./pages/user/Privacy";
 
 // Admin pages
 import Dashboard from "./pages/admin/Dashboard";
@@ -77,6 +80,10 @@ function App() {
       <Route path="/verify-otp" element={<OTPVerify />} />
       <Route path="/forgot-password" element={<ForgotPassword />} />
       <Route path="/reset-password" element={<ResetPassword />} />
+        
+<Route path="/profile" element={<Profile />} />
+<Route path="/terms" element={<Terms />} />
+<Route path="/privacy" element={<Privacy />} />
 
       {/* Root redirect based on role */}
       <Route
