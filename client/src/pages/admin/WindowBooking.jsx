@@ -4,6 +4,7 @@ import AdminLayout from "../../components/admin/AdminLayout";
 import api from "../../api/axios";
 import toast from "react-hot-toast";
 import { Ticket, X, Printer, Download, MapPin, Clock } from "lucide-react";
+import jsPDF from "jspdf";
 import Spinner from "../../components/common/Spinner";
 import { QRCodeSVG } from "qrcode.react";
 
@@ -225,38 +226,248 @@ const QRModal = ({ booking, show, onClose }) => {
   const qrRef = useRef(null);
   const qrValue = `CINEBOOK-${booking.id}-${booking.showId}`;
 
-  const getQRSvg = () => {
+// ✅ Convert QR SVG → PNG dataURL via canvas
+const getQRPngDataUrl = () => {
+  return new Promise((resolve, reject) => {
     const svg = qrRef.current?.querySelector("svg");
-    if (!svg) return "";
-    const clone = svg.cloneNode(true);
-    clone.setAttribute("width", "180");
-    clone.setAttribute("height", "180");
-    return clone.outerHTML;
-  };
+    if (!svg) return reject("No SVG found");
 
-  const openTicketWindow = (forPDF) => {
-    const qrSvgString = getQRSvg();
-    if (!qrSvgString) {
-      toast.error("QR not ready. Try again.");
-      return;
-    }
-    const html = generateTicketHTML({ booking, show, qrSvgString, forPDF });
-    const w = window.open("", "_blank");
-    if (!w) {
-      toast.error("Popup blocked. Please allow popups for this site.");
-      return;
-    }
-    w.document.write(html);
-    w.document.close();
-    w.focus();
-    if (forPDF) {
-      toast("In the print dialog → Destination → Save as PDF", {
-        icon: "ℹ️",
-        duration: 5000,
-      });
-    }
-    setTimeout(() => { w.print(); }, 800);
-  };
+    const svgData = new XMLSerializer().serializeToString(svg);
+    const svgBlob = new Blob([svgData], { type: "image/svg+xml;charset=utf-8" });
+    const svgUrl = URL.createObjectURL(svgBlob);
+
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.createElement("canvas");
+      canvas.width = 200;
+      canvas.height = 200;
+      const ctx = canvas.getContext("2d");
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(0, 0, 200, 200);
+      ctx.drawImage(img, 0, 0, 200, 200);
+      URL.revokeObjectURL(svgUrl);
+      resolve(canvas.toDataURL("image/png"));
+    };
+    img.onerror = () => { URL.revokeObjectURL(svgUrl); reject("Image load failed"); };
+    img.src = svgUrl;
+  });
+};
+
+// ✅ Direct PDF download using jsPDF text API + QR as PNG
+const handleDownloadPDF = async () => {
+  toast.loading("Generating PDF...", { id: "pdf" });
+  try {
+    const qrPng = await getQRPngDataUrl();
+    const seats = booking.seats || [];
+    const regularSeats = seats.filter(s => s.type !== "GOLDEN");
+    const goldenSeats = seats.filter(s => s.type === "GOLDEN");
+    const allSeatLabels = [
+      ...regularSeats.map(s => `${s.row}${s.number}`),
+      ...goldenSeats.map(s => `${s.row}${s.number} ✦`),
+    ].join("   ");
+
+    const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a5" });
+    const W = 148; // A5 width mm
+
+    // ── Dark header background
+    pdf.setFillColor(15, 52, 96);
+    pdf.rect(0, 0, W, 52, "F");
+
+    // ── CineBook brand
+    pdf.setFontSize(9);
+    pdf.setTextColor(167, 139, 250);
+    pdf.setFont("helvetica", "bold");
+    pdf.text("CineBook", 12, 12);
+
+    // ── Movie title
+    pdf.setFontSize(18);
+    pdf.setTextColor(255, 255, 255);
+    pdf.setFont("helvetica", "bold");
+    const titleLines = pdf.splitTextToSize(show?.movie?.title || "Movie", W - 24);
+    pdf.text(titleLines, 12, 24);
+
+    // ── Badges row
+    let bx = 12;
+    const by = 43;
+    const badgeData = [
+      { text: show?.showType || "2D", bg: [124, 58, 237] },
+      ...(show?.movie?.language ? [{ text: show.movie.language, bg: [80, 80, 100] }] : []),
+      ...(show?.movie?.rating ? [{ text: show.movie.rating, bg: [80, 80, 100] }] : []),
+    ];
+    pdf.setFontSize(7);
+    badgeData.forEach(({ text, bg }) => {
+      const tw = pdf.getTextWidth(text) + 6;
+      pdf.setFillColor(...bg);
+      pdf.roundedRect(bx, by - 4, tw, 6, 1.5, 1.5, "F");
+      pdf.setTextColor(255, 255, 255);
+      pdf.setFont("helvetica", "bold");
+      pdf.text(text, bx + 3, by);
+      bx += tw + 4;
+    });
+
+    // ── Dashed separator
+    let y = 58;
+    pdf.setDrawColor(200, 200, 200);
+    pdf.setLineDashPattern([2, 2], 0);
+    pdf.line(12, y, W - 12, y);
+    pdf.setLineDashPattern([], 0);
+    y += 8;
+
+    // ── Info rows helper
+    const infoRow = (label, value, yPos) => {
+      pdf.setFontSize(7);
+      pdf.setTextColor(150, 150, 150);
+      pdf.setFont("helvetica", "bold");
+      pdf.text(label.toUpperCase(), 12, yPos);
+      pdf.setFontSize(9);
+      pdf.setTextColor(30, 30, 30);
+      pdf.setFont("helvetica", "bold");
+      pdf.text(String(value), 12, yPos + 5);
+    };
+
+    infoRow("Theatre", show?.theatre?.name || "—", y);
+    y += 12;
+    infoRow("Location", show?.theatre?.location || "—", y);
+    y += 12;
+
+    // Two column row
+    infoRow("Show Time", show?.startTime || "—", y);
+    infoRow("Booking ID", `#${booking.id}`, y);
+    // shift second col
+    pdf.setFontSize(7);
+    pdf.setTextColor(150, 150, 150);
+    pdf.setFont("helvetica", "bold");
+    pdf.text("BOOKING ID", W / 2, y);
+    pdf.setFontSize(9);
+    pdf.setTextColor(30, 30, 30);
+    pdf.setFont("helvetica", "bold");
+    pdf.text(`#${booking.id}`, W / 2, y + 5);
+    y += 12;
+
+    infoRow("Payment", booking.paymentType, y);
+    pdf.setFontSize(7);
+    pdf.setTextColor(150, 150, 150);
+    pdf.setFont("helvetica", "bold");
+    pdf.text("TOTAL SEATS", W / 2, y);
+    pdf.setFontSize(9);
+    pdf.setTextColor(30, 30, 30);
+    pdf.setFont("helvetica", "bold");
+    pdf.text(`${seats.length} seat${seats.length !== 1 ? "s" : ""}`, W / 2, y + 5);
+    y += 14;
+
+    // ── Dashed separator
+    pdf.setDrawColor(200, 200, 200);
+    pdf.setLineDashPattern([2, 2], 0);
+    pdf.line(12, y, W - 12, y);
+    pdf.setLineDashPattern([], 0);
+    y += 7;
+
+    // ── Seats label
+    pdf.setFontSize(7);
+    pdf.setTextColor(150, 150, 150);
+    pdf.setFont("helvetica", "bold");
+    pdf.text("YOUR SEATS", 12, y);
+    y += 5;
+
+    // ── Seat chips
+    let sx = 12;
+    [...regularSeats, ...goldenSeats].forEach((s, i) => {
+      const isGolden = s.type === "GOLDEN";
+      const label = `${s.row}${s.number}${isGolden ? " ✦" : ""}`;
+      pdf.setFontSize(8);
+      const tw = pdf.getTextWidth(label) + 8;
+      if (sx + tw > W - 12) { sx = 12; y += 10; }
+      if (isGolden) {
+        pdf.setFillColor(255, 251, 235);
+        pdf.setDrawColor(217, 119, 6);
+        pdf.setTextColor(146, 64, 14);
+      } else {
+        pdf.setFillColor(249, 250, 251);
+        pdf.setDrawColor(209, 213, 219);
+        pdf.setTextColor(55, 65, 81);
+      }
+      pdf.roundedRect(sx, y - 3, tw, 8, 1.5, 1.5, "FD");
+      pdf.setFont("helvetica", "bold");
+      pdf.text(label, sx + 4, y + 2.5);
+      sx += tw + 4;
+    });
+    y += 14;
+
+    // ── Dashed separator
+    pdf.setDrawColor(200, 200, 200);
+    pdf.setLineDashPattern([2, 2], 0);
+    pdf.line(12, y, W - 12, y);
+    pdf.setLineDashPattern([], 0);
+    y += 7;
+
+    // ── Total amount box
+    pdf.setFillColor(249, 250, 251);
+    pdf.roundedRect(12, y, W - 24, 14, 2, 2, "F");
+    pdf.setFontSize(8);
+    pdf.setTextColor(107, 114, 128);
+    pdf.setFont("helvetica", "normal");
+    pdf.text("Total Paid", 18, y + 6);
+    pdf.setFontSize(7);
+    pdf.text(`${booking.paymentType} Payment`, 18, y + 11);
+    pdf.setFontSize(16);
+    pdf.setTextColor(17, 24, 39);
+    pdf.setFont("helvetica", "bold");
+    pdf.text(`Rs.${booking.totalAmount}`, W - 14, y + 9.5, { align: "right" });
+    y += 20;
+
+    // ── Dashed separator
+    pdf.setDrawColor(200, 200, 200);
+    pdf.setLineDashPattern([2, 2], 0);
+    pdf.line(12, y, W - 12, y);
+    pdf.setLineDashPattern([], 0);
+    y += 8;
+
+    // ── QR code centered
+    const qrSize = 44;
+    const qrX = (W - qrSize) / 2;
+    pdf.setFillColor(255, 255, 255);
+    pdf.setDrawColor(229, 231, 235);
+    pdf.roundedRect(qrX - 4, y - 2, qrSize + 8, qrSize + 8, 3, 3, "FD");
+    pdf.addImage(qrPng, "PNG", qrX, y, qrSize, qrSize);
+    y += qrSize + 10;
+
+    // ── QR value
+    pdf.setFontSize(6.5);
+    pdf.setTextColor(156, 163, 175);
+    pdf.setFont("courier", "normal");
+    pdf.text(qrValue, W / 2, y, { align: "center" });
+    y += 6;
+
+    // ── Footer note
+    pdf.setFontSize(7);
+    pdf.setFont("helvetica", "normal");
+    pdf.text(`Booking #${booking.id} · Valid for one entry only · CineBook`, W / 2, y, { align: "center" });
+
+    // ── Save
+    pdf.save(`CineBook-Ticket-${booking.id}.pdf`);
+    toast.success("Ticket downloaded!", { id: "pdf" });
+  } catch (err) {
+    console.error(err);
+    toast.error("Failed to generate PDF", { id: "pdf" });
+  }
+};
+
+// ✅ Print — still uses the HTML window approach (perfect for printing)
+const openPrintWindow = () => {
+  const svg = qrRef.current?.querySelector("svg");
+  if (!svg) { toast.error("QR not ready. Try again."); return; }
+  const clone = svg.cloneNode(true);
+  clone.setAttribute("width", "180");
+  clone.setAttribute("height", "180");
+  const qrSvgString = clone.outerHTML;
+  const html = generateTicketHTML({ booking, show, qrSvgString, forPDF: false });
+  const w = window.open("", "_blank");
+  if (!w) { toast.error("Popup blocked. Please allow popups."); return; }
+  w.document.write(html);
+  w.document.close();
+  w.focus();
+  setTimeout(() => { w.print(); }, 800);
+};
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm px-4">
@@ -370,19 +581,19 @@ const QRModal = ({ booking, show, onClose }) => {
           {/* Action buttons */}
           <div className="p-5 pt-0 flex flex-col gap-2">
             <button
-              onClick={() => openTicketWindow(true)}
-              className="w-full flex items-center justify-center gap-2 bg-primary/10 hover:bg-primary/20 border border-primary/20 text-primary font-semibold py-3 rounded-xl transition text-sm"
-            >
-              <Download size={16} />
-              Download Ticket PDF
-            </button>
-            <button
-              onClick={() => openTicketWindow(false)}
-              className="w-full flex items-center justify-center gap-2 bg-card border border-border text-muted hover:text-white font-semibold py-3 rounded-xl transition text-sm"
-            >
-              <Printer size={16} />
-              Print Ticket
-            </button>
+  onClick={handleDownloadPDF}
+  className="w-full flex items-center justify-center gap-2 bg-primary/10 hover:bg-primary/20 border border-primary/20 text-primary font-semibold py-3 rounded-xl transition text-sm"
+>
+  <Download size={16} />
+  Download Ticket PDF
+</button>
+<button
+  onClick={openPrintWindow}
+  className="w-full flex items-center justify-center gap-2 bg-card border border-border text-muted hover:text-white font-semibold py-3 rounded-xl transition text-sm"
+>
+  <Printer size={16} />
+  Print Ticket
+</button>
             <button
               onClick={onClose}
               className="w-full bg-dark border border-border text-muted hover:text-white py-2.5 rounded-xl text-sm transition"
