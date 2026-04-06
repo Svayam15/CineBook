@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import Navbar from "../../components/common/Navbar";
 import api from "../../api/axios";
 import toast from "react-hot-toast";
-import { Ticket, Clock, MapPin, Calendar, X, QrCode, CreditCard } from "lucide-react";
+import { Ticket, Clock, MapPin, Calendar, X, QrCode, CreditCard, CheckCircle2 } from "lucide-react";
 import { formatDate } from "@/utils/formatDate.js";
 import { QRCodeSVG } from "qrcode.react";
 
@@ -14,7 +14,6 @@ const statusColors = {
   FAILED:    "bg-zinc-500/10 text-zinc-400 border-zinc-500/20",
 };
 
-// ✅ Format UTC to IST readable string
 const formatIST = (dateStr) => {
   if (!dateStr) return "";
   return new Date(dateStr).toLocaleString("en-IN", {
@@ -28,7 +27,6 @@ const formatIST = (dateStr) => {
   });
 };
 
-// ─── Refund Policy Helper ─────────────────────────────────────────────────────
 const getRefundPolicy = (showStartTime, bookingStatus) => {
   if (bookingStatus === "PENDING") {
     return { percent: 0, label: "No payment made", color: "text-zinc-400", isPending: true };
@@ -159,7 +157,7 @@ const TicketModal = ({ booking, onClose }) => {
           </button>
         </div>
 
-        <div className="p-5 space-y-4">
+        <div className="p-5 space-y-4 max-h-[80vh] overflow-y-auto">
           <div>
             <h3 className="font-heading text-lg font-bold text-white leading-tight">
               {booking.show?.movie?.title}
@@ -168,6 +166,13 @@ const TicketModal = ({ booking, onClose }) => {
               <span className={`text-xs px-2 py-0.5 rounded-full border ${statusColors[booking.status]}`}>
                 {booking.status}
               </span>
+              {/* ✅ USED badge */}
+              {booking.isUsed && (
+                <span className="text-xs px-2 py-0.5 rounded-full border bg-zinc-500/10 text-zinc-400 border-zinc-500/20 flex items-center gap-1">
+                  <CheckCircle2 size={10} />
+                  USED
+                </span>
+              )}
               <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full">
                 {booking.show?.showType}
               </span>
@@ -187,7 +192,6 @@ const TicketModal = ({ booking, onClose }) => {
             </div>
             <div className="flex items-center gap-2 text-muted">
               <Clock size={13} className="shrink-0 text-primary" />
-              {/* ✅ Fixed: format raw UTC to IST */}
               <span>{formatIST(booking.show?.rawStartTime || booking.show?.startTime)}</span>
             </div>
             <div className="flex items-center gap-2 text-muted">
@@ -218,6 +222,16 @@ const TicketModal = ({ booking, onClose }) => {
             <span className="text-muted text-sm">Total Paid</span>
             <span className="text-white font-bold text-lg">₹{booking.totalAmount}</span>
           </div>
+
+          {/* ✅ Used At info */}
+          {booking.isUsed && booking.usedAt && (
+            <div className="bg-zinc-500/10 border border-zinc-500/20 rounded-xl px-4 py-3">
+              <p className="text-zinc-400 text-xs flex items-center gap-1.5">
+                <CheckCircle2 size={12} />
+                Used at {formatIST(booking.usedAt)}
+              </p>
+            </div>
+          )}
 
           <div className="flex items-center gap-2">
             <div className="w-3 h-3 rounded-full bg-dark border border-border -ml-7" />
@@ -285,21 +299,20 @@ const MyBookings = () => {
     }
   };
 
-  // ✅ Pay Now — PENDING only, show not started
   const canPayNow = (booking) => {
     if (booking.status !== "PENDING") return false;
     const showTime = new Date(booking.show?.rawStartTime || booking.show?.startTime);
     return showTime > new Date();
   };
 
-  // ✅ Cancel — PAID or PENDING, show not started
+  // ✅ Cannot cancel if isUsed
   const canCancel = (booking) => {
+    if (booking.isUsed) return false;
     if (booking.status !== "PAID" && booking.status !== "PENDING") return false;
     const showTime = new Date(booking.show?.rawStartTime || booking.show?.startTime);
     return showTime > new Date();
   };
 
-  // ✅ Navigate to Payment with existing bookingId — skips SSE entirely
   const handlePayNow = (booking) => {
     navigate("/payment", {
       state: {
@@ -358,7 +371,6 @@ const MyBookings = () => {
                 <div className="flex items-start justify-between gap-4 flex-wrap">
                   <div className="flex-1 min-w-0">
 
-                    {/* Title + Badges */}
                     <div className="flex items-center gap-2 mb-2 flex-wrap">
                       <h3 className="font-heading text-base sm:text-lg font-semibold text-white">
                         {booking.show?.movie?.title}
@@ -366,12 +378,18 @@ const MyBookings = () => {
                       <span className={`text-xs px-2 py-0.5 rounded-full border ${statusColors[booking.status]}`}>
                         {booking.status}
                       </span>
+                      {/* ✅ USED badge on card */}
+                      {booking.isUsed && (
+                        <span className="text-xs px-2 py-0.5 rounded-full border bg-zinc-500/10 text-zinc-400 border-zinc-500/20 flex items-center gap-1">
+                          <CheckCircle2 size={10} />
+                          USED
+                        </span>
+                      )}
                       <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full">
                         {booking.show?.showType}
                       </span>
                     </div>
 
-                    {/* Info */}
                     <div className="space-y-1.5">
                       <p className="text-muted text-xs sm:text-sm flex items-center gap-1.5">
                         <MapPin size={12} className="shrink-0" />
@@ -381,7 +399,6 @@ const MyBookings = () => {
                       </p>
                       <p className="text-muted text-xs sm:text-sm flex items-center gap-1.5">
                         <Clock size={12} className="shrink-0" />
-                        {/* ✅ Fixed: format raw UTC to IST */}
                         {formatIST(booking.show?.rawStartTime || booking.show?.startTime)}
                       </p>
                       <p className="text-muted text-xs sm:text-sm flex items-center gap-1.5">
@@ -390,7 +407,6 @@ const MyBookings = () => {
                       </p>
                     </div>
 
-                    {/* Seats */}
                     <div className="flex flex-wrap gap-1.5 mt-3">
                       {booking.seats?.map((bs) => (
                         <span
@@ -406,21 +422,26 @@ const MyBookings = () => {
                       ))}
                     </div>
 
-                    {/* Refund note */}
                     {booking.refundAmount > 0 && (
                       <p className="text-golden text-xs mt-2">
                         Refunded: ₹{booking.refundAmount}
                       </p>
                     )}
+
+                    {/* ✅ Used at info on card */}
+                    {booking.isUsed && booking.usedAt && (
+                      <p className="text-zinc-500 text-xs mt-2 flex items-center gap-1">
+                        <CheckCircle2 size={10} />
+                        Used at {formatIST(booking.usedAt)}
+                      </p>
+                    )}
                   </div>
 
-                  {/* Right side */}
                   <div className="text-right shrink-0 flex flex-col items-end gap-2">
                     <p className="text-white font-bold text-xl">₹{booking.totalAmount}</p>
                     <p className="text-muted text-xs">{booking.paymentType}</p>
                     <p className="text-muted text-xs">#{booking.id}</p>
 
-                    {/* View Ticket — PAID only */}
                     {booking.status === "PAID" && (
                       <button
                         onClick={() => setSelectedTicket(booking)}
@@ -431,7 +452,6 @@ const MyBookings = () => {
                       </button>
                     )}
 
-                    {/* ✅ Pay Now — PENDING only */}
                     {canPayNow(booking) && (
                       <button
                         onClick={() => handlePayNow(booking)}
@@ -442,7 +462,6 @@ const MyBookings = () => {
                       </button>
                     )}
 
-                    {/* ✅ Cancel — PAID or PENDING, show not started */}
                     {canCancel(booking) && (
                       <button
                         onClick={() => setCancelTarget(booking)}

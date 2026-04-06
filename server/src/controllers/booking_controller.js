@@ -25,7 +25,6 @@ export const createBooking = asyncHandler(async (req, res) => {
     throw error;
   }
 
-  // ✅ FIX: validate all seatIds are positive integers with no duplicates
   const allPositiveIntegers = seatIds.every(
     (id) => Number.isInteger(id) && id > 0
   );
@@ -42,7 +41,6 @@ export const createBooking = asyncHandler(async (req, res) => {
     throw error;
   }
 
-  // 🛡️ Best-effort duplicate check — real guard is inside the worker transaction
   const existingActive = await prisma.booking.findFirst({
     where: {
       userId,
@@ -104,7 +102,6 @@ export const getBookingStatus = asyncHandler(async (req, res) => {
 
   let closed = false;
 
-  // ✅ Hard timeout — 2 minutes to allow Stripe payment to complete
   const hardTimeout = setTimeout(() => {
     if (!closed) {
       closed = true;
@@ -182,7 +179,7 @@ export const getMyBookings = asyncHandler(async (req, res) => {
   res.json({ success: true, bookings });
 });
 
-// ❌ CANCEL BOOKING
+// ❌ CANCEL BOOKING (USER)
 export const cancelBooking = asyncHandler(async (req, res) => {
   const userId = req.user.userId;
   const { id } = req.params;
@@ -215,9 +212,15 @@ export const cancelBooking = asyncHandler(async (req, res) => {
     throw error;
   }
 
+  // ✅ BLOCK — cannot cancel a used ticket
+  if (booking.isUsed) {
+    const error = new Error("Cannot cancel a ticket that has already been used for entry");
+    error.statusCode = 400;
+    throw error;
+  }
+
   // ── PENDING cancel ──────────────────────────────────────────────────────────
-if (booking.status === "PENDING") {
-    // ✅ Get locked seat IDs BEFORE releasing them
+  if (booking.status === "PENDING") {
     const lockedSeats = await prisma.showSeat.findMany({
       where: { pendingBookingId: bookingId },
       select: { id: true },
@@ -242,7 +245,6 @@ if (booking.status === "PENDING") {
       cancelledSeats: booking.seats.length,
     }).catch((err) => logger.error(`Cancel email error: ${err.message}`));
 
-    // ✅ Broadcast AVAILABLE using actual locked seat IDs
     lockedSeats.forEach((seat) => {
       broadcastToShow(booking.show.id, { seatId: seat.id, status: "AVAILABLE" });
     });
@@ -278,8 +280,6 @@ if (booking.status === "PENDING") {
     message = "Booking cancelled. No refund (under 4 hours to show). Seats released.";
   }
 
-  // ✅ FIX: PAID bookings have seats in BOOKED state with pendingBookingId = null
-  // Must release using actual showSeatId from BookingSeat records
   const bookedSeatIds = booking.seats.map((bs) => bs.showSeatId);
 
   await prisma.$transaction([
@@ -297,13 +297,10 @@ if (booking.status === "PENDING") {
     }),
   ]);
 
-
-  // ✅ Broadcast AVAILABLE
   bookedSeatIds.forEach((seatId) => {
     broadcastToShow(booking.show.id, { seatId, status: "AVAILABLE" });
   });
 
-  // ✅ Process Stripe refund
   if (booking.paymentType === "CARD" && booking.paymentId && refundAmount > 0) {
     try {
       await processRefund({

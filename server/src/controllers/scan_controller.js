@@ -2,7 +2,6 @@ import prisma from "../utils/prisma.js";
 import asyncHandler from "../utils/asyncHandler.js";
 import logger from "../config/logger.js";
 
-// ✅ Format to IST
 const formatIST = (dateStr) => {
   if (!dateStr) return null;
   return new Date(dateStr).toLocaleString("en-IN", {
@@ -16,13 +15,11 @@ const formatIST = (dateStr) => {
   });
 };
 
-// ✅ Check if show is in valid scanning window
-// Allow entry from 2 hours before show start to show end
 const getScanValidity = (show) => {
   const now = new Date();
   const startTime = new Date(show.startTime);
   const endTime = new Date(startTime.getTime() + (show.movie?.duration || 120) * 60 * 1000);
-  const entryOpenTime = new Date(startTime.getTime() - 2 * 60 * 60 * 1000); // 2hrs before
+  const entryOpenTime = new Date(startTime.getTime() - 2 * 60 * 60 * 1000);
 
   if (now > endTime) return { valid: false, reason: "SHOW_ENDED" };
   if (now < entryOpenTime) return { valid: false, reason: "TOO_EARLY", entryOpenTime };
@@ -30,7 +27,6 @@ const getScanValidity = (show) => {
 };
 
 // 📷 GET BOOKING DETAILS ON SCAN (STAFF + ADMIN)
-// Called immediately when QR is scanned — does NOT mark as used
 export const scanTicket = asyncHandler(async (req, res) => {
   const { bookingId } = req.params;
 
@@ -38,7 +34,8 @@ export const scanTicket = asyncHandler(async (req, res) => {
     where: { id: parseInt(bookingId) },
     include: {
       user: {
-        select: { id: true, name: true, surname: true, username: true },
+        // ✅ Added email to user select
+        select: { id: true, name: true, surname: true, username: true, email: true },
       },
       show: {
         include: {
@@ -52,7 +49,6 @@ export const scanTicket = asyncHandler(async (req, res) => {
     },
   });
 
-  // ❌ Booking not found
   if (!booking) {
     return res.status(404).json({
       valid: false,
@@ -61,7 +57,6 @@ export const scanTicket = asyncHandler(async (req, res) => {
     });
   }
 
-  // ❌ Not paid
   if (booking.status !== "PAID") {
     return res.status(400).json({
       valid: false,
@@ -80,7 +75,6 @@ export const scanTicket = asyncHandler(async (req, res) => {
     });
   }
 
-  // ❌ Already used
   if (booking.isUsed) {
     return res.status(400).json({
       valid: false,
@@ -99,7 +93,6 @@ export const scanTicket = asyncHandler(async (req, res) => {
     });
   }
 
-  // ✅ Check show timing window
   const scanValidity = getScanValidity(booking.show);
 
   if (!scanValidity.valid) {
@@ -139,21 +132,26 @@ export const scanTicket = asyncHandler(async (req, res) => {
     }
   }
 
-  // ✅ All good — return full booking details for staff to review
+  // ✅ Full booking data returned for verification
   return res.json({
     valid: true,
     booking: {
       id: booking.id,
       status: booking.status,
       paymentType: booking.paymentType,
+      paymentId: booking.paymentId,        // ✅ NEW
       totalAmount: booking.totalAmount,
       isUsed: booking.isUsed,
-      user: booking.user,
+      createdAt: formatIST(booking.createdAt), // ✅ NEW — booked on date
+      user: booking.user,                  // ✅ now includes email
       show: {
         id: booking.show.id,
         movie: booking.show.movie?.title,
+        moviePoster: booking.show.movie?.posterUrl,  // ✅ NEW
         movieRating: booking.show.movie?.rating,
         movieLanguage: booking.show.movie?.language,
+        movieGenre: booking.show.movie?.genre,       // ✅ NEW
+        movieDuration: booking.show.movie?.duration, // ✅ NEW
         theatre: booking.show.theatre?.name,
         location: booking.show.theatre?.location,
         showType: booking.show.showType,
@@ -171,7 +169,6 @@ export const scanTicket = asyncHandler(async (req, res) => {
 });
 
 // ✅ CONFIRM TICKET AS USED (STAFF + ADMIN)
-// Called when staff manually taps "Mark as Used"
 export const confirmTicket = asyncHandler(async (req, res) => {
   const { bookingId } = req.params;
 
@@ -198,7 +195,6 @@ export const confirmTicket = asyncHandler(async (req, res) => {
     });
   }
 
-  // ✅ Mark as used
   const updated = await prisma.booking.update({
     where: { id: parseInt(bookingId) },
     data: {

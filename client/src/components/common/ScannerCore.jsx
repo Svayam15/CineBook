@@ -1,7 +1,11 @@
 import { useEffect, useRef, useState } from "react";
 import toast from "react-hot-toast";
 import jsQR from "jsqr";
-import { ScanLine, CheckCircle2, XCircle, AlertTriangle, Camera, MapPin, Clock, User } from "lucide-react";
+import {
+  ScanLine, CheckCircle2, XCircle, AlertTriangle,
+  Camera, MapPin, Clock, User, Mail, CreditCard,
+  Calendar, Film, Hash
+} from "lucide-react";
 
 const API_URL = import.meta.env.VITE_API_URL;
 
@@ -66,84 +70,200 @@ const ResultCard = ({ result, onConfirm, onReset, confirming }) => {
     );
   }
 
+  // ✅ VALID TICKET — show everything
   return (
     <div className="space-y-4">
       <div className="bg-green-500/10 border border-green-500/30 rounded-2xl p-4 flex items-center gap-3">
         <CheckCircle2 size={28} className="text-green-400 flex-shrink-0" />
         <div>
           <p className="text-green-400 font-semibold">Valid Ticket</p>
-          <p className="text-muted text-xs">Review details and mark as used</p>
+          <p className="text-muted text-xs">Review all details carefully before marking as used</p>
         </div>
       </div>
 
-      <div className="bg-card border border-border rounded-2xl p-5 space-y-4">
-        <div>
-          <h2 className="font-heading text-xl font-bold text-white">{booking.show?.movie}</h2>
-          <div className="flex items-center gap-2 mt-1 flex-wrap">
-            {booking.show?.showType && (
-              <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full">
-                {booking.show.showType}
+      <div className="bg-card border border-border rounded-2xl overflow-hidden">
+
+        {/* Movie poster + title header */}
+        {booking.show?.moviePoster && (
+          <div className="relative h-28 overflow-hidden">
+            <img
+              src={booking.show.moviePoster}
+              alt={booking.show.movie}
+              className="w-full h-full object-cover object-top"
+              style={{ filter: "brightness(0.4) blur(2px)", transform: "scale(1.05)" }}
+            />
+            <div className="absolute inset-0 flex items-end p-4">
+              <div>
+                <h2 className="font-heading text-xl font-bold text-white leading-tight">
+                  {booking.show?.movie}
+                </h2>
+                <div className="flex items-center gap-2 mt-1 flex-wrap">
+                  {booking.show?.showType && (
+                    <span className="text-xs bg-primary/20 text-primary px-2 py-0.5 rounded-full">
+                      {booking.show.showType}
+                    </span>
+                  )}
+                  {booking.show?.movieRating && (
+                    <span className="text-xs bg-black/40 text-white px-2 py-0.5 rounded-full">
+                      {booking.show.movieRating}
+                    </span>
+                  )}
+                  {booking.show?.movieLanguage && (
+                    <span className="text-xs bg-black/40 text-white px-2 py-0.5 rounded-full">
+                      {booking.show.movieLanguage}
+                    </span>
+                  )}
+                  {booking.show?.movieGenre && (
+                    <span className="text-xs bg-black/40 text-white px-2 py-0.5 rounded-full">
+                      {booking.show.movieGenre}
+                    </span>
+                  )}
+                  {booking.show?.movieDuration && (
+                    <span className="text-xs bg-black/40 text-white px-2 py-0.5 rounded-full">
+                      {booking.show.movieDuration} min
+                    </span>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* No poster fallback */}
+        {!booking.show?.moviePoster && (
+          <div className="p-5 border-b border-border">
+            <h2 className="font-heading text-xl font-bold text-white">{booking.show?.movie}</h2>
+            <div className="flex items-center gap-2 mt-1 flex-wrap">
+              {booking.show?.showType && (
+                <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full">
+                  {booking.show.showType}
+                </span>
+              )}
+              {booking.show?.movieRating && (
+                <span className="text-xs bg-zinc-800 text-zinc-300 px-2 py-0.5 rounded-full">
+                  {booking.show.movieRating}
+                </span>
+              )}
+              {booking.show?.movieLanguage && (
+                <span className="text-xs bg-zinc-800 text-zinc-300 px-2 py-0.5 rounded-full">
+                  {booking.show.movieLanguage}
+                </span>
+              )}
+            </div>
+          </div>
+        )}
+
+        <div className="p-5 space-y-4">
+
+          {/* ✅ Person details */}
+          <div className="bg-dark rounded-xl p-4 space-y-2">
+            <p className="text-muted text-xs uppercase tracking-wide font-medium mb-3">
+              Customer Details
+            </p>
+            <div className="flex items-center gap-2 text-sm">
+              <User size={14} className="text-primary flex-shrink-0" />
+              <span className="text-white font-medium">
+                {booking.user?.name} {booking.user?.surname}
               </span>
+              <span className="text-muted text-xs">@{booking.user?.username}</span>
+            </div>
+            {booking.user?.email && (
+              <div className="flex items-center gap-2 text-sm">
+                <Mail size={14} className="text-primary flex-shrink-0" />
+                <span className="text-muted">{booking.user.email}</span>
+              </div>
             )}
-            {booking.show?.movieRating && (
-              <span className="text-xs bg-zinc-800 text-zinc-300 px-2 py-0.5 rounded-full">
-                {booking.show.movieRating}
+          </div>
+
+          {/* ✅ Show details */}
+          <div className="bg-dark rounded-xl p-4 space-y-2">
+            <p className="text-muted text-xs uppercase tracking-wide font-medium mb-3">
+              Show Details
+            </p>
+            <div className="flex items-center gap-2 text-sm text-muted">
+              <MapPin size={13} className="text-primary flex-shrink-0" />
+              <span>
+                {booking.show?.theatre}
+                {booking.show?.location ? `, ${booking.show.location}` : ""}
               </span>
+            </div>
+            <div className="flex items-center gap-2 text-sm text-muted">
+              <Clock size={13} className="text-primary flex-shrink-0" />
+              <span>{booking.show?.startTime}</span>
+            </div>
+          </div>
+
+          {/* ✅ Seat details */}
+          <div>
+            <p className="text-muted text-xs uppercase tracking-wide mb-2">
+              Seats ({booking.seats?.length})
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {Array.isArray(booking.seats) && booking.seats.map((seat, i) => (
+                <div
+                  key={i}
+                  className={`text-xs px-3 py-1.5 rounded-lg border font-medium flex flex-col items-center
+                    ${seat.type === "GOLDEN"
+                      ? "bg-yellow-500/10 text-yellow-400 border-yellow-500/20"
+                      : "bg-zinc-800 text-zinc-300 border-zinc-700"
+                    }`}
+                >
+                  <span>{seat.row}{seat.number}</span>
+                  <span className="text-[9px] opacity-60 mt-0.5">
+                    {seat.type === "GOLDEN" ? "✦ Golden" : "Regular"}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* ✅ Payment details */}
+          <div className="bg-dark rounded-xl p-4 space-y-2">
+            <p className="text-muted text-xs uppercase tracking-wide font-medium mb-3">
+              Payment Details
+            </p>
+            <div className="flex justify-between items-center">
+              <span className="text-muted text-sm flex items-center gap-1.5">
+                <CreditCard size={13} className="text-primary" />
+                Total Paid
+              </span>
+              <span className="text-white font-bold">₹{booking.totalAmount}</span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-muted text-sm">Payment Type</span>
+              <span className="text-white text-sm">{booking.paymentType}</span>
+            </div>
+            {booking.paymentId && (
+              <div className="flex justify-between items-center">
+                <span className="text-muted text-sm">Payment ID</span>
+                <span className="text-zinc-400 text-xs font-mono truncate max-w-[150px]">
+                  {booking.paymentId}
+                </span>
+              </div>
             )}
-            {booking.show?.movieLanguage && (
-              <span className="text-xs bg-zinc-800 text-zinc-300 px-2 py-0.5 rounded-full">
-                {booking.show.movieLanguage}
+          </div>
+
+          {/* ✅ Booking meta */}
+          <div className="bg-dark rounded-xl p-4 space-y-2">
+            <p className="text-muted text-xs uppercase tracking-wide font-medium mb-3">
+              Booking Info
+            </p>
+            <div className="flex justify-between items-center">
+              <span className="text-muted text-sm flex items-center gap-1.5">
+                <Hash size={13} className="text-primary" />
+                Booking ID
               </span>
-            )}
-          </div>
-        </div>
-
-        <div className="flex items-center gap-2 text-sm">
-          <User size={14} className="text-primary flex-shrink-0" />
-          <span className="text-white font-medium">
-            {booking.user?.name} {booking.user?.surname}
-          </span>
-          <span className="text-muted">@{booking.user?.username}</span>
-        </div>
-
-        <div className="space-y-2">
-          <div className="flex items-center gap-2 text-sm text-muted">
-            <MapPin size={13} className="text-primary flex-shrink-0" />
-            <span>{booking.show?.theatre}{booking.show?.location ? `, ${booking.show.location}` : ""}</span>
-          </div>
-          <div className="flex items-center gap-2 text-sm text-muted">
-            <Clock size={13} className="text-primary flex-shrink-0" />
-            <span>{booking.show?.startTime}</span>
-          </div>
-        </div>
-
-        <div>
-          <p className="text-muted text-xs uppercase tracking-wide mb-2">Seats</p>
-          <div className="flex flex-wrap gap-2">
-            {Array.isArray(booking.seats) && booking.seats.map((seat, i) => (
-              <span
-                key={i}
-                className={`text-xs px-2.5 py-1 rounded-lg border font-medium
-                  ${seat.type === "GOLDEN"
-                    ? "bg-yellow-500/10 text-yellow-400 border-yellow-500/20"
-                    : "bg-zinc-800 text-zinc-300 border-zinc-700"
-                  }`}
-              >
-                {seat.row}{seat.number} {seat.type === "GOLDEN" ? "✦" : ""}
+              <span className="text-white text-sm font-mono">#{booking.id}</span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-muted text-sm flex items-center gap-1.5">
+                <Calendar size={13} className="text-primary" />
+                Booked On
               </span>
-            ))}
+              <span className="text-white text-sm">{booking.createdAt}</span>
+            </div>
           </div>
         </div>
-
-        <div className="flex justify-between items-center bg-dark rounded-xl px-4 py-3">
-          <span className="text-muted text-sm">Total Paid</span>
-          <div className="text-right">
-            <span className="text-white font-bold">₹{booking.totalAmount}</span>
-            <span className="text-muted text-xs ml-2">{booking.paymentType}</span>
-          </div>
-        </div>
-
-        <p className="text-muted text-xs text-center">Booking #{booking.id}</p>
       </div>
 
       <button
@@ -164,7 +284,10 @@ const ResultCard = ({ result, onConfirm, onReset, confirming }) => {
         )}
       </button>
 
-      <button onClick={onReset} className="w-full bg-card border border-border text-muted hover:text-white py-3 rounded-2xl text-sm transition">
+      <button
+        onClick={onReset}
+        className="w-full bg-card border border-border text-muted hover:text-white py-3 rounded-2xl text-sm transition"
+      >
         Cancel — Scan Different Ticket
       </button>
     </div>
@@ -242,20 +365,27 @@ const ScannerCore = () => {
   const handleQRData = async (qrData) => {
     const parts = qrData.split("-");
     if (parts.length < 3 || parts[0] !== "CINEBOOK") {
-      setResult({ valid: false, reason: "INVALID_FORMAT", message: "Invalid QR code format. Not a CineBook ticket." });
+      setResult({
+        valid: false,
+        reason: "INVALID_FORMAT",
+        message: "Invalid QR code format. Not a CineBook ticket.",
+      });
       return;
     }
 
     const bookingId = parseInt(parts[1]);
     if (isNaN(bookingId)) {
-      setResult({ valid: false, reason: "INVALID_FORMAT", message: "Invalid booking ID in QR code." });
+      setResult({
+        valid: false,
+        reason: "INVALID_FORMAT",
+        message: "Invalid booking ID in QR code.",
+      });
       return;
     }
 
     setCurrentBookingId(bookingId);
 
     try {
-      // ✅ Use native fetch — bypasses axios interceptor completely
       const res = await fetch(`${API_URL}/bookings/scan/${bookingId}`, {
         credentials: "include",
       });
