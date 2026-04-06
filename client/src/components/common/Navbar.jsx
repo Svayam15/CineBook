@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
-import { Film, Ticket, LogOut, Home, User, Settings } from "lucide-react";
+import { Film, Ticket, LogOut, Home, User, FileText, Shield } from "lucide-react";
 import useAuthStore from "../../store/authStore";
 import toast from "react-hot-toast";
 
@@ -23,7 +23,6 @@ const Navbar = () => {
 
   const isActive = (path) => location.pathname === path;
 
-  // Close on outside click
   useEffect(() => {
     const handler = (e) => {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
@@ -34,9 +33,66 @@ const Navbar = () => {
     return () => document.removeEventListener("mousedown", handler);
   }, []);
 
-  const initials = user
-    ? `${user.name?.[0] ?? ""}`.toUpperCase()
-    : "?";
+  const initials = user ? `${user.name?.[0] ?? ""}`.toUpperCase() : "?";
+
+  const DropdownMenu = () => (
+    <>
+      {/* User info header */}
+      <div className="px-4 py-3 border-b border-border">
+        <p className="text-white text-sm font-semibold truncate">
+          {user?.name} {user?.surname}
+        </p>
+        <p className="text-muted text-xs truncate mt-0.5">@{user?.username}</p>
+      </div>
+
+      {/* Menu items */}
+      <div className="py-1">
+        <Link
+          to="/my-bookings"
+          onClick={() => setDropdownOpen(false)}
+          className="flex items-center gap-3 px-4 py-2.5 text-sm text-muted hover:text-white hover:bg-white/5 transition"
+        >
+          <Ticket size={15} />
+          My Bookings
+        </Link>
+        <Link
+          to="/profile"
+          onClick={() => setDropdownOpen(false)}
+          className="flex items-center gap-3 px-4 py-2.5 text-sm text-muted hover:text-white hover:bg-white/5 transition"
+        >
+          <User size={15} />
+          Profile
+        </Link>
+        <Link
+          to="/terms"
+          onClick={() => setDropdownOpen(false)}
+          className="flex items-center gap-3 px-4 py-2.5 text-sm text-muted hover:text-white hover:bg-white/5 transition"
+        >
+          <FileText size={15} />
+          Terms & Conditions
+        </Link>
+        <Link
+          to="/privacy"
+          onClick={() => setDropdownOpen(false)}
+          className="flex items-center gap-3 px-4 py-2.5 text-sm text-muted hover:text-white hover:bg-white/5 transition"
+        >
+          <Shield size={15} />
+          Privacy Policy
+        </Link>
+      </div>
+
+      {/* Logout */}
+      <div className="border-t border-border py-1">
+        <button
+          onClick={handleLogout}
+          className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-red-400 hover:bg-red-500/10 transition"
+        >
+          <LogOut size={15} />
+          Logout
+        </button>
+      </div>
+    </>
+  );
 
   return (
     <>
@@ -80,56 +136,9 @@ const Navbar = () => {
               {initials}
             </button>
 
-            {/* Dropdown */}
             {dropdownOpen && (
               <div className="absolute right-0 mt-2.5 w-52 bg-card border border-border rounded-2xl shadow-2xl overflow-hidden z-50">
-
-                {/* User info header */}
-                <div className="px-4 py-3 border-b border-border">
-                  <p className="text-white text-sm font-semibold truncate">
-                    {user?.name} {user?.surname}
-                  </p>
-                  <p className="text-muted text-xs truncate mt-0.5">@{user?.username}</p>
-                </div>
-
-                {/* Menu items */}
-                <div className="py-1">
-                  <Link
-                    to="/my-bookings"
-                    onClick={() => setDropdownOpen(false)}
-                    className="flex items-center gap-3 px-4 py-2.5 text-sm text-muted hover:text-white hover:bg-white/5 transition"
-                  >
-                    <Ticket size={15} />
-                    My Bookings
-                  </Link>
-                  <Link
-                    to="/profile"
-                    onClick={() => setDropdownOpen(false)}
-                    className="flex items-center gap-3 px-4 py-2.5 text-sm text-muted hover:text-white hover:bg-white/5 transition"
-                  >
-                    <User size={15} />
-                    Profile
-                  </Link>
-                  <Link
-                    to="/settings"
-                    onClick={() => setDropdownOpen(false)}
-                    className="flex items-center gap-3 px-4 py-2.5 text-sm text-muted hover:text-white hover:bg-white/5 transition"
-                  >
-                    <Settings size={15} />
-                    Settings
-                  </Link>
-                </div>
-
-                {/* Logout */}
-                <div className="border-t border-border py-1">
-                  <button
-                    onClick={handleLogout}
-                    className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-red-400 hover:bg-red-500/10 transition"
-                  >
-                    <LogOut size={15} />
-                    Logout
-                  </button>
-                </div>
+                <DropdownMenu />
               </div>
             )}
           </div>
@@ -169,53 +178,8 @@ const Navbar = () => {
 
         {/* Mobile dropdown — pops up above tab bar */}
         {dropdownOpen && (
-          <div
-            ref={dropdownRef}
-            className="absolute bottom-16 right-2 w-52 bg-card border border-border rounded-2xl shadow-2xl overflow-hidden"
-          >
-            <div className="px-4 py-3 border-b border-border">
-              <p className="text-white text-sm font-semibold truncate">
-                {user?.name} {user?.surname}
-              </p>
-              <p className="text-muted text-xs truncate mt-0.5">@{user?.username}</p>
-            </div>
-
-            <div className="py-1">
-              <Link
-                to="/my-bookings"
-                onClick={() => setDropdownOpen(false)}
-                className="flex items-center gap-3 px-4 py-2.5 text-sm text-muted hover:text-white hover:bg-white/5 transition"
-              >
-                <Ticket size={15} />
-                My Bookings
-              </Link>
-              <Link
-                to="/profile"
-                onClick={() => setDropdownOpen(false)}
-                className="flex items-center gap-3 px-4 py-2.5 text-sm text-muted hover:text-white hover:bg-white/5 transition"
-              >
-                <User size={15} />
-                Profile
-              </Link>
-              <Link
-                to="/settings"
-                onClick={() => setDropdownOpen(false)}
-                className="flex items-center gap-3 px-4 py-2.5 text-sm text-muted hover:text-white hover:bg-white/5 transition"
-              >
-                <Settings size={15} />
-                Settings
-              </Link>
-            </div>
-
-            <div className="border-t border-border py-1">
-              <button
-                onClick={handleLogout}
-                className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-red-400 hover:bg-red-500/10 transition"
-              >
-                <LogOut size={15} />
-                Logout
-              </button>
-            </div>
+          <div className="absolute bottom-16 right-2 w-52 bg-card border border-border rounded-2xl shadow-2xl overflow-hidden">
+            <DropdownMenu />
           </div>
         )}
       </nav>
