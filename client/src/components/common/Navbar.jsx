@@ -37,58 +37,48 @@ const Navbar = () => {
 
   const DropdownMenu = () => (
     <>
-      {/* User info header */}
       <div className="px-4 py-3 border-b border-border">
         <p className="text-white text-sm font-semibold truncate">
           {user?.name} {user?.surname}
         </p>
         <p className="text-muted text-xs truncate mt-0.5">@{user?.username}</p>
       </div>
-
-      {/* Menu items */}
       <div className="py-1">
         <Link
           to="/my-bookings"
           onClick={() => setDropdownOpen(false)}
           className="flex items-center gap-3 px-4 py-2.5 text-sm text-muted hover:text-white hover:bg-white/5 transition"
         >
-          <Ticket size={15} />
-          My Bookings
+          <Ticket size={15} /> My Bookings
         </Link>
         <Link
           to="/profile"
           onClick={() => setDropdownOpen(false)}
           className="flex items-center gap-3 px-4 py-2.5 text-sm text-muted hover:text-white hover:bg-white/5 transition"
         >
-          <User size={15} />
-          Profile
+          <User size={15} /> Profile
         </Link>
         <Link
           to="/terms"
           onClick={() => setDropdownOpen(false)}
           className="flex items-center gap-3 px-4 py-2.5 text-sm text-muted hover:text-white hover:bg-white/5 transition"
         >
-          <FileText size={15} />
-          Terms & Conditions
+          <FileText size={15} /> Terms & Conditions
         </Link>
         <Link
           to="/privacy"
           onClick={() => setDropdownOpen(false)}
           className="flex items-center gap-3 px-4 py-2.5 text-sm text-muted hover:text-white hover:bg-white/5 transition"
         >
-          <Shield size={15} />
-          Privacy Policy
+          <Shield size={15} /> Privacy Policy
         </Link>
       </div>
-
-      {/* Logout */}
       <div className="border-t border-border py-1">
         <button
           onClick={handleLogout}
           className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-red-400 hover:bg-red-500/10 transition"
         >
-          <LogOut size={15} />
-          Logout
+          <LogOut size={15} /> Logout
         </button>
       </div>
     </>
@@ -108,7 +98,7 @@ const Navbar = () => {
             </span>
           </Link>
 
-          {/* Desktop Nav */}
+          {/* Desktop Nav — center links, hidden on mobile */}
           <nav className="hidden md:flex items-center gap-1">
             <Link
               to="/"
@@ -122,12 +112,11 @@ const Navbar = () => {
               className={`px-4 py-2 rounded-xl text-sm transition flex items-center gap-1.5
                 ${isActive("/my-bookings") ? "bg-primary/10 text-primary font-medium" : "text-muted hover:text-white"}`}
             >
-              <Ticket size={15} />
-              My Bookings
+              <Ticket size={15} /> My Bookings
             </Link>
           </nav>
 
-          {/* Avatar + Dropdown */}
+          {/* Avatar — always visible, right side */}
           <div className="relative" ref={dropdownRef}>
             <button
               onClick={() => setDropdownOpen((prev) => !prev)}
@@ -164,24 +153,18 @@ const Navbar = () => {
             <Ticket size={20} />
             <span>My Bookings</span>
           </Link>
-          <button
-            onClick={() => setDropdownOpen((prev) => !prev)}
+          <Link
+            to="/profile"
             className={`flex flex-col items-center justify-center gap-1 text-xs transition
-              ${dropdownOpen ? "text-primary" : "text-muted"}`}
+              ${isActive("/profile") ? "text-primary" : "text-muted"}`}
           >
-            <div className="w-6 h-6 rounded-full bg-primary flex items-center justify-center text-white font-bold text-[10px]">
+            <div className={`w-6 h-6 rounded-full flex items-center justify-center font-bold text-[10px] text-white
+              ${isActive("/profile") ? "bg-primary" : "bg-primary/70"}`}>
               {initials}
             </div>
             <span>Profile</span>
-          </button>
+          </Link>
         </div>
-
-        {/* Mobile dropdown — pops up above tab bar */}
-        {dropdownOpen && (
-          <div className="absolute bottom-16 right-2 w-52 bg-card border border-border rounded-2xl shadow-2xl overflow-hidden">
-            <DropdownMenu />
-          </div>
-        )}
       </nav>
     </>
   );
