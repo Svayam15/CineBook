@@ -3,7 +3,7 @@ import ScannerCore from "../../components/common/ScannerCore";
 
 const Scanner = () => (
   <AdminLayout>
-    <ScannerCore />
+    <ScannerCore isAdmin={true} />
   </AdminLayout>
 );
 

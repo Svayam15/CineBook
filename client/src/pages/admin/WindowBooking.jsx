@@ -3,37 +3,90 @@ import { useEffect, useState, useRef } from "react";
 import AdminLayout from "../../components/admin/AdminLayout";
 import api from "../../api/axios";
 import toast from "react-hot-toast";
-import { Ticket, X, Printer } from "lucide-react";
+import html2canvas from "html2canvas";
+import jsPDF from "jspdf";
+import { Ticket, X, Printer, Download, MapPin, Clock } from "lucide-react";
 import Spinner from "../../components/common/Spinner";
 import { QRCodeSVG } from "qrcode.react";
 
 // ─── QR Modal ─────────────────────────────────────────────────────────────────
+const downloadTicketPDF = async (ticketRef, bookingId) => {
+  if (!ticketRef.current) return;
+  try {
+    toast.loading("Generating PDF...", { id: "pdf" });
+    const canvas = await html2canvas(ticketRef.current, {
+      backgroundColor: "#0D0D0D",
+      scale: 2,
+      useCORS: true,
+      allowTaint: true,
+    });
+    const imgData = canvas.toDataURL("image/png");
+    const pdf = new jsPDF({
+      orientation: "portrait",
+      unit: "px",
+      format: [canvas.width / 2, canvas.height / 2],
+    });
+    pdf.addImage(imgData, "PNG", 0, 0, canvas.width / 2, canvas.height / 2);
+    pdf.save(`CineBook-Ticket-${bookingId}.pdf`);
+    toast.success("Ticket downloaded!", { id: "pdf" });
+  } catch {
+    toast.error("Failed to generate PDF", { id: "pdf" });
+  }
+};
+
 const QRModal = ({ booking, show, onClose }) => {
   const printRef = useRef();
+  const ticketRef = useRef();
   const qrValue = `CINEBOOK-${booking.id}-${booking.showId}`;
 
   const handlePrint = () => {
-    const content = printRef.current;
     const printWindow = window.open("", "_blank");
     printWindow.document.write(`
-      <html>
+      <html lang="en">
         <head>
           <title>CineBook Ticket — Booking #${booking.id}</title>
           <style>
-            body { font-family: Arial, sans-serif; display: flex; justify-content: center; padding: 40px; }
-            .ticket { border: 2px dashed #333; border-radius: 16px; padding: 32px; max-width: 360px; text-align: center; }
-            h1 { font-size: 24px; margin-bottom: 4px; }
-            p { color: #555; font-size: 14px; margin: 4px 0; }
-            .qr { margin: 24px auto; }
-            .seats { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin: 12px 0; }
-            .seat { border: 1px solid #333; border-radius: 8px; padding: 4px 10px; font-size: 13px; font-weight: bold; }
+            * { box-sizing: border-box; margin: 0; padding: 0; }
+            body { font-family: Arial, sans-serif; background: #fff; display: flex; justify-content: center; padding: 40px; }
+            .ticket { border: 2px dashed #333; border-radius: 16px; padding: 32px; max-width: 400px; width: 100%; }
+            .title { font-size: 22px; font-weight: bold; margin-bottom: 4px; }
+            .subtitle { color: #666; font-size: 13px; margin-bottom: 16px; }
             .divider { border-top: 1px dashed #ccc; margin: 16px 0; }
-            .total { font-size: 22px; font-weight: bold; }
-            .footer { font-size: 11px; color: #999; margin-top: 16px; }
+            .row { display: flex; justify-content: space-between; margin: 6px 0; font-size: 13px; }
+            .label { color: #888; }
+            .value { font-weight: 600; color: #111; }
+            .seats { display: flex; gap: 8px; flex-wrap: wrap; margin: 12px 0; }
+            .seat { border: 1px solid #333; border-radius: 8px; padding: 4px 10px; font-size: 12px; font-weight: bold; }
+            .seat.golden { border-color: #b8860b; color: #b8860b; }
+            .total { font-size: 20px; font-weight: bold; text-align: center; margin: 12px 0; }
+            .qr-wrap { display: flex; flex-direction: column; align-items: center; gap: 8px; margin-top: 16px; }
+            .qr-code { font-size: 10px; color: #999; font-family: monospace; }
+            .footer { font-size: 11px; color: #aaa; text-align: center; margin-top: 8px; }
           </style>
         </head>
         <body>
-          ${content.innerHTML}
+          <div class="ticket">
+            <div class="title">${show?.movie?.title || "Movie"}</div>
+            <div class="subtitle">${show?.showType || ""} · ${show?.movie?.language || ""}</div>
+            <div class="divider"></div>
+            <div class="row"><span class="label">Theatre</span><span class="value">${show?.theatre?.name || ""}</span></div>
+            <div class="row"><span class="label">Location</span><span class="value">${show?.theatre?.location || ""}</span></div>
+            <div class="row"><span class="label">Show Time</span><span class="value">${show?.startTime || ""}</span></div>
+            <div class="row"><span class="label">Payment</span><span class="value">${booking.paymentType}</span></div>
+            <div class="divider"></div>
+            <div class="label" style="font-size:12px;margin-bottom:8px;">SEATS</div>
+            <div class="seats">
+              ${(booking.seats || []).map(s => `<span class="seat ${s.type === "GOLDEN" ? "golden" : ""}">${s.row}${s.number}</span>`).join("")}
+            </div>
+            <div class="divider"></div>
+            <div class="total">₹${booking.totalAmount}</div>
+            <div class="divider"></div>
+            <div class="qr-wrap">
+              ${printRef.current?.querySelector("svg")?.outerHTML || ""}
+              <div class="qr-code">${qrValue}</div>
+              <div class="footer">Booking #${booking.id} · Show this at the entrance</div>
+            </div>
+          </div>
         </body>
       </html>
     `);
@@ -45,7 +98,7 @@ const QRModal = ({ booking, show, onClose }) => {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm px-4">
-      <div className="bg-card border border-border rounded-2xl w-full max-w-sm shadow-2xl overflow-hidden">
+      <div className="bg-card border border-border rounded-2xl w-full max-w-sm md:max-w-2xl shadow-2xl overflow-hidden">
 
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-border">
@@ -58,85 +111,124 @@ const QRModal = ({ booking, show, onClose }) => {
           </button>
         </div>
 
-        {/* Ticket Body — printable */}
-        <div className="p-5">
-          <div ref={printRef}>
-            <div className="ticket" style={{ fontFamily: "Arial, sans-serif", textAlign: "center" }}>
-              {/* Movie */}
-              <h1 className="font-heading text-lg font-bold text-white mb-1">
-                {show?.movie?.title}
-              </h1>
-              <p className="text-muted text-sm">{show?.showType} · {show?.movie?.language}</p>
+        <div className="max-h-[80vh] overflow-y-auto">
+          {/* ✅ Two column on desktop */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-0" ref={ticketRef}>
 
-              {/* Divider */}
-              <div className="border-t border-dashed border-border my-4" />
-
-              {/* Details */}
-              <div className="space-y-1.5 text-sm text-muted mb-4">
-                <p>🏛️ {show?.theatre?.name}, {show?.theatre?.location}</p>
-                <p>🕐 {show?.startTime}</p>
-                <p>💳 {booking.paymentType} Payment</p>
-              </div>
-
-              {/* Seats */}
-              <div className="flex flex-wrap gap-2 justify-center mb-4">
-                {booking.seats?.map((seat, i) => (
-                  <span
-                    key={i}
-                    className={`text-xs px-2.5 py-1 rounded-lg border font-medium
-                      ${seat.type === "GOLDEN"
-                        ? "bg-yellow-500/10 text-yellow-400 border-yellow-500/20"
-                        : "bg-zinc-800 text-zinc-300 border-zinc-700"
-                      }`}
-                  >
-                    {seat.row}{seat.number}
+            {/* Left — ticket details */}
+            <div className="p-5 space-y-4 md:border-r md:border-border" ref={printRef}>
+              <div>
+                <h3 className="font-heading text-lg font-bold text-white">
+                  {show?.movie?.title}
+                </h3>
+                <div className="flex gap-2 mt-1 flex-wrap">
+                  <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full">
+                    {show?.showType}
                   </span>
-                ))}
+                  {show?.movie?.language && (
+                    <span className="text-xs bg-zinc-800 text-zinc-300 px-2 py-0.5 rounded-full">
+                      {show.movie.language}
+                    </span>
+                  )}
+                  {show?.movie?.rating && (
+                    <span className="text-xs bg-zinc-800 text-zinc-300 px-2 py-0.5 rounded-full">
+                      {show.movie.rating}
+                    </span>
+                  )}
+                </div>
               </div>
 
-              {/* Amount */}
-              <div className="bg-dark rounded-xl px-4 py-3 mb-4 flex justify-between items-center">
-                <span className="text-muted text-sm">Total</span>
+              <div className="border-t border-dashed border-border" />
+
+              <div className="space-y-2 text-sm">
+                <div className="flex items-center gap-2 text-muted">
+                  <MapPin size={13} className="text-primary shrink-0" />
+                  <span>{show?.theatre?.name}, {show?.theatre?.location}</span>
+                </div>
+                <div className="flex items-center gap-2 text-muted">
+                  <Clock size={13} className="text-primary shrink-0" />
+                  <span>{show?.startTime}</span>
+                </div>
+              </div>
+
+              <div>
+                <p className="text-muted text-xs mb-2">Seats</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {(booking.seats || []).map((seat, i) => (
+                    <span
+                      key={i}
+                      className={`text-xs px-2.5 py-1 rounded-lg border font-medium
+                        ${seat.type === "GOLDEN"
+                          ? "bg-yellow-500/10 text-yellow-400 border-yellow-500/20"
+                          : "bg-zinc-800 text-zinc-300 border-zinc-700"
+                        }`}
+                    >
+                      {seat.row}{seat.number}
+                    </span>
+                  ))}
+                </div>
+              </div>
+
+              <div className="border-t border-dashed border-border" />
+
+              <div className="flex justify-between items-center bg-dark rounded-xl px-4 py-3">
+                <span className="text-muted text-sm">Total Paid</span>
                 <span className="text-white font-bold text-lg">₹{booking.totalAmount}</span>
               </div>
 
-              {/* Divider */}
-              <div className="border-t border-dashed border-border my-4" />
-
-              {/* QR Code */}
-              <div className="flex flex-col items-center gap-3">
-                <div className="bg-white p-3 rounded-2xl">
-                  <QRCodeSVG
-                    value={qrValue}
-                    size={160}
-                    bgColor="#ffffff"
-                    fgColor="#0D0D0D"
-                    level="H"
-                  />
-                </div>
-                <p className="text-muted text-xs font-mono tracking-wide">
-                  {qrValue}
-                </p>
-                <p className="text-muted text-xs">Booking #{booking.id} · Show this at entrance</p>
+              <div className="flex justify-between items-center text-sm">
+                <span className="text-muted">Payment</span>
+                <span className="text-white">{booking.paymentType}</span>
               </div>
+
+              <div className="flex justify-between items-center text-sm">
+                <span className="text-muted">Booking ID</span>
+                <span className="text-white font-mono">#{booking.id}</span>
+              </div>
+            </div>
+
+            {/* Right — QR */}
+            <div className="p-5 flex flex-col items-center justify-center gap-4 bg-dark/30">
+              <div className="border-t border-dashed border-border w-full md:hidden" />
+              <p className="text-muted text-xs text-center">Show this QR at the entrance</p>
+              <div className="bg-white p-4 rounded-2xl">
+                <QRCodeSVG
+                  value={qrValue}
+                  size={180}
+                  bgColor="#ffffff"
+                  fgColor="#0D0D0D"
+                  level="H"
+                />
+              </div>
+              <p className="text-muted text-xs font-mono tracking-wide text-center break-all">
+                {qrValue}
+              </p>
             </div>
           </div>
 
-          {/* Print Button */}
-          <button
-            onClick={handlePrint}
-            className="w-full mt-4 flex items-center justify-center gap-2 bg-primary hover:bg-primary-dark text-white font-semibold py-3 rounded-xl transition"
-          >
-            <Printer size={16} />
-            Print Ticket
-          </button>
-
-          <button
-            onClick={onClose}
-            className="w-full mt-2 bg-card border border-border text-muted hover:text-white py-2.5 rounded-xl text-sm transition"
-          >
-            Close
-          </button>
+          {/* ✅ Action buttons */}
+          <div className="p-5 pt-0 flex flex-col gap-2">
+            <button
+              onClick={() => downloadTicketPDF(ticketRef, booking.id)}
+              className="w-full flex items-center justify-center gap-2 bg-primary/10 hover:bg-primary/20 border border-primary/20 text-primary font-semibold py-3 rounded-xl transition text-sm"
+            >
+              <Download size={16} />
+              Download Ticket PDF
+            </button>
+            <button
+              onClick={handlePrint}
+              className="w-full flex items-center justify-center gap-2 bg-card border border-border text-muted hover:text-white font-semibold py-3 rounded-xl transition text-sm"
+            >
+              <Printer size={16} />
+              Print Ticket
+            </button>
+            <button
+              onClick={onClose}
+              className="w-full bg-dark border border-border text-muted hover:text-white py-2.5 rounded-xl text-sm transition"
+            >
+              Close
+            </button>
+          </div>
         </div>
       </div>
     </div>
