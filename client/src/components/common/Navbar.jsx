@@ -15,7 +15,7 @@ const DrawerCard = ({ children }) => (
   </div>
 );
 
-const DrawerRow = ({Icon, label, onClick }) => (
+const DrawerRow = ({icon: Icon, label, onClick }) => (
   <button
     onClick={onClick}
     className="w-full flex items-center gap-4 px-4 py-4 text-left hover:bg-gray-50 transition"
@@ -33,8 +33,7 @@ const ProfileDrawer = ({ onClose, user, onLogout, navigate }) => {
   return (
     <>
       <div className="fixed inset-0 z-40 bg-black/20 backdrop-blur-sm" onClick={onClose} />
-      // AFTER
-<div className="fixed inset-0 md:inset-auto md:top-0 md:right-0 md:h-full md:w-80 bg-gray-50 z-50 flex flex-col shadow-2xl overflow-y-auto">
+<div className="fixed top-0 right-0 h-full w-screen md:w-80 bg-gray-50 z-50 flex flex-col shadow-2xl overflow-y-auto">
         <div className="flex items-center gap-3 px-5 py-5 bg-white border-b border-gray-100">
           <button onClick={onClose} className="text-gray-500 hover:text-gray-800 transition">
             <ArrowLeft size={20} />
