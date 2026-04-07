@@ -159,13 +159,13 @@ const Navbar = ({ onSearchChange, searchValue }) => {
               <Search size={20} strokeWidth={1.8} />
             </button>
 
-            {/* Avatar */}
-            <button
-              onClick={() => setDrawerOpen(true)}
-              className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center font-bold text-sm text-primary hover:bg-primary/20 transition"
-            >
-              {initials}
-            </button>
+            {/* Avatar — hidden on mobile since bottom tab has Profile */}
+          <button
+                  onClick={() => setDrawerOpen(true)}
+                  className="hidden md:flex w-9 h-9 rounded-full bg-primary/10 items-center justify-center font-bold text-sm text-primary hover:bg-primary/20 transition"
+                  >
+          {initials}
+          </button>
           </div>
         </div>
 
