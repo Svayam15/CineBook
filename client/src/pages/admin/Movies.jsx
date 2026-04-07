@@ -208,7 +208,6 @@ if (!form.releaseDate) return toast.error("Please select a release date");
             <label className="text-sm text-muted font-medium">Duration (mins) <span className="text-red-400">*</span></label>
             <input
               type="number"
-              inputMode="numeric"
               value={form.duration}
               onChange={(e) => set("duration", e.target.value)}
               placeholder="e.g. 148"
