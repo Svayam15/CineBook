@@ -1,36 +1,31 @@
 import { useNavigate } from "react-router-dom";
 import {
   ArrowLeft, ChevronRight, LogOut,
-  Ticket, FileText, Shield,
+  BookMarked, MessageSquare, HelpCircle, FileText,
 } from "lucide-react";
 import useAuthStore from "../../store/authStore";
 import toast from "react-hot-toast";
 
-const Row = ({ icon: Icon, label, to, onClick, danger }) => {
+const Row = ({ icon: Icon, label, to, onClick }) => {
   const navigate = useNavigate();
-
   const handleClick = () => {
     if (onClick) return onClick();
     if (to) navigate(to);
   };
-
   return (
     <button
       onClick={handleClick}
-      className={`w-full flex items-center gap-4 px-4 py-4 transition text-left
-        ${danger ? "hover:bg-red-500/5" : "hover:bg-white/3"}`}
+      className="w-full flex items-center gap-4 px-4 py-4 text-left hover:bg-gray-50 transition"
     >
-      <Icon size={17} className={danger ? "text-red-400" : "text-muted"} />
-      <span className={`flex-1 text-sm font-medium ${danger ? "text-red-400" : "text-white"}`}>
-        {label}
-      </span>
-      {!danger && <ChevronRight size={15} className="text-muted" />}
+      <Icon size={18} className="text-gray-500 shrink-0" strokeWidth={1.5} />
+      <span className="flex-1 text-sm font-medium text-gray-800">{label}</span>
+      <ChevronRight size={16} className="text-gray-400" />
     </button>
   );
 };
 
-const CardGroup = ({ children }) => (
-  <div className="bg-card border border-border rounded-2xl overflow-hidden divide-y divide-border">
+const Card = ({ children }) => (
+  <div className="bg-white rounded-2xl overflow-hidden shadow-sm border border-gray-100 divide-y divide-gray-100">
     {children}
   </div>
 );
@@ -48,57 +43,66 @@ const Profile = () => {
     }
   };
 
-  const initials = user
-    ? `${user.name?.[0] ?? ""}${user.surname?.[0] ?? ""}`.toUpperCase()
-    : "?";
+  const initials = user ? `${user.name?.[0] ?? ""}`.toUpperCase() : "?";
 
   return (
-    <div className="min-h-screen bg-dark pb-24">
+    <div className="min-h-screen bg-gray-100 pb-24">
 
       {/* Sticky header */}
-      <div className="sticky top-0 z-40 bg-card border-b border-border px-4 py-4 flex items-center gap-3">
-        <button
-          onClick={() => navigate(-1)}
-          className="text-muted hover:text-white transition"
-        >
+      <div className="sticky top-0 z-40 bg-white border-b border-gray-200 px-4 py-4 flex items-center gap-3">
+        <button onClick={() => navigate(-1)} className="text-gray-600 hover:text-gray-900 transition">
           <ArrowLeft size={20} />
         </button>
-        <h1 className="font-heading text-base font-bold text-white">Profile</h1>
+        <h1 className="text-base font-bold text-gray-900">Profile</h1>
       </div>
 
       <div className="max-w-xl mx-auto px-4 sm:px-6 py-6 space-y-5">
 
         {/* Avatar + name */}
         <div className="flex items-center gap-4 px-1 py-2">
-          <div className="w-16 h-16 rounded-full bg-primary/20 border-2 border-primary/30 flex items-center justify-center text-primary font-bold text-2xl shrink-0">
+          <div className="w-16 h-16 rounded-full bg-violet-200 flex items-center justify-center text-violet-600 font-bold text-2xl shrink-0">
             {initials}
           </div>
           <div>
-            <p className="text-white font-bold text-lg leading-tight">
+            <p className="text-gray-900 font-bold text-lg leading-tight">
               {user?.name} {user?.surname}
             </p>
-            <p className="text-muted text-sm mt-0.5">{user?.email}</p>
+            <p className="text-gray-500 text-sm mt-0.5">{user?.email}</p>
           </div>
         </div>
 
         {/* Bookings */}
-        <CardGroup>
-          <Row icon={Ticket} label="View all bookings" to="/my-bookings" />
-        </CardGroup>
+        <Card>
+          <Row icon={BookMarked} label="View all bookings" to="/my-bookings" />
+        </Card>
+
+        {/* Support */}
+        <div className="space-y-2">
+          <p className="text-gray-900 text-sm font-bold px-1">Support</p>
+          <Card>
+            <Row icon={MessageSquare} label="Chat with us" to="/support" />
+          </Card>
+        </div>
 
         {/* More */}
         <div className="space-y-2">
-          <p className="text-muted text-xs font-semibold px-1 uppercase tracking-wide">More</p>
-          <CardGroup>
-            <Row icon={FileText} label="Terms & Conditions" to="/terms" />
-            <Row icon={Shield} label="Privacy Policy" to="/privacy" />
-          </CardGroup>
+          <p className="text-gray-900 text-sm font-bold px-1">More</p>
+          <Card>
+            <Row icon={HelpCircle} label="Terms & Conditions" to="/terms" />
+            <Row icon={FileText} label="Privacy Policy" to="/privacy" />
+          </Card>
         </div>
 
         {/* Logout */}
-        <CardGroup>
-          <Row icon={LogOut} label="Logout" onClick={handleLogout} danger />
-        </CardGroup>
+        <Card>
+          <button
+            onClick={handleLogout}
+            className="w-full flex items-center gap-4 px-4 py-4 text-left hover:bg-gray-50 transition"
+          >
+            <LogOut size={18} className="text-gray-500 shrink-0" strokeWidth={1.5} />
+            <span className="flex-1 text-sm font-medium text-gray-800">Logout</span>
+          </button>
+        </Card>
 
       </div>
     </div>

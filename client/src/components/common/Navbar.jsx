@@ -1,8 +1,8 @@
 import { useState, useEffect } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import {
-  Film, Ticket, LogOut, Home,
-  FileText, Shield, ArrowLeft, ChevronRight,
+  Film, Ticket, Home, ArrowLeft, ChevronRight,
+  BookMarked, MessageSquare, HelpCircle, FileText, LogOut,
 } from "lucide-react";
 import useAuthStore from "../../store/authStore";
 import toast from "react-hot-toast";
@@ -20,7 +20,7 @@ const DrawerRow = ({ icon: Icon, label, onClick }) => (
     onClick={onClick}
     className="w-full flex items-center gap-4 px-4 py-4 text-left hover:bg-gray-50 transition"
   >
-    <Icon size={18} className="text-gray-500 shrink-0" />
+    <Icon size={18} className="text-gray-500 shrink-0" strokeWidth={1.5} />
     <span className="flex-1 text-sm font-medium text-gray-800">{label}</span>
     <ChevronRight size={16} className="text-gray-400" />
   </button>
@@ -32,8 +32,11 @@ const ProfileDrawer = ({ onClose, user, onLogout, navigate }) => {
 
   return (
     <>
-      {/* Backdrop */}
-      <div className="fixed inset-0 z-40 bg-black/20" onClick={onClose} />
+      {/* Backdrop with blur — exactly like District */}
+      <div
+        className="fixed inset-0 z-40 bg-black/10 backdrop-blur-sm"
+        onClick={onClose}
+      />
 
       {/* Drawer panel */}
       <div className="fixed top-0 right-0 h-full w-80 bg-gray-100 z-50 flex flex-col shadow-2xl overflow-y-auto animate-slide-in-right">
@@ -50,7 +53,7 @@ const ProfileDrawer = ({ onClose, user, onLogout, navigate }) => {
 
           {/* Avatar + name */}
           <div className="flex items-center gap-4 px-1">
-            <div className="w-16 h-16 rounded-full bg-primary/20 flex items-center justify-center text-primary font-bold text-2xl shrink-0">
+            <div className="w-16 h-16 rounded-full bg-violet-200 flex items-center justify-center text-violet-600 font-bold text-2xl shrink-0">
               {initials}
             </div>
             <div>
@@ -64,23 +67,35 @@ const ProfileDrawer = ({ onClose, user, onLogout, navigate }) => {
           {/* Bookings */}
           <DrawerCard>
             <DrawerRow
-              icon={Ticket}
+              icon={BookMarked}
               label="View all bookings"
               onClick={() => { onClose(); navigate("/my-bookings"); }}
             />
           </DrawerCard>
+
+          {/* Support */}
+          <div className="space-y-2">
+            <p className="text-gray-900 text-sm font-bold px-1">Support</p>
+            <DrawerCard>
+              <DrawerRow
+                icon={MessageSquare}
+                label="Chat with us"
+                onClick={() => { onClose(); navigate("/support"); }}
+              />
+            </DrawerCard>
+          </div>
 
           {/* More */}
           <div className="space-y-2">
             <p className="text-gray-900 text-sm font-bold px-1">More</p>
             <DrawerCard>
               <DrawerRow
-                icon={FileText}
+                icon={HelpCircle}
                 label="Terms & Conditions"
                 onClick={() => { onClose(); navigate("/terms"); }}
               />
               <DrawerRow
-                icon={Shield}
+                icon={FileText}
                 label="Privacy Policy"
                 onClick={() => { onClose(); navigate("/privacy"); }}
               />
@@ -93,7 +108,7 @@ const ProfileDrawer = ({ onClose, user, onLogout, navigate }) => {
               onClick={onLogout}
               className="w-full flex items-center gap-4 px-4 py-4 text-left hover:bg-gray-50 transition"
             >
-              <LogOut size={18} className="text-gray-500 shrink-0" />
+              <LogOut size={18} className="text-gray-500 shrink-0" strokeWidth={1.5} />
               <span className="flex-1 text-sm font-medium text-gray-800">Logout</span>
             </button>
           </DrawerCard>
@@ -124,7 +139,6 @@ const Navbar = () => {
   const isActive = (path) => location.pathname === path;
   const initials = user ? `${user.name?.[0] ?? ""}`.toUpperCase() : "?";
 
-  // Close drawer on route change — use pathname as dep, not setter
   const pathname = location.pathname;
   useEffect(() => {
     setDrawerOpen(false);
@@ -165,7 +179,7 @@ const Navbar = () => {
           {/* Avatar — opens drawer */}
           <button
             onClick={() => setDrawerOpen(true)}
-            className="w-9 h-9 rounded-full bg-primary/20 flex items-center justify-center font-bold text-sm text-primary hover:bg-primary/30 transition"
+            className="w-9 h-9 rounded-full bg-violet-200 flex items-center justify-center font-bold text-sm text-violet-600 hover:bg-violet-300 transition"
           >
             {initials}
           </button>
@@ -207,7 +221,7 @@ const Navbar = () => {
               ${isActive("/profile") ? "text-primary" : "text-muted"}`}
           >
             <div className={`w-6 h-6 rounded-full flex items-center justify-center font-bold text-[10px]
-              ${isActive("/profile") ? "bg-primary text-white" : "bg-primary/20 text-primary"}`}>
+              ${isActive("/profile") ? "bg-violet-600 text-white" : "bg-violet-200 text-violet-600"}`}>
               {initials}
             </div>
             <span>Profile</span>
