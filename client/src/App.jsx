@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
 import useAuthStore from "./store/authStore";
 import api from "./api/axios";
+import AdminProfile from "./pages/admin/AdminProfile";
 
 // Auth pages
 import Login from "./pages/Login";
@@ -129,6 +130,7 @@ function App() {
       <Route path="/admin/users" element={<ProtectedRoute adminOnly><Users /></ProtectedRoute>} />
       <Route path="/admin/window-booking" element={<ProtectedRoute adminOnly><WindowBooking /></ProtectedRoute>} />
       <Route path="/admin/scanner" element={<ProtectedRoute adminOnly><Scanner /></ProtectedRoute>} /> {/* ✅ NEW */}
+      <Route path="/admin/profile" element={<ProtectedRoute adminOnly><AdminProfile /></ProtectedRoute>} />
 
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
