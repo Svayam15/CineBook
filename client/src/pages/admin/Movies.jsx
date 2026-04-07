@@ -279,7 +279,6 @@ if (!form.releaseDate) return toast.error("Please select a release date");
           <textarea
             value={form.description}
             onChange={(e) => set("description", e.target.value)}
-            required
             rows={3}
             placeholder="Movie synopsis..."
             className="bg-gray-50 border border-gray-200 text-gray-900 rounded-xl px-4 py-2.5 outline-none focus:border-primary text-sm placeholder:text-gray-400 resize-none"
