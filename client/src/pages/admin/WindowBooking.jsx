@@ -471,15 +471,15 @@ const openPrintWindow = () => {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm px-4">
-      <div className="bg-card border border-border rounded-2xl w-full max-w-sm md:max-w-2xl shadow-2xl overflow-hidden">
+      <div className="bg-white border border-gray-100 rounded-2xl w-full max-w-sm md:max-w-2xl shadow-2xl overflow-hidden">
 
         {/* Header */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-border">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
           <div className="flex items-center gap-2">
             <Ticket size={18} className="text-primary" />
-            <span className="font-heading font-semibold text-white">Booking Confirmed!</span>
+            <span className="font-heading font-semibold text-gray-900">Booking Confirmed!</span>
           </div>
-          <button onClick={onClose} className="text-muted hover:text-white transition">
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-700 transition">
             <X size={18} />
           </button>
         </div>
@@ -488,49 +488,49 @@ const openPrintWindow = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-0">
 
             {/* Left — ticket details */}
-            <div className="p-5 space-y-4 md:border-r md:border-border">
+            <div className="p-5 space-y-4 md:border-r md:border-gray-100">
               <div>
-                <h3 className="font-heading text-lg font-bold text-white">{show?.movie?.title}</h3>
+                <h3 className="font-heading text-lg font-bold text-gray-900">{show?.movie?.title}</h3>
                 <div className="flex gap-2 mt-1 flex-wrap">
                   <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full">
                     {show?.showType}
                   </span>
                   {show?.movie?.language && (
-                    <span className="text-xs bg-zinc-800 text-zinc-300 px-2 py-0.5 rounded-full">
+                    <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">
                       {show.movie.language}
                     </span>
                   )}
                   {show?.movie?.rating && (
-                    <span className="text-xs bg-zinc-800 text-zinc-300 px-2 py-0.5 rounded-full">
+                    <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">
                       {show.movie.rating}
                     </span>
                   )}
                 </div>
               </div>
 
-              <div className="border-t border-dashed border-border" />
+              <div className="border-t border-dashed border-gray-200" />
 
               <div className="space-y-2 text-sm">
-                <div className="flex items-center gap-2 text-muted">
+                <div className="flex items-center gap-2 text-gray-600">
                   <MapPin size={13} className="text-primary shrink-0" />
                   <span>{show?.theatre?.name}, {show?.theatre?.location}</span>
                 </div>
-                <div className="flex items-center gap-2 text-muted">
+                <div className="flex items-center gap-2 text-gray-600">
                   <Clock size={13} className="text-primary shrink-0" />
                   <span>{show?.startTime}</span>
                 </div>
               </div>
 
               <div>
-                <p className="text-muted text-xs mb-2">Seats</p>
+                <p className="text-gray-400 text-xs mb-2 font-medium">Seats</p>
                 <div className="flex flex-wrap gap-1.5">
                   {(booking.seats || []).map((seat, i) => (
                     <span
                       key={i}
                       className={`text-xs px-2.5 py-1 rounded-lg border font-medium
                         ${seat.type === "GOLDEN"
-                          ? "bg-yellow-500/10 text-yellow-400 border-yellow-500/20"
-                          : "bg-zinc-800 text-zinc-300 border-zinc-700"
+                          ? "bg-yellow-500/10 text-yellow-700 border-yellow-200"
+                          : "bg-gray-50 text-gray-700 border-gray-200"
                         }`}
                     >
                       {seat.row}{seat.number} {seat.type === "GOLDEN" ? "✦" : ""}
@@ -541,24 +541,24 @@ const openPrintWindow = () => {
 
               <div className="border-t border-dashed border-border" />
 
-              <div className="flex justify-between items-center bg-dark rounded-xl px-4 py-3">
-                <span className="text-muted text-sm">Total Paid</span>
-                <span className="text-white font-bold text-lg">₹{booking.totalAmount}</span>
+              <div className="flex justify-between items-center bg-gray-50 rounded-xl px-4 py-3">
+                <span className="text-gray-500 text-sm">Total Paid</span>
+                <span className="text-gray-900 font-bold text-lg">₹{booking.totalAmount}</span>
               </div>
               <div className="flex justify-between text-sm">
-                <span className="text-muted">Payment</span>
-                <span className="text-white">{booking.paymentType}</span>
+                <span className="text-gray-400">Payment</span>
+                <span className="text-gray-700 font-medium">{booking.paymentType}</span>
               </div>
               <div className="flex justify-between text-sm">
-                <span className="text-muted">Booking ID</span>
-                <span className="text-white font-mono">#{booking.id}</span>
+                <span className="text-gray-400">Booking ID</span>
+                <span className="text-gray-700 font-mono font-medium">#{booking.id}</span>
               </div>
             </div>
 
             {/* Right — QR */}
-            <div className="p-5 flex flex-col items-center justify-center gap-4 bg-dark/30">
-              <div className="border-t border-dashed border-border w-full md:hidden" />
-              <p className="text-muted text-xs text-center">Show this QR at the entrance</p>
+            <div className="p-5 flex flex-col items-center justify-center gap-4 bg-gray-50/50">
+              <div className="border-t border-dashed border-gray-200 w-full md:hidden" />
+              <p className="text-gray-400 text-xs text-center">Show this QR at the entrance</p>
               <div className="bg-white p-4 rounded-2xl" ref={qrRef}>
                 <QRCodeSVG
                   value={qrValue}
@@ -568,12 +568,12 @@ const openPrintWindow = () => {
                   level="H"
                 />
               </div>
-              <p className="text-muted text-xs font-mono tracking-wide text-center break-all">
+              <p className="text-gray-400 text-xs font-mono tracking-wide text-center break-all">
                 {qrValue}
               </p>
               <div className="bg-primary/5 border border-primary/20 rounded-xl px-4 py-3 w-full text-center">
                 <p className="text-primary text-xs font-medium">Booking #{booking.id}</p>
-                <p className="text-muted text-xs mt-0.5">{booking.paymentType} Payment</p>
+                <p className="text-gray-400 text-xs mt-0.5">{booking.paymentType} Payment</p>
               </div>
             </div>
           </div>
@@ -589,14 +589,14 @@ const openPrintWindow = () => {
 </button>
 <button
   onClick={openPrintWindow}
-  className="w-full flex items-center justify-center gap-2 bg-card border border-border text-muted hover:text-white font-semibold py-3 rounded-xl transition text-sm"
+  className="w-full flex items-center justify-center gap-2 bg-white border border-gray-200 text-gray-600 hover:text-gray-900 font-semibold py-3 rounded-xl transition text-sm"
 >
   <Printer size={16} />
   Print Ticket
 </button>
             <button
               onClick={onClose}
-              className="w-full bg-dark border border-border text-muted hover:text-white py-2.5 rounded-xl text-sm transition"
+              className="w-full bg-white border border-gray-200 text-gray-400 hover:text-gray-700 py-2.5 rounded-xl text-sm transition"
             >
               Close
             </button>
@@ -818,7 +818,7 @@ const WindowBooking = () => {
       )}
 
       <div className="mb-6">
-        <h1 className="font-heading text-2xl font-bold text-white">Window Booking</h1>
+        <h1 className="font-heading text-2xl font-bold text-gray-900">Window Booking</h1>
         <p className="text-muted text-sm mt-1">Book tickets for walk-in customers</p>
       </div>
 
@@ -826,11 +826,11 @@ const WindowBooking = () => {
 
         {/* Show Selection */}
         <div className="lg:col-span-1">
-          <h2 className="text-white font-semibold mb-3">Select Show</h2>
+          <h2 className="text-gray-900 font-semibold mb-3">Select Show</h2>
           {loadingShows ? (
             <div className="space-y-2">
               {[...Array(4)].map((_, i) => (
-                <div key={i} className="bg-card border border-border rounded-xl h-16 animate-pulse" />
+                <div key={i} className="bg-white border border-gray-100 rounded-xl h-16 animate-pulse" />
               ))}
             </div>
           ) : (
@@ -841,21 +841,21 @@ const WindowBooking = () => {
                   <div
                     key={show.id}
                     onClick={() => handleShowSelect(show)}
-                    className={`bg-card border rounded-xl px-4 py-3 transition
+                    className={`bg-white border rounded-xl px-4 py-3 transition shadow-sm
                       ${hasStarted
-                        ? "border-border opacity-40 cursor-not-allowed"
+                        ? "border-gray-100 opacity-40 cursor-not-allowed"
                         : selectedShow?.id === show.id
                         ? "border-primary bg-primary/5 cursor-pointer"
-                        : "border-border hover:border-zinc-600 cursor-pointer"
+                        : "border-gray-100 hover:border-gray-300 cursor-pointer"
                       }`}
                   >
                     <div className="flex items-center justify-between">
-                      <p className="text-white text-sm font-medium">{show.movie?.title}</p>
+                      <p className="text-gray-900 text-sm font-medium">{show.movie?.title}</p>
                       {hasStarted && (
-                        <span className="text-xs text-red-400 font-medium">Started</span>
+                        <span className="text-xs text-red-500 font-medium">Started</span>
                       )}
                     </div>
-                    <p className="text-muted text-xs mt-0.5">
+                    <p className="text-gray-400 text-xs mt-0.5">
                       {show.theatre?.name} • {show.showType} • {show.startTime}
                     </p>
                     <p className="text-primary text-xs mt-0.5">₹{show.regularPrice} regular</p>
@@ -869,18 +869,18 @@ const WindowBooking = () => {
         {/* Seat Selection */}
         <div className="lg:col-span-2">
           {!selectedShow ? (
-            <div className="flex items-center justify-center h-64 bg-card border border-border rounded-2xl">
+            <div className="flex items-center justify-center h-64 bg-white border border-gray-100 rounded-2xl shadow-sm">
               <div className="text-center">
-                <Ticket size={36} className="text-muted mx-auto mb-2" />
-                <p className="text-muted">Select a show to see seats</p>
+                <Ticket size={36} className="text-gray-300 mx-auto mb-2" />
+                <p className="text-gray-400">Select a show to see seats</p>
               </div>
             </div>
           ) : loadingSeats ? (
-            <div className="flex items-center justify-center h-64 bg-card border border-border rounded-2xl">
+            <div className="flex items-center justify-center h-64 bg-white border border-gray-100 rounded-2xl">
               <Spinner text="Loading seats..." />
             </div>
           ) : (
-            <div className="bg-card border border-border rounded-2xl p-5">
+            <div className="bg-white border border-gray-100 rounded-2xl p-5 shadow-sm">
 
               <div className="w-full bg-primary/10 border border-primary/20 rounded-lg py-2 text-center text-primary text-xs font-medium mb-6">
                 🎬 SCREEN
@@ -889,7 +889,7 @@ const WindowBooking = () => {
               <div className="space-y-2 mb-6 flex flex-col items-center">
                 {Object.entries(seatsByRow).map(([row, rowSeats]) => (
                   <div key={row} className="flex items-center gap-2">
-                    <span className="text-muted text-xs w-4">{row}</span>
+                    <span className="text-gray-400 text-xs w-4">{row}</span>
                     <div className="flex gap-1 md:gap-1.5">
                       {rowSeats.map((seat) => (
                         <button
@@ -898,14 +898,14 @@ const WindowBooking = () => {
                           disabled={seat.status !== "AVAILABLE"}
                           className={`w-6 h-6 md:w-8 md:h-8 rounded-md md:rounded-lg text-[10px] md:text-xs font-medium transition
                             ${seat.status === "BOOKED"
-                              ? "bg-zinc-700 text-zinc-500 cursor-not-allowed"
+                              ? "bg-gray-200 text-gray-400 cursor-not-allowed"
                               : seat.status === "LOCKED"
-                              ? "bg-red-500/20 text-red-400 border border-red-500/30 cursor-not-allowed"
+                              ? "bg-red-50 text-red-400 border border-red-200 cursor-not-allowed"
                               : selectedSeats.includes(seat.id)
                               ? "bg-primary text-white"
                               : seat.type === "GOLDEN"
-                              ? "bg-golden/10 text-golden border border-golden/30 hover:bg-golden/20"
-                              : "bg-zinc-800 text-zinc-300 hover:bg-zinc-700"
+                              ? "bg-yellow-50 text-yellow-600 border border-yellow-200 hover:bg-yellow-100"
+                              : "bg-gray-50 text-gray-600 border border-gray-200 hover:bg-gray-100"
                             }`}
                         >
                           {seat.number}
@@ -917,29 +917,29 @@ const WindowBooking = () => {
               </div>
 
               {/* Legend */}
-              <div className="flex flex-wrap gap-4 mb-6 text-xs text-muted">
+              <div className="flex flex-wrap gap-4 mb-6 text-xs text-gray-400">
                 <span className="flex items-center gap-1.5">
-                  <span className="w-4 h-4 rounded bg-zinc-800 inline-block" />Available
+                  <span className="w-4 h-4 rounded bg-gray-50 border border-gray-200 inline-block" />Available
                 </span>
                 <span className="flex items-center gap-1.5">
                   <span className="w-4 h-4 rounded bg-primary inline-block" />Selected
                 </span>
                 <span className="flex items-center gap-1.5">
-                  <span className="w-4 h-4 rounded bg-golden/10 border border-golden/30 inline-block" />Golden
+                  <span className="w-4 h-4 rounded bg-yellow-50 border border-yellow-200 inline-block" />Golden
                 </span>
                 <span className="flex items-center gap-1.5">
-                  <span className="w-4 h-4 rounded bg-zinc-700 inline-block" />Booked
+                  <span className="w-4 h-4 rounded bg-gray-200 inline-block" />Booked
                 </span>
                 <span className="flex items-center gap-1.5">
-                  <span className="w-4 h-4 rounded bg-red-500/20 border border-red-500/30 inline-block" />Locked
+                  <span className="w-4 h-4 rounded bg-red-50 border border-red-200 inline-block" />Locked
                 </span>
               </div>
 
               {selectedSeats.length > 0 && (
-                <div className="border-t border-border pt-4">
+                <div className="border-t border-gray-100 pt-4">
                   <div className="flex items-center justify-between mb-3">
-                    <p className="text-muted text-sm">{selectedSeats.length} seat(s) selected</p>
-                    <p className="text-white font-bold">₹{totalAmount}</p>
+                    <p className="text-gray-500 text-sm">{selectedSeats.length} seat(s) selected</p>
+                    <p className="text-gray-900 font-bold">₹{totalAmount}</p>
                   </div>
 
                   <div className="flex gap-3 mb-4">
@@ -950,7 +950,7 @@ const WindowBooking = () => {
                         className={`flex-1 py-2 rounded-xl text-sm font-medium transition border
                           ${paymentType === type
                             ? "bg-primary border-primary text-white"
-                            : "bg-dark border-border text-muted hover:text-white"}`}
+                            : "bg-white border-gray-200 text-gray-600 hover:text-gray-900"}`}
                       >
                         {type === "CASH" ? "💵 Cash" : "💳 Card"}
                       </button>

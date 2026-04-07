@@ -17,7 +17,7 @@ const downloadTicketPDF = async (ticketRef, bookingId) => {
   try {
     toast.loading("Generating PDF...", { id: "pdf" });
     const canvas = await html2canvas(ticketRef.current, {
-      backgroundColor: "#0D0D0D",
+      backgroundColor: "#ffffff",
       scale: 2,
       useCORS: true,
       allowTaint: true,
@@ -42,19 +42,19 @@ const ResultCard = ({ result, onConfirm, onReset, confirming, isAdmin }) => {
   if (reason === "ALREADY_USED") {
     return (
       <div className="max-w-md mx-auto space-y-4">
-        <div className="bg-red-500/5 border border-red-500/30 rounded-2xl p-6 text-center">
+        <div className="bg-red-50 border border-red-200 rounded-2xl p-6 text-center">
           <XCircle size={48} className="text-red-400 mx-auto mb-3" />
-          <h2 className="text-red-400 font-heading text-xl font-bold mb-1">Already Used</h2>
-          <p className="text-muted text-sm mb-2">{message}</p>
-          <p className="text-muted text-xs">Used at: {usedAt}</p>
+          <h2 className="text-red-500 font-heading text-xl font-bold mb-1">Already Used</h2>
+          <p className="text-gray-500 text-sm mb-2">{message}</p>
+          <p className="text-gray-400 text-xs">Used at: {usedAt}</p>
           {booking && (
-            <div className="mt-4 text-left bg-dark rounded-xl p-4 space-y-1">
-              <p className="text-white text-sm font-medium">{booking.show?.movie}</p>
-              <p className="text-muted text-xs">{booking.user?.name} {booking.user?.surname}</p>
+            <div className="mt-4 text-left bg-gray-50 rounded-xl p-4 space-y-1">
+              <p className="text-gray-900 text-sm font-medium">{booking.show?.movie}</p>
+              <p className="text-gray-400 text-xs">{booking.user?.name} {booking.user?.surname}</p>
             </div>
           )}
         </div>
-        <button onClick={onReset} className="w-full bg-card border border-border text-muted hover:text-white py-3 rounded-2xl text-sm transition">
+        <button onClick={onReset} className="w-full bg-white border border-gray-200 text-gray-500 hover:text-gray-900 py-3 rounded-2xl text-sm transition">
           Scan Another Ticket
         </button>
       </div>
@@ -64,21 +64,21 @@ const ResultCard = ({ result, onConfirm, onReset, confirming, isAdmin }) => {
   if (reason === "TOO_EARLY") {
     return (
       <div className="max-w-md mx-auto space-y-4">
-        <div className="bg-yellow-500/5 border border-yellow-500/30 rounded-2xl p-6 text-center">
-          <AlertTriangle size={48} className="text-yellow-400 mx-auto mb-3" />
-          <h2 className="text-yellow-400 font-heading text-xl font-bold mb-1">Too Early</h2>
-          <p className="text-muted text-sm mb-1">{message}</p>
-          <p className="text-muted text-xs">Entry opens: {entryOpenTime}</p>
+        <div className="bg-yellow-50 border border-yellow-200 rounded-2xl p-6 text-center">
+          <AlertTriangle size={48} className="text-yellow-500 mx-auto mb-3" />
+          <h2 className="text-yellow-600 font-heading text-xl font-bold mb-1">Too Early</h2>
+          <p className="text-gray-500 text-sm mb-1">{message}</p>
+          <p className="text-gray-400 text-xs">Entry opens: {entryOpenTime}</p>
           {booking && (
-            <div className="mt-4 text-left bg-dark rounded-xl p-4 space-y-1">
-              <p className="text-white text-sm font-medium">{booking.show?.movie}</p>
-              <p className="text-muted text-xs">{booking.user?.name} {booking.user?.surname}</p>
-              <p className="text-muted text-xs">{booking.show?.theatre}</p>
-              <p className="text-muted text-xs">{booking.show?.startTime}</p>
+            <div className="mt-4 text-left bg-gray-50 rounded-xl p-4 space-y-1">
+              <p className="text-gray-900 text-sm font-medium">{booking.show?.movie}</p>
+              <p className="text-gray-400 text-xs">{booking.user?.name} {booking.user?.surname}</p>
+              <p className="text-gray-400 text-xs">{booking.show?.theatre}</p>
+              <p className="text-gray-400 text-xs">{booking.show?.startTime}</p>
             </div>
           )}
         </div>
-        <button onClick={onReset} className="w-full bg-card border border-border text-muted hover:text-white py-3 rounded-2xl text-sm transition">
+        <button onClick={onReset} className="w-full bg-white border border-gray-200 text-gray-500 hover:text-gray-900 py-3 rounded-2xl text-sm transition">
           Scan Another Ticket
         </button>
       </div>
@@ -88,12 +88,12 @@ const ResultCard = ({ result, onConfirm, onReset, confirming, isAdmin }) => {
   if (!valid) {
     return (
       <div className="max-w-md mx-auto space-y-4">
-        <div className="bg-red-500/5 border border-red-500/30 rounded-2xl p-6 text-center">
+        <div className="bg-red-50 border border-red-200 rounded-2xl p-6 text-center">
           <XCircle size={48} className="text-red-400 mx-auto mb-3" />
-          <h2 className="text-red-400 font-heading text-xl font-bold mb-1">Invalid Ticket</h2>
-          <p className="text-muted text-sm">{message}</p>
+          <h2 className="text-red-500 font-heading text-xl font-bold mb-1">Invalid Ticket</h2>
+          <p className="text-gray-500 text-sm">{message}</p>
         </div>
-        <button onClick={onReset} className="w-full bg-card border border-border text-muted hover:text-white py-3 rounded-2xl text-sm transition">
+        <button onClick={onReset} className="w-full bg-white border border-gray-200 text-gray-500 hover:text-gray-900 py-3 rounded-2xl text-sm transition">
           Scan Another Ticket
         </button>
       </div>
@@ -103,11 +103,11 @@ const ResultCard = ({ result, onConfirm, onReset, confirming, isAdmin }) => {
   return (
     <div className="space-y-4 w-full">
 
-      <div className="bg-green-500/10 border border-green-500/30 rounded-2xl p-4 flex items-center gap-3">
-        <CheckCircle2 size={28} className="text-green-400 flex-shrink-0" />
+      <div className="bg-green-50 border border-green-200 rounded-2xl p-4 flex items-center gap-3">
+        <CheckCircle2 size={28} className="text-green-500 flex-shrink-0" />
         <div>
-          <p className="text-green-400 font-semibold">Valid Ticket</p>
-          <p className="text-muted text-xs">Review all details carefully before marking as used</p>
+          <p className="text-green-600 font-semibold">Valid Ticket</p>
+          <p className="text-gray-400 text-xs">Review all details carefully before marking as used</p>
         </div>
       </div>
 
@@ -117,30 +117,30 @@ const ResultCard = ({ result, onConfirm, onReset, confirming, isAdmin }) => {
 
           {/* LEFT */}
           <div className="space-y-3">
-            <div className="bg-card border border-border rounded-2xl p-4 space-y-2">
-              <p className="text-muted text-xs uppercase tracking-wide font-medium">Customer</p>
+            <div className="bg-white border border-gray-100 rounded-2xl p-4 space-y-2 shadow-sm">
+              <p className="text-gray-400 text-xs uppercase tracking-wide font-medium">Customer</p>
               <div className="flex items-center gap-2 text-sm">
                 <User size={14} className="text-primary flex-shrink-0" />
-                <span className="text-white font-medium">
+                <span className="text-gray-900 font-medium">
                   {booking.user?.name} {booking.user?.surname}
                 </span>
-                <span className="text-muted text-xs">@{booking.user?.username}</span>
+                <span className="text-gray-400 text-xs">@{booking.user?.username}</span>
               </div>
               {booking.user?.email && (
                 <div className="flex items-center gap-2 text-sm">
                   <Mail size={14} className="text-primary flex-shrink-0" />
-                  <span className="text-muted">{booking.user.email}</span>
+                  <span className="text-gray-500">{booking.user.email}</span>
                 </div>
               )}
             </div>
 
-            <div className="bg-card border border-border rounded-2xl p-4 space-y-2">
-              <p className="text-muted text-xs uppercase tracking-wide font-medium">Show</p>
-              <div className="flex items-center gap-2 text-sm text-muted">
+            <div className="bg-white border border-gray-100 rounded-2xl p-4 space-y-2 shadow-sm">
+              <p className="text-gray-400 text-xs uppercase tracking-wide font-medium">Show</p>
+              <div className="flex items-center gap-2 text-sm text-gray-500">
                 <MapPin size={13} className="text-primary flex-shrink-0" />
                 <span>{booking.show?.theatre}{booking.show?.location ? `, ${booking.show.location}` : ""}</span>
               </div>
-              <div className="flex items-center gap-2 text-sm text-muted">
+              <div className="flex items-center gap-2 text-sm text-gray-500">
                 <Clock size={13} className="text-primary flex-shrink-0" />
                 <span>{booking.show?.startTime}</span>
               </div>
@@ -151,25 +151,25 @@ const ResultCard = ({ result, onConfirm, onReset, confirming, isAdmin }) => {
                   </span>
                 )}
                 {booking.show?.movieRating && (
-                  <span className="text-xs bg-zinc-800 text-zinc-300 px-2 py-0.5 rounded-full">
+                  <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">
                     {booking.show.movieRating}
                   </span>
                 )}
                 {booking.show?.movieLanguage && (
-                  <span className="text-xs bg-zinc-800 text-zinc-300 px-2 py-0.5 rounded-full">
+                  <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">
                     {booking.show.movieLanguage}
                   </span>
                 )}
                 {booking.show?.movieDuration && (
-                  <span className="text-xs bg-zinc-800 text-zinc-300 px-2 py-0.5 rounded-full">
+                  <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">
                     {booking.show.movieDuration} min
                   </span>
                 )}
               </div>
             </div>
 
-            <div className="bg-card border border-border rounded-2xl p-4">
-              <p className="text-muted text-xs uppercase tracking-wide font-medium mb-3">
+            <div className="bg-white border border-gray-100 rounded-2xl p-4 shadow-sm">
+              <p className="text-gray-400 text-xs uppercase tracking-wide font-medium mb-3">
                 Seats ({booking.seats?.length})
               </p>
               <div className="flex flex-wrap gap-2">
@@ -178,8 +178,8 @@ const ResultCard = ({ result, onConfirm, onReset, confirming, isAdmin }) => {
                     key={i}
                     className={`text-xs px-3 py-1.5 rounded-lg border font-medium flex flex-col items-center
                       ${seat.type === "GOLDEN"
-                        ? "bg-yellow-500/10 text-yellow-400 border-yellow-500/20"
-                        : "bg-zinc-800 text-zinc-300 border-zinc-700"
+                        ? "bg-yellow-50 text-yellow-700 border-yellow-200"
+                        : "bg-gray-50 text-gray-700 border-gray-200"
                       }`}
                   >
                     <span>{seat.row}{seat.number}</span>
@@ -191,23 +191,23 @@ const ResultCard = ({ result, onConfirm, onReset, confirming, isAdmin }) => {
               </div>
             </div>
 
-            <div className="bg-card border border-border rounded-2xl p-4 space-y-2">
-              <p className="text-muted text-xs uppercase tracking-wide font-medium">Payment</p>
+            <div className="bg-white border border-gray-100 rounded-2xl p-4 space-y-2 shadow-sm">
+              <p className="text-gray-400 text-xs uppercase tracking-wide font-medium">Payment</p>
               <div className="flex justify-between items-center">
-                <span className="text-muted text-sm flex items-center gap-1.5">
+                <span className="text-gray-500 text-sm flex items-center gap-1.5">
                   <CreditCard size={13} className="text-primary" />
                   Total Paid
                 </span>
-                <span className="text-white font-bold text-lg">₹{booking.totalAmount}</span>
+                <span className="text-gray-900 font-bold text-lg">₹{booking.totalAmount}</span>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-muted text-sm">Type</span>
-                <span className="text-white text-sm">{booking.paymentType}</span>
+                <span className="text-gray-400 text-sm">Type</span>
+                <span className="text-gray-700 text-sm">{booking.paymentType}</span>
               </div>
               {booking.paymentId && (
                 <div className="flex justify-between items-center">
-                  <span className="text-muted text-sm">Payment ID</span>
-                  <span className="text-zinc-400 text-xs font-mono truncate max-w-[160px]">
+                  <span className="text-gray-400 text-sm">Payment ID</span>
+                  <span className="text-gray-500 text-xs font-mono truncate max-w-[160px]">
                     {booking.paymentId}
                   </span>
                 </div>
@@ -237,26 +237,26 @@ const ResultCard = ({ result, onConfirm, onReset, confirming, isAdmin }) => {
                 </div>
               </div>
             ) : (
-              <div className="bg-card border border-border rounded-2xl p-4">
-                <h2 className="font-heading text-xl font-bold text-white">{booking.show?.movie}</h2>
+              <div className="bg-white border border-gray-100 rounded-2xl p-4 shadow-sm">
+                <h2 className="font-heading text-xl font-bold text-gray-900">{booking.show?.movie}</h2>
               </div>
             )}
 
-            <div className="bg-card border border-border rounded-2xl p-4 space-y-2">
-              <p className="text-muted text-xs uppercase tracking-wide font-medium">Booking Info</p>
+            <div className="bg-white border border-gray-100 rounded-2xl p-4 space-y-2 shadow-sm">
+              <p className="text-gray-400 text-xs uppercase tracking-wide font-medium">Booking Info</p>
               <div className="flex justify-between items-center">
-                <span className="text-muted text-sm flex items-center gap-1.5">
+                <span className="text-gray-500 text-sm flex items-center gap-1.5">
                   <Hash size={13} className="text-primary" />
                   Booking ID
                 </span>
-                <span className="text-white text-sm font-mono">#{booking.id}</span>
+                <span className="text-gray-900 text-sm font-mono">#{booking.id}</span>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-muted text-sm flex items-center gap-1.5">
+                <span className="text-gray-500 text-sm flex items-center gap-1.5">
                   <Calendar size={13} className="text-primary" />
                   Booked On
                 </span>
-                <span className="text-white text-sm">{booking.createdAt}</span>
+                <span className="text-gray-700 text-sm">{booking.createdAt}</span>
               </div>
             </div>
           </div>
@@ -296,7 +296,7 @@ const ResultCard = ({ result, onConfirm, onReset, confirming, isAdmin }) => {
 
         <button
           onClick={onReset}
-          className="w-full bg-card border border-border text-muted hover:text-white py-3 rounded-2xl text-sm transition flex items-center justify-center gap-2"
+          className="w-full bg-white border border-gray-200 text-gray-500 hover:text-gray-900 py-3 rounded-2xl text-sm transition flex items-center justify-center gap-2"
         >
           <Camera size={16} />
           Scan Another Ticket
@@ -428,32 +428,32 @@ const ScannerCore = ({ isAdmin = false }) => {
   return (
     <div className="w-full max-w-5xl mx-auto">
       <div className="mb-6">
-        <h1 className="font-heading text-2xl font-bold text-white flex items-center gap-2">
+        <h1 className="font-heading text-2xl font-bold text-gray-900 flex items-center gap-2">
           <ScanLine size={24} className="text-primary" />
           Ticket Scanner
         </h1>
-        <p className="text-muted text-sm mt-1">
+        <p className="text-gray-400 text-sm mt-1">
           Scan customer's QR code to verify their ticket
         </p>
       </div>
 
       {result?.confirmed && (
-        <div className="bg-green-500/10 border border-green-500/30 rounded-2xl p-8 text-center max-w-md mx-auto">
-          <CheckCircle2 size={64} className="text-green-400 mx-auto mb-4" />
-          <h2 className="text-green-400 font-heading text-2xl font-bold mb-2">Verified!</h2>
-          <p className="text-muted text-sm">Ticket marked as used. Resetting scanner...</p>
+        <div className="bg-green-50 border border-green-200 rounded-2xl p-8 text-center max-w-md mx-auto">
+          <CheckCircle2 size={64} className="text-green-500 mx-auto mb-4" />
+          <h2 className="text-green-600 font-heading text-2xl font-bold mb-2">Verified!</h2>
+          <p className="text-gray-400 text-sm">Ticket marked as used. Resetting scanner...</p>
         </div>
       )}
 
       {!result && (
         <div className="space-y-4 max-w-md mx-auto">
-          <div className="relative bg-dark border border-border rounded-2xl overflow-hidden aspect-square">
+          <div className="relative bg-gray-50 border border-gray-200 rounded-2xl overflow-hidden aspect-square">
             <video ref={videoRef} className="w-full h-full object-cover" playsInline muted />
             <canvas ref={canvasRef} className="hidden" />
             {!cameraActive && (
-              <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-dark">
-                <Camera size={48} className="text-muted" />
-                <p className="text-muted text-sm text-center px-4">
+              <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-gray-50">
+                <Camera size={48} className="text-gray-300" />
+                <p className="text-gray-400 text-sm text-center px-4">
                   {cameraError || "Camera inactive. Press Start Scanning to begin."}
                 </p>
               </div>
@@ -473,8 +473,8 @@ const ScannerCore = ({ isAdmin = false }) => {
             )}
           </div>
           {cameraError && (
-            <div className="bg-red-500/10 border border-red-500/30 rounded-xl px-4 py-3">
-              <p className="text-red-400 text-sm">{cameraError}</p>
+            <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3">
+              <p className="text-red-500 text-sm">{cameraError}</p>
             </div>
           )}
           {!cameraActive ? (
@@ -488,7 +488,7 @@ const ScannerCore = ({ isAdmin = false }) => {
           ) : (
             <button
               onClick={stopCamera}
-              className="w-full bg-card border border-border text-muted hover:text-white py-4 rounded-2xl text-base transition"
+              className="w-full bg-white border border-gray-200 text-gray-500 hover:text-gray-900 py-4 rounded-2xl text-base transition"
             >
               Stop Camera
             </button>
