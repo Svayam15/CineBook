@@ -4,6 +4,7 @@ import logger from "../config/logger.js";
 import { MOVIE_RATING, LANGUAGES, GENRES, SHOW_TYPE } from "../utils/constants.js";
 
 const VALID_FORMATS = Object.values(SHOW_TYPE); // ["2D", "3D", "4D"]
+const NAME_LIST_PATTERN = /^[a-zA-Z]+(\s[a-zA-Z]+)*(,\s[a-zA-Z]+(\s[a-zA-Z]+)*)*$/;
 
 // ─── Validators ───────────────────────────────────────────────────────────────
 
@@ -52,11 +53,18 @@ export const createMovie = asyncHandler(async (req, res) => {
     cast,
   } = req.body;
 
-  if (!title || !duration || !posterUrl || !rating || !description || !releaseDate) {
-    const error = new Error("Required: title, duration, posterUrl, rating, description, releaseDate");
-    error.statusCode = 400;
-    throw error;
-  }
+  if (!title || !duration || !posterUrl || !rating || !description || !releaseDate || !director || !cast) {
+  const error = new Error("Required: title, duration, posterUrl, rating, description, releaseDate, director, cast");
+  error.statusCode = 400;
+  throw error;
+}
+
+  // Add after the "Required fields" check in createMovie
+if (!/[a-zA-Z]/.test(title)) {
+  const error = new Error("Title must contain at least one letter");
+  error.statusCode = 400;
+  throw error;
+}
 
   if (duration <= 0) {
     const error = new Error("Duration must be greater than 0");
@@ -69,6 +77,12 @@ export const createMovie = asyncHandler(async (req, res) => {
     error.statusCode = 400;
     throw error;
   }
+
+  if (!Number.isInteger(Number(duration))) {
+  const error = new Error("Duration must be a whole number");
+  error.statusCode = 400;
+  throw error;
+}
 
   if (!Object.values(MOVIE_RATING).includes(rating)) {
     const error = new Error("Rating must be one of: U, UA, A, S");
@@ -90,6 +104,18 @@ export const createMovie = asyncHandler(async (req, res) => {
 
   const formatErr = validateFormats(formats);
   if (formatErr) { const e = new Error(formatErr); e.statusCode = 400; throw e; }
+
+  if (!NAME_LIST_PATTERN.test(director.trim())) {
+  const error = new Error("Director: only letters, commas, one space after name and after each comma allowed");
+  error.statusCode = 400;
+  throw error;
+}
+
+if (!NAME_LIST_PATTERN.test(cast.trim())) {
+  const error = new Error("Cast: only letters, commas, one space after name and after each comma allowed");
+  error.statusCode = 400;
+  throw error;
+}
 
   const movie = await prisma.movie.create({
     data: {
@@ -175,6 +201,12 @@ export const updateMovie = asyncHandler(async (req, res) => {
     throw error;
   }
 
+  if (title && !/[a-zA-Z]/.test(title)) {
+  const error = new Error("Title must contain at least one letter");
+  error.statusCode = 400;
+  throw error;
+}
+
   if (duration !== undefined && duration <= 0) {
     const error = new Error("Duration must be greater than 0");
     error.statusCode = 400;
@@ -186,6 +218,13 @@ export const updateMovie = asyncHandler(async (req, res) => {
     error.statusCode = 400;
     throw error;
   }
+
+  // Add after the duration > 600 check in createMovie AND updateMovie
+if (!Number.isInteger(Number(duration))) {
+  const error = new Error("Duration must be a whole number");
+  error.statusCode = 400;
+  throw error;
+}
 
   if (rating && !Object.values(MOVIE_RATING).includes(rating)) {
     const error = new Error("Rating must be one of: U, UA, A, S");
@@ -214,6 +253,35 @@ export const updateMovie = asyncHandler(async (req, res) => {
   if (formats !== undefined) {
     const err = validateFormats(formats);
     if (err) { const e = new Error(err); e.statusCode = 400; throw e; }
+
+
+    // ADD before the prisma.movie.update call:
+if (director !== undefined) {
+  if (!director || !director.trim()) {
+    const error = new Error("Director is required");
+    error.statusCode = 400;
+    throw error;
+  }
+  if (!NAME_LIST_PATTERN.test(director.trim())) {
+    const error = new Error("Director: only letters, commas and one space after each comma allowed");
+    error.statusCode = 400;
+    throw error;
+  }
+}
+
+if (cast !== undefined) {
+  if (!cast || !cast.trim()) {
+    const error = new Error("Cast is required");
+    error.statusCode = 400;
+    throw error;
+  }
+  if (!NAME_LIST_PATTERN.test(cast.trim())) {
+    const error = new Error("Cast: only letters, commas and one space after each comma allowed");
+    error.statusCode = 400;
+    throw error;
+  }
+}
+
 
     // ✅ If formats change, check existing shows don't use a removed format
     const removedFormats = (movie.formats || []).filter((f) => !formats.includes(f));
@@ -258,8 +326,8 @@ export const updateMovie = asyncHandler(async (req, res) => {
       ...(genres !== undefined && { genres }),
       ...(description && { description }),
       ...(releaseDate && { releaseDate: new Date(releaseDate) }),
-      ...(director !== undefined && { director: director || null }),
-      ...(cast !== undefined && { cast: cast || null }),
+      ...(director !== undefined && { director: director.trim() }),
+      ...(cast !== undefined && { cast: cast.trim() }),
     },
   });
 
