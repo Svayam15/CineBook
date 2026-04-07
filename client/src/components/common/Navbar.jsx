@@ -108,10 +108,7 @@ const Navbar = ({ onSearchChange, searchValue }) => {
   const isActive = (path) => location.pathname === path;
   const initials = user ? `${user.name?.[0] ?? ""}`.toUpperCase() : "?";
 
-useEffect(() => {
-  const id = setTimeout(() => setDrawerOpen(false), 0);
-  return () => clearTimeout(id);
-}, [location.pathname]);
+useEffect(() => { setDrawerOpen(false); }, [location.pathname]);
 
   return (
     <>
