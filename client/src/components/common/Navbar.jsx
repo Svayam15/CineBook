@@ -142,7 +142,7 @@ const Navbar = ({ onSearchChange, searchValue }) => {
                 placeholder="Search movies or theatres..."
                 value={searchValue || ""}
                 onChange={(e) => onSearchChange?.(e.target.value)}
-                className="bg-gray-100 text-gray-900 rounded-full pl-4 pr-8 py-2 md:py-2.5 text-sm outline-none focus:bg-white focus:ring-2 focus:ring-primary/30 transition placeholder:text-gray-400 border border-primary/40 w-44 sm:w-56 md:w-80"
+                className="bg-gray-100 text-gray-900 rounded-full pl-4 pr-8 py-2 md:py-2.5 text-sm outline-none focus:bg-white focus:ring-2 focus:ring-primary/30 transition placeholder:text-gray-400 border border-2-primary/40 w-44 sm:w-56 md:w-80"
               />
               {searchValue && (
                 <button
