@@ -163,11 +163,6 @@ const AdminLayout = ({ children }) => {
 
           <div className="flex-1" />
 
-          {/* Greeting — desktop only */}
-          <span className="hidden md:block text-sm text-gray-400 shrink-0">
-            👋 {user?.name}
-          </span>
-
           {/* Avatar — desktop only, opens drawer */}
           <button
             onClick={() => setDrawerOpen(true)}
