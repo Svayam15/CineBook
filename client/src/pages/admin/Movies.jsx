@@ -166,6 +166,12 @@
     const handleSubmit = (e) => {
   e.preventDefault();
   if (!form.posterUrl) return toast.error("Please upload a poster");
+  if (!form.title.trim())
+  return toast.error("Title is required");
+if (!/[a-zA-Z]/.test(form.title))
+  return toast.error("Title must contain at least one letter");
+if (!form.duration)
+  return toast.error("Duration is required");
   if (!/[a-zA-Z]/.test(form.title))
     return toast.error("Title must contain at least one letter");
   const dur = Number(form.duration);
@@ -208,7 +214,6 @@ if (!namePattern.test(form.cast.trim()))
               type="text"
               value={form.title}
               onChange={(e) => set("title", e.target.value)}
-              required
               placeholder="e.g. Dhurandhaar"
               className="bg-gray-50 border border-gray-200 text-gray-900 rounded-xl px-4 py-2.5 outline-none focus:border-primary text-sm placeholder:text-gray-400"
             />
@@ -219,7 +224,6 @@ if (!namePattern.test(form.cast.trim()))
               type="number"
               value={form.duration}
               onChange={(e) => set("duration", e.target.value)}
-              required
               min="1"
               max="600"
               step="1"

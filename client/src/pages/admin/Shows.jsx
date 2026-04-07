@@ -152,48 +152,67 @@ const ShowRow = ({ show, onEdit, onReschedule, onCancel, cancelling }) => {
   const canEdit = show.status === "UPCOMING";
 
   return (
-    <div className="bg-white border border-gray-100 rounded-2xl px-5 py-4 flex items-center justify-between gap-4">
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2 flex-wrap">
-          <p className="text-gray-900 font-medium">{show.movie?.title}</p>
-          <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full">{show.showType}</span>
-          <span className="text-xs bg-golden/10 text-golden px-2 py-0.5 rounded-full">{show.language}</span>
-          {show.hasGoldenSeats && (
-            <span className="text-xs bg-yellow-500/10 text-yellow-400 px-2 py-0.5 rounded-full">Golden</span>
-          )}
-          <span className={`text-xs px-2 py-0.5 rounded-full ${statusBadge(show.status)}`}>
-            {show.status}
+    <div className="bg-white border border-gray-100 rounded-2xl px-4 py-4 flex flex-col gap-3">
+
+      {/* Top: title + cancelled badge */}
+      <div className="flex items-start justify-between gap-2">
+        <p className="text-gray-900 font-medium text-sm leading-snug">{show.movie?.title}</p>
+        {!show.isActive && (
+          <span className="text-xs bg-red-500/10 text-red-400 border border-red-500/20 px-2 py-0.5 rounded-full shrink-0">
+            Cancelled
           </span>
-          {!show.isActive && (
-            <span className="text-xs bg-red-500/10 text-red-400 border border-red-500/20 px-2 py-0.5 rounded-full">Cancelled</span>
-          )}
-        </div>
-        <p className="text-muted text-sm mt-1 truncate">
-          {show.theatre?.name} &nbsp;·&nbsp; {show.startTime} &nbsp;·&nbsp; {show.totalSeats} seats &nbsp;·&nbsp; ₹{show.regularPrice}
+        )}
+      </div>
+
+      {/* Badges */}
+      <div className="flex flex-wrap gap-1.5">
+        <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full">{show.showType}</span>
+        <span className="text-xs bg-golden/10 text-golden px-2 py-0.5 rounded-full">{show.language}</span>
+        {show.hasGoldenSeats && (
+          <span className="text-xs bg-yellow-500/10 text-yellow-400 px-2 py-0.5 rounded-full">Golden</span>
+        )}
+        <span className={`text-xs px-2 py-0.5 rounded-full ${statusBadge(show.status)}`}>
+          {show.status}
+        </span>
+      </div>
+
+      {/* Meta */}
+      <div className="flex flex-col gap-0.5">
+        <p className="text-muted text-xs">{show.theatre?.name}</p>
+        <p className="text-muted text-xs">{show.startTime}</p>
+        <p className="text-muted text-xs">
+          {show.totalSeats} seats · ₹{show.regularPrice}
           {show.hasGoldenSeats && ` · ₹${show.goldenPrice} golden`}
         </p>
       </div>
 
+      {/* Actions */}
       {canEdit && show.isActive ? (
-        <div className="flex items-center gap-2 shrink-0">
-          <button onClick={() => onEdit(show)} className="flex items-center gap-1.5 text-gray-500 hover:text-gray-900 border border-gray-200 px-3 py-1.5 rounded-xl text-sm transition">
-            <Pencil size={13} /> Edit
+        <div className="flex flex-wrap gap-2 pt-1 border-t border-gray-100">
+          <button
+            onClick={() => onEdit(show)}
+            className="flex items-center gap-1.5 text-gray-500 hover:text-gray-900 border border-gray-200 px-3 py-1.5 rounded-xl text-xs transition"
+          >
+            <Pencil size={12} /> Edit
           </button>
-          <button onClick={() => onReschedule(show)} className="flex items-center gap-1.5 text-blue-400 hover:text-blue-300 border border-blue-400/20 px-3 py-1.5 rounded-xl text-sm transition">
-            <CalendarClock size={13} /> Reschedule
+          <button
+            onClick={() => onReschedule(show)}
+            className="flex items-center gap-1.5 text-blue-400 hover:text-blue-300 border border-blue-400/20 px-3 py-1.5 rounded-xl text-xs transition"
+          >
+            <CalendarClock size={12} /> Reschedule
           </button>
           <button
             onClick={() => onCancel(show)}
             disabled={cancelling === show.id}
-            className="flex items-center gap-1.5 text-red-400 hover:text-red-300 border border-red-400/10 px-3 py-1.5 rounded-xl text-sm transition disabled:opacity-50"
+            className="flex items-center gap-1.5 text-red-400 hover:text-red-300 border border-red-400/10 px-3 py-1.5 rounded-xl text-xs transition disabled:opacity-50"
           >
-            {cancelling === show.id ? <Spinner /> : <Trash2 size={13} />} Cancel
+            {cancelling === show.id ? <Spinner /> : <Trash2 size={12} />} Cancel
           </button>
         </div>
       ) : (
-        <span className="text-gray-400 text-xs shrink-0">
-          {!show.isActive ? "Cancelled" : "No actions"}
-        </span>
+        <p className="text-gray-400 text-xs pt-1 border-t border-gray-100">
+          {!show.isActive ? "Cancelled" : "No actions available"}
+        </p>
       )}
     </div>
   );

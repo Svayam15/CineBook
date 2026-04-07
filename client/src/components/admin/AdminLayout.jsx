@@ -21,11 +21,11 @@ const navItems = [
 
 // Trimmed list for mobile tab bar — 4 key items + Profile
 const mobileNavItems = [
-  { path: "/admin",          label: "Dashboard", icon: LayoutDashboard, exact: true },
-  { path: "/admin/shows",    label: "Shows",     icon: Tv },
-  { path: "/admin/bookings", label: "Bookings",  icon: BookOpen },
-  { path: "/admin/scanner",  label: "Scanner",   icon: ScanLine },
-  { path: "/admin/profile",  label: "Profile",   icon: UserCircle },
+  { path: "/admin",           label: "Dashboard", icon: LayoutDashboard, exact: true },
+  { path: "/admin/movies",    label: "Movies",    icon: Film },
+  { path: "/admin/theatres",  label: "Theatres",  icon: Theater },
+  { path: "/admin/shows",     label: "Shows",     icon: Tv },
+  { path: "/admin/profile",   label: "Profile",   icon: UserCircle },
 ];
 
 // ─── Drawer sub-components ────────────────────────────────────────────────────
