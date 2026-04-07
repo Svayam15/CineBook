@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import {
   Film, Ticket, Home, ArrowLeft, ChevronRight, Search, X,
-  BookMarked, MessageSquare, HelpCircle, FileText, LogOut, MapPin,
+  BookMarked, MessageSquare, HelpCircle, FileText, LogOut, MapPin
 } from "lucide-react";
 import useAuthStore from "../../store/authStore";
 import toast from "react-hot-toast";
@@ -15,7 +15,7 @@ const DrawerCard = ({ children }) => (
   </div>
 );
 
-const DrawerRow = ({ icon: Icon, label, onClick }) => (
+const DrawerRow = ({Icon, label, onClick }) => (
   <button
     onClick={onClick}
     className="w-full flex items-center gap-4 px-4 py-4 text-left hover:bg-gray-50 transition"
@@ -33,7 +33,7 @@ const ProfileDrawer = ({ onClose, user, onLogout, navigate }) => {
   return (
     <>
       <div className="fixed inset-0 z-40 bg-black/20 backdrop-blur-sm" onClick={onClose} />
-      <div className="fixed top-0 right-0 h-full w-80 bg-gray-50 z-50 flex flex-col shadow-2xl overflow-y-auto">
+      <div className="fixed top-0 right-0 h-full w-full md:w-80 bg-gray-50 z-50 flex flex-col shadow-2xl overflow-y-auto">
         <div className="flex items-center gap-3 px-5 py-5 bg-white border-b border-gray-100">
           <button onClick={onClose} className="text-gray-500 hover:text-gray-800 transition">
             <ArrowLeft size={20} />
@@ -108,7 +108,10 @@ const Navbar = ({ onSearchChange, searchValue }) => {
   const isActive = (path) => location.pathname === path;
   const initials = user ? `${user.name?.[0] ?? ""}`.toUpperCase() : "?";
 
-  useEffect(() => { setDrawerOpen(false); }, [location.pathname]);
+useEffect(() => {
+  const id = setTimeout(() => setDrawerOpen(false), 0);
+  return () => clearTimeout(id);
+}, [location.pathname]);
 
   return (
     <>
