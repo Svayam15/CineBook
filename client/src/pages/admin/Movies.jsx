@@ -171,6 +171,7 @@
   if (!form.duration.trim()) return toast.error("Duration is required");
   if (!/^\d+$/.test(form.duration.trim())) return toast.error(`"${form.duration}" is not valid — enter a whole number only, no decimals (e.g. 148)`);
   const dur = Number(form.duration);
+  if (dur === 0) return toast.error("Duration must be at least 1 minute");
   if (dur < 1) return toast.error("Duration must be at least 1 minute");
   if (dur > 600) return toast.error("Duration cannot exceed 600 minutes");
   const namePattern = /^[a-zA-Z]+(\s[a-zA-Z]+)*(,\s[a-zA-Z]+(\s[a-zA-Z]+)*)*$/;
