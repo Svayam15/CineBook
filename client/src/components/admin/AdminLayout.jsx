@@ -3,23 +3,32 @@ import { NavLink, useNavigate, useLocation } from "react-router-dom";
 import {
   Film, Theater, Tv, BookOpen, Users, LayoutDashboard,
   LogOut, Ticket, ScanLine, ArrowLeft, ChevronRight,
-  HelpCircle, FileText, Shield
+  HelpCircle, FileText, Shield, UserCircle
 } from "lucide-react";
 import useAuthStore from "../../store/authStore";
 import toast from "react-hot-toast";
 
 const navItems = [
-  { path: "/admin",               label: "Dashboard",     icon: LayoutDashboard, exact: true },
-  { path: "/admin/movies",        label: "Movies",        icon: Film },
-  { path: "/admin/theatres",      label: "Theatres",      icon: Theater },
-  { path: "/admin/shows",         label: "Shows",         icon: Tv },
-  { path: "/admin/bookings",      label: "Bookings",      icon: BookOpen },
-  { path: "/admin/users",         label: "Users",         icon: Users },
-  { path: "/admin/window-booking",label: "Window Booking",icon: Ticket },
-  { path: "/admin/scanner",       label: "Scanner",       icon: ScanLine },
+  { path: "/admin",                label: "Dashboard",      icon: LayoutDashboard, exact: true },
+  { path: "/admin/movies",         label: "Movies",         icon: Film },
+  { path: "/admin/theatres",       label: "Theatres",       icon: Theater },
+  { path: "/admin/shows",          label: "Shows",          icon: Tv },
+  { path: "/admin/bookings",       label: "Bookings",       icon: BookOpen },
+  { path: "/admin/users",          label: "Users",          icon: Users },
+  { path: "/admin/window-booking", label: "Window Booking", icon: Ticket },
+  { path: "/admin/scanner",        label: "Scanner",        icon: ScanLine },
 ];
 
-// ─── Drawer sub-components (mirror user Navbar pattern) ──────────────────────
+// Trimmed list for mobile tab bar — 4 key items + Profile
+const mobileNavItems = [
+  { path: "/admin",          label: "Dashboard", icon: LayoutDashboard, exact: true },
+  { path: "/admin/shows",    label: "Shows",     icon: Tv },
+  { path: "/admin/bookings", label: "Bookings",  icon: BookOpen },
+  { path: "/admin/scanner",  label: "Scanner",   icon: ScanLine },
+  { path: "/admin/profile",  label: "Profile",   icon: UserCircle },
+];
+
+// ─── Drawer sub-components ────────────────────────────────────────────────────
 const DrawerCard = ({ children }) => (
   <div className="bg-white rounded-2xl overflow-hidden shadow-sm border border-gray-100 divide-y divide-gray-100">
     {children}
@@ -43,13 +52,12 @@ const DrawerRow = ({ icon: Icon, label, onClick, danger }) => (
   </button>
 );
 
-// ─── Admin Profile Drawer ─────────────────────────────────────────────────────
+// ─── Admin Profile Drawer (desktop only) ─────────────────────────────────────
 const AdminProfileDrawer = ({ user, onClose, onLogout, navigate }) => {
   const initials = user ? `${user.name?.[0] ?? ""}`.toUpperCase() : "?";
 
   return (
     <>
-      {/* Drawer header */}
       <div className="flex items-center gap-3 px-5 py-5 bg-white border-b border-gray-100">
         <button onClick={onClose} className="text-gray-500 hover:text-gray-800 transition">
           <ArrowLeft size={20} />
@@ -68,7 +76,6 @@ const AdminProfileDrawer = ({ user, onClose, onLogout, navigate }) => {
               <p className="text-gray-900 font-bold text-sm leading-tight">
                 {user?.name} {user?.surname}
               </p>
-              {/* Admin badge inline with name */}
               <span className="inline-flex items-center gap-1 bg-amber-100 text-amber-700 text-[10px] font-semibold px-2 py-0.5 rounded-full border border-amber-200">
                 <Shield size={9} />
                 Admin
@@ -95,7 +102,7 @@ const AdminProfileDrawer = ({ user, onClose, onLogout, navigate }) => {
           <p className="text-gray-400 text-xs font-semibold uppercase tracking-wider px-1">Legal</p>
           <DrawerCard>
             <DrawerRow icon={HelpCircle} label="Terms & Conditions" onClick={() => { onClose(); navigate("/terms"); }} />
-            <DrawerRow icon={FileText}   label="Privacy Policy"      onClick={() => { onClose(); navigate("/privacy"); }} />
+            <DrawerRow icon={FileText}   label="Privacy Policy"     onClick={() => { onClose(); navigate("/privacy"); }} />
           </DrawerCard>
         </div>
 
@@ -111,13 +118,12 @@ const AdminProfileDrawer = ({ user, onClose, onLogout, navigate }) => {
 // ─── AdminLayout ──────────────────────────────────────────────────────────────
 const AdminLayout = ({ children }) => {
   const { user, logout } = useAuthStore();
-  const navigate  = useNavigate();
-  const location  = useLocation();
+  const navigate = useNavigate();
+  const location = useLocation();
   const [drawerOpen, setDrawerOpen] = useState(false);
 
   const initials = user ? `${user.name?.[0] ?? ""}`.toUpperCase() : "?";
 
-  // Close drawer on route change
   useEffect(() => { setDrawerOpen(false); }, [location.pathname]);
 
   const handleLogout = async () => {
@@ -133,7 +139,7 @@ const AdminLayout = ({ children }) => {
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
 
-      {/* ── Sticky Navbar-style header ── */}
+      {/* ── Sticky header ── */}
       <header className="bg-white border-b border-gray-200 sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 md:px-6 h-14 md:h-16 flex items-center gap-3 md:gap-6">
 
@@ -147,7 +153,7 @@ const AdminLayout = ({ children }) => {
             </span>
           </NavLink>
 
-          {/* Admin badge — amber pill, mirrors location chip in user Navbar */}
+          {/* Admin badge — desktop */}
           <div className="hidden md:flex items-center gap-1.5 shrink-0">
             <span className="inline-flex items-center gap-1.5 bg-amber-50 border border-amber-200 text-amber-700 text-xs font-semibold px-3 py-1 rounded-full">
               <Shield size={11} strokeWidth={2} />
@@ -155,7 +161,6 @@ const AdminLayout = ({ children }) => {
             </span>
           </div>
 
-          {/* Spacer */}
           <div className="flex-1" />
 
           {/* Greeting — desktop only */}
@@ -163,7 +168,7 @@ const AdminLayout = ({ children }) => {
             👋 {user?.name}
           </span>
 
-          {/* Avatar button — opens profile drawer */}
+          {/* Avatar — desktop only, opens drawer */}
           <button
             onClick={() => setDrawerOpen(true)}
             className="hidden md:flex w-9 h-9 rounded-full bg-primary/10 items-center justify-center font-bold text-sm text-primary hover:bg-primary/20 transition shrink-0"
@@ -171,33 +176,26 @@ const AdminLayout = ({ children }) => {
             {initials}
           </button>
 
-          {/* Mobile: Admin badge + avatar */}
-          <div className="flex md:hidden items-center gap-2">
+          {/* Mobile: badge only (profile is in tab bar) */}
+          <div className="flex md:hidden items-center">
             <span className="inline-flex items-center gap-1 bg-amber-50 border border-amber-200 text-amber-700 text-[10px] font-semibold px-2 py-0.5 rounded-full">
               <Shield size={9} strokeWidth={2} />
               Admin
             </span>
-            <button
-              onClick={() => setDrawerOpen(true)}
-              className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center font-bold text-xs text-primary hover:bg-primary/20 transition"
-            >
-              {initials}
-            </button>
           </div>
+
         </div>
       </header>
 
-      {/* ── Profile Drawer (same animation as user Navbar) ── */}
+      {/* ── Profile Drawer — desktop only ── */}
       <div className="fixed inset-0 z-50 pointer-events-none">
-        {/* Backdrop */}
         <div
           className={`absolute inset-0 bg-black/20 backdrop-blur-sm transition-opacity duration-300
             ${drawerOpen ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"}`}
           onClick={() => setDrawerOpen(false)}
         />
-        {/* Drawer panel */}
         <div
-          className={`absolute top-0 right-0 h-full w-full md:w-80 bg-gray-50 flex flex-col shadow-2xl overflow-y-auto transition-transform duration-300 ease-out
+          className={`absolute top-0 right-0 h-full w-80 bg-gray-50 flex flex-col shadow-2xl overflow-y-auto transition-transform duration-300 ease-out
             ${drawerOpen ? "translate-x-0 pointer-events-auto" : "translate-x-full pointer-events-none"}`}
         >
           <AdminProfileDrawer
@@ -212,7 +210,7 @@ const AdminLayout = ({ children }) => {
       {/* ── Body: sidebar + main ── */}
       <div className="flex flex-1">
 
-        {/* Desktop sidebar */}
+        {/* Desktop sidebar — full navItems */}
         <aside className="hidden md:flex w-56 bg-white border-r border-gray-200 p-4 flex-col gap-1 sticky top-16 h-[calc(100vh-64px)]">
           {navItems.map(({ path, label, icon: Icon, exact }) => (
             <NavLink
@@ -238,10 +236,10 @@ const AdminLayout = ({ children }) => {
         </main>
       </div>
 
-      {/* ── Mobile bottom tab bar ── */}
+      {/* ── Mobile bottom tab bar — mobileNavItems only ── */}
       <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-gray-200 px-2 py-2">
         <div className="flex items-center justify-around">
-          {navItems.map(({ path, label, icon: Icon, exact }) => (
+          {mobileNavItems.map(({ path, label, icon: Icon, exact }) => (
             <NavLink
               key={path}
               to={path}
@@ -252,13 +250,12 @@ const AdminLayout = ({ children }) => {
               }
             >
               <Icon size={20} />
-              <span className="text-[9px] font-medium leading-tight text-center">
-                {label === "Window Booking" ? "Window" : label}
-              </span>
+              <span className="text-[9px] font-medium leading-tight text-center">{label}</span>
             </NavLink>
           ))}
         </div>
       </nav>
+
     </div>
   );
 };
