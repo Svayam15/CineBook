@@ -31,24 +31,24 @@ const ForgotPassword = () => {
             <div className="w-14 h-14 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
               <span className="text-2xl">🔑</span>
             </div>
-            <h2 className="font-heading text-xl font-semibold text-white">
+            <h2 className="font-heading text-xl font-semibold text-gray-900">
               Forgot Password?
             </h2>
-            <p className="text-muted text-sm mt-2">
+            <p className="text-gray-500 text-sm mt-2">
               Enter your email and we'll send you an OTP to reset your password
             </p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="block text-sm text-muted mb-1.5">Email</label>
+              <label className="block text-sm text-gray-600 mb-1.5">Email</label>
               <input
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="Enter your email"
                 required
-                className="w-full bg-dark border border-border text-white rounded-xl px-4 py-3 outline-none focus:border-primary focus:ring-1 focus:ring-primary transition placeholder-zinc-700 text-sm"
+                className="w-full bg-gray-50 border border-gray-200 text-gray-900 rounded-xl px-4 py-3 outline-none focus:border-primary focus:ring-1 focus:ring-primary transition placeholder:text-gray-400 text-sm"
               />
             </div>
 
@@ -62,7 +62,7 @@ const ForgotPassword = () => {
           </form>
 
           <div className="text-center mt-5">
-            <Link to="/login" className="text-muted text-sm hover:text-white transition">
+            <Link to="/login" className="text-gray-500 text-sm hover:text-gray-900 transition">
               ← Back to login
             </Link>
           </div>

@@ -8,23 +8,23 @@ import Spinner from "../../components/common/Spinner";
 // ─── Delete Confirm Modal ─────────────────────────────────────────────────────
 const DeleteModal = ({ theatre, onClose, onConfirm, deleting }) => (
   <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm px-4">
-    <div className="bg-card border border-border rounded-2xl w-full max-w-sm shadow-2xl overflow-hidden">
-      <div className="flex items-center justify-between px-5 py-4 border-b border-border">
-        <span className="font-heading font-semibold text-white">Delete Theatre?</span>
-        <button onClick={onClose} className="text-muted hover:text-white transition">
+    <div className="bg-white border border-gray-100 rounded-2xl w-full max-w-sm shadow-2xl overflow-hidden">
+      <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+        <span className="font-heading font-semibold text-gray-900">Delete Theatre?</span>
+        <button onClick={onClose} className="text-gray-400 hover:text-gray-700 transition">
           <X size={18} />
         </button>
       </div>
       <div className="p-5 space-y-4">
         <p className="text-muted text-sm">
           Are you sure you want to delete{" "}
-          <span className="text-white font-semibold">"{theatre.name}"</span>?
+          <span className="text-gray-900 font-semibold">"{theatre.name}"</span>?
           This will also delete all associated shows.
         </p>
         <div className="flex gap-3">
           <button
             onClick={onClose}
-            className="flex-1 py-2.5 rounded-xl border border-border text-muted hover:text-white text-sm transition"
+            className="flex-1 py-2.5 rounded-xl border border-gray-200 text-gray-500 hover:text-gray-900 text-sm transition"
           >
             Cancel
           </button>
@@ -110,7 +110,7 @@ const Theatres = () => {
 
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="font-heading text-2xl font-bold text-white">Theatres</h1>
+          <h1 className="font-heading text-2xl font-bold text-gray-900">Theatres</h1>
           <p className="text-muted text-sm mt-1">{theatres.length} theatres total</p>
         </div>
         <button
@@ -124,8 +124,8 @@ const Theatres = () => {
 
       {/* Add Form */}
       {showForm && (
-        <div className="bg-card border border-border rounded-2xl p-5 mb-6">
-          <h2 className="font-heading text-lg font-semibold text-white mb-4">Add New Theatre</h2>
+        <div className="bg-white border border-gray-100 rounded-2xl p-5 mb-6">
+          <h2 className="font-heading text-lg font-semibold text-gray-900 mb-4">Add New Theatre</h2>
           <form onSubmit={handleAdd} className="flex flex-col sm:flex-row gap-3">
             <input
               type="text"
@@ -133,7 +133,7 @@ const Theatres = () => {
               value={form.name}
               onChange={(e) => setForm({ ...form, name: e.target.value })}
               required
-              className="flex-1 bg-dark border border-border text-white rounded-xl px-4 py-2.5 outline-none focus:border-primary text-sm"
+              className="flex-1 bg-gray-50 border border-gray-200 text-gray-900 rounded-xl px-4 py-2.5 outline-none focus:border-primary text-sm"
             />
             <input
               type="text"
@@ -141,7 +141,7 @@ const Theatres = () => {
               value={form.location}
               onChange={(e) => setForm({ ...form, location: e.target.value })}
               required
-              className="flex-1 bg-dark border border-border text-white rounded-xl px-4 py-2.5 outline-none focus:border-primary text-sm"
+              className="flex-1 bg-gray-50 border border-gray-200 text-gray-900 rounded-xl px-4 py-2.5 outline-none focus:border-primary text-sm"
             />
             <button
               type="submit"
@@ -158,7 +158,7 @@ const Theatres = () => {
       {loading ? (
         <div className="space-y-3">
           {[...Array(4)].map((_, i) => (
-            <div key={i} className="bg-card border border-border rounded-2xl h-16 animate-pulse" />
+            <div key={i} className="bg-white border border-gray-100 rounded-2xl h-16 animate-pulse" />
           ))}
         </div>
       ) : theatres.length === 0 ? (
@@ -169,9 +169,9 @@ const Theatres = () => {
       ) : (
         <div className="space-y-3">
           {theatres.map((theatre) => (
-            <div key={theatre.id} className="bg-card border border-border rounded-2xl px-5 py-4 flex items-center justify-between">
+            <div key={theatre.id} className="bg-white border border-gray-100 rounded-2xl px-5 py-4 flex items-center justify-between">
               <div>
-                <p className="text-white font-medium">{theatre.name}</p>
+                <p className="text-gray-900 font-medium">{theatre.name}</p>
                 <p className="text-muted text-sm">📍 {theatre.location}</p>
               </div>
               <button

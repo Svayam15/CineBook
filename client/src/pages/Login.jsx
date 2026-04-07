@@ -54,7 +54,7 @@ const Login = () => {
 
          return (
     <AuthLayout subtitle="Your ultimate movie booking experience">
-          <h2 className="font-heading text-xl font-semibold text-white mb-6">
+          <h2 className="font-heading text-xl font-semibold text-gray-900 mb-6">
             Welcome back! Please login.
 
           </h2>
@@ -63,7 +63,7 @@ const Login = () => {
 
             {/* Identifier */}
             <div>
-              <label className="block text-sm text-muted mb-1.5">
+              <label className="block text-sm text-gray-600 mb-1.5">
                 Email or Username
               </label>
               <input
@@ -73,13 +73,13 @@ const Login = () => {
                 onChange={handleChange}
                 placeholder="Enter your email or username"
                 required
-                className="w-full bg-dark border border-border text-white rounded-xl px-4 py-3 outline-none focus:border-primary focus:ring-1 focus:ring-primary transition placeholder-zinc-700 text-sm"
+                className="w-full bg-gray-50 border border-gray-200 text-gray-900 rounded-xl px-4 py-3 outline-none focus:border-primary focus:ring-1 focus:ring-primary transition placeholder:text-gray-400 text-sm"
               />
             </div>
 
             {/* Password */}
             <div>
-              <label className="block text-sm text-muted mb-1.5">
+              <label className="block text-sm text-gray-600 mb-1.5">
                 Password
               </label>
               <div className="relative">
@@ -90,12 +90,12 @@ const Login = () => {
                   onChange={handleChange}
                   placeholder="Enter your password"
                   required
-                  className="w-full bg-dark border border-border text-white rounded-xl px-4 py-3 pr-12 outline-none focus:border-primary focus:ring-1 focus:ring-primary transition placeholder-zinc-700 text-sm"
+                  className="w-full bg-gray-50 border border-gray-200 text-gray-900 rounded-xl px-4 py-3 pr-12 outline-none focus:border-primary focus:ring-1 focus:ring-primary transition placeholder:text-gray-400 text-sm"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-muted hover:text-white transition"
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-700 transition"
                 >
                   {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                 </button>
@@ -108,7 +108,7 @@ const Login = () => {
   <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center transition-all duration-200
     ${formData.stayLoggedIn
       ? "bg-primary border-primary"
-      : "border-zinc-600 group-hover:border-primary"
+      : "border-gray-300 group-hover:border-primary"
     }`}
   >
     {formData.stayLoggedIn && (
@@ -117,7 +117,7 @@ const Login = () => {
       </svg>
     )}
   </div>
-  <span className="text-sm text-muted group-hover:text-white transition">Stay logged in</span>
+  <span className="text-sm text-gray-500 group-hover:text-gray-900 transition">Stay logged in</span>
 </div>
               <Link
                 to="/forgot-password"

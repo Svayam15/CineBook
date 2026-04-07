@@ -10,9 +10,9 @@ const STATUS_TABS = ["ALL", "UPCOMING", "ONGOING", "COMPLETED"];
 
 const statusBadge = (status) => {
   switch (status) {
-    case "UPCOMING":  return "bg-blue-500/10 text-blue-400 border border-blue-500/20";
-    case "ONGOING":   return "bg-green-500/10 text-green-400 border border-green-500/20";
-    case "COMPLETED": return "bg-zinc-500/10 text-zinc-400 border border-zinc-500/20";
+    case "UPCOMING":  return "bg-blue-100 text-blue-700 border border-blue-200";
+    case "ONGOING":   return "bg-green-100 text-green-700 border border-green-200";
+    case "COMPLETED": return "bg-gray-100 text-gray-600 border border-gray-200";
     default:          return "";
   }
 };
@@ -20,11 +20,11 @@ const statusBadge = (status) => {
 // ─── Confirm Modal ────────────────────────────────────────────────────────────
 const ConfirmModal = ({ title, message, confirmLabel, confirmClass, onConfirm, onCancel }) => (
   <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-    <div className="bg-card border border-border rounded-2xl p-6 w-full max-w-sm mx-4 shadow-2xl">
-      <h3 className="text-white font-semibold text-lg mb-2">{title}</h3>
+    <div className="bg-white border border-gray-100 rounded-2xl p-6 w-full max-w-sm mx-4 shadow-2xl">
+      <h3 className="text-gray-900 font-semibold text-lg mb-2">{title}</h3>
       <p className="text-muted text-sm mb-6">{message}</p>
       <div className="flex gap-3 justify-end">
-        <button onClick={onCancel} className="px-4 py-2 rounded-xl border border-border text-muted hover:text-white text-sm transition">Cancel</button>
+        <button onClick={onCancel} className="px-4 py-2 rounded-xl border border-gray-200 text-gray-500 hover:text-gray-900 text-sm transition">Cancel</button>
         <button onClick={onConfirm} className={`px-4 py-2 rounded-xl text-white text-sm font-medium transition ${confirmClass}`}>{confirmLabel}</button>
       </div>
     </div>
@@ -44,12 +44,12 @@ const UpdateModal = ({ show, onSave, onClose, saving }) => {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-      <div className="bg-card border border-border rounded-2xl p-6 w-full max-w-md mx-4 shadow-2xl">
+      <div className="bg-white border border-gray-100 rounded-2xl p-6 w-full max-w-md mx-4 shadow-2xl">
         <div className="flex items-center justify-between mb-5">
-          <h3 className="text-white font-semibold text-lg">Edit Show</h3>
-          <button onClick={onClose} className="text-muted hover:text-white transition"><X size={18} /></button>
+          <h3 className="text-gray-900 font-semibold text-lg">Edit Show</h3>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-700 transition"><X size={18} /></button>
         </div>
-        <p className="text-muted text-xs mb-4 bg-dark border border-border rounded-xl px-4 py-2.5">
+        <p className="text-gray-500 text-xs mb-4 bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5">
           Only show type and prices can be edited. The show must have no bookings.
         </p>
         <div className="space-y-4">
@@ -58,7 +58,7 @@ const UpdateModal = ({ show, onSave, onClose, saving }) => {
             <select
               value={form.showType}
               onChange={(e) => setForm({ ...form, showType: e.target.value })}
-              className="w-full bg-dark border border-border text-white rounded-xl px-4 py-2.5 outline-none focus:border-primary text-sm"
+              className="w-full bg-gray-50 border border-gray-200 text-gray-900 rounded-xl px-4 py-2.5 outline-none focus:border-primary text-sm"
             >
               {availableFormats.map((t) => <option key={t} value={t}>{t}</option>)}
             </select>
@@ -69,7 +69,7 @@ const UpdateModal = ({ show, onSave, onClose, saving }) => {
               type="number" min="1"
               value={form.regularPrice}
               onChange={(e) => setForm({ ...form, regularPrice: e.target.value })}
-              className="w-full bg-dark border border-border text-white rounded-xl px-4 py-2.5 outline-none focus:border-primary text-sm"
+              className="w-full bg-gray-50 border border-gray-200 text-gray-900 rounded-xl px-4 py-2.5 outline-none focus:border-primary text-sm"
             />
           </div>
           {show.hasGoldenSeats && (
@@ -79,13 +79,13 @@ const UpdateModal = ({ show, onSave, onClose, saving }) => {
                 type="number" min="1"
                 value={form.goldenPrice}
                 onChange={(e) => setForm({ ...form, goldenPrice: e.target.value })}
-                className="w-full bg-dark border border-border text-white rounded-xl px-4 py-2.5 outline-none focus:border-primary text-sm"
+                className="w-full bg-gray-50 border border-gray-200 text-gray-900 rounded-xl px-4 py-2.5 outline-none focus:border-primary text-sm"
               />
             </div>
           )}
         </div>
         <div className="flex gap-3 justify-end mt-6">
-          <button onClick={onClose} className="px-4 py-2 rounded-xl border border-border text-muted hover:text-white text-sm transition">Cancel</button>
+          <button onClick={onClose} className="px-4 py-2 rounded-xl border border-gray-200 text-gray-500 hover:text-gray-900 text-sm transition">Cancel</button>
           <button
             onClick={() => onSave(show.id, {
               showType: form.showType,
@@ -109,12 +109,12 @@ const RescheduleModal = ({ show, onSave, onClose, saving }) => {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-      <div className="bg-card border border-border rounded-2xl p-6 w-full max-w-md mx-4 shadow-2xl">
+      <div className="bg-white border border-gray-100 rounded-2xl p-6 w-full max-w-md mx-4 shadow-2xl">
         <div className="flex items-center justify-between mb-5">
-          <h3 className="text-white font-semibold text-lg">Reschedule Show</h3>
-          <button onClick={onClose} className="text-muted hover:text-white transition"><X size={18} /></button>
+          <h3 className="text-gray-900 font-semibold text-lg">Reschedule Show</h3>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-700 transition"><X size={18} /></button>
         </div>
-        <p className="text-muted text-xs mb-4 bg-dark border border-border rounded-xl px-4 py-2.5">
+        <p className="text-gray-500 text-xs mb-4 bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5">
           All paid booking holders will be notified by email automatically.
         </p>
         <div>
@@ -123,11 +123,11 @@ const RescheduleModal = ({ show, onSave, onClose, saving }) => {
             type="datetime-local"
             value={startTime}
             onChange={(e) => setStartTime(e.target.value)}
-            className="w-full bg-dark border border-border text-white rounded-xl px-4 py-2.5 outline-none focus:border-primary text-sm"
+            className="w-full bg-gray-50 border border-gray-200 text-gray-900 rounded-xl px-4 py-2.5 outline-none focus:border-primary text-sm"
           />
         </div>
         <div className="flex gap-3 justify-end mt-6">
-          <button onClick={onClose} className="px-4 py-2 rounded-xl border border-border text-muted hover:text-white text-sm transition">Cancel</button>
+          <button onClick={onClose} className="px-4 py-2 rounded-xl border border-gray-200 text-gray-500 hover:text-gray-900 text-sm transition">Cancel</button>
           <button
             onClick={() => {
               if (!startTime) return toast.error("Please select a new start time");
@@ -152,10 +152,10 @@ const ShowRow = ({ show, onEdit, onReschedule, onCancel, cancelling }) => {
   const canEdit = show.status === "UPCOMING";
 
   return (
-    <div className="bg-card border border-border rounded-2xl px-5 py-4 flex items-center justify-between gap-4">
+    <div className="bg-white border border-gray-100 rounded-2xl px-5 py-4 flex items-center justify-between gap-4">
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 flex-wrap">
-          <p className="text-white font-medium">{show.movie?.title}</p>
+          <p className="text-gray-900 font-medium">{show.movie?.title}</p>
           <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full">{show.showType}</span>
           <span className="text-xs bg-golden/10 text-golden px-2 py-0.5 rounded-full">{show.language}</span>
           {show.hasGoldenSeats && (
@@ -176,7 +176,7 @@ const ShowRow = ({ show, onEdit, onReschedule, onCancel, cancelling }) => {
 
       {canEdit && show.isActive ? (
         <div className="flex items-center gap-2 shrink-0">
-          <button onClick={() => onEdit(show)} className="flex items-center gap-1.5 text-muted hover:text-white border border-border px-3 py-1.5 rounded-xl text-sm transition">
+          <button onClick={() => onEdit(show)} className="flex items-center gap-1.5 text-gray-500 hover:text-gray-900 border border-gray-200 px-3 py-1.5 rounded-xl text-sm transition">
             <Pencil size={13} /> Edit
           </button>
           <button onClick={() => onReschedule(show)} className="flex items-center gap-1.5 text-blue-400 hover:text-blue-300 border border-blue-400/20 px-3 py-1.5 rounded-xl text-sm transition">
@@ -191,7 +191,7 @@ const ShowRow = ({ show, onEdit, onReschedule, onCancel, cancelling }) => {
           </button>
         </div>
       ) : (
-        <span className="text-zinc-600 text-xs shrink-0">
+        <span className="text-gray-400 text-xs shrink-0">
           {!show.isActive ? "Cancelled" : "No actions"}
         </span>
       )}
@@ -358,7 +358,7 @@ const Shows = () => {
       {/* Header */}
       <div className="flex items-center justify-between mb-6 gap-4 flex-wrap">
         <div>
-          <h1 className="font-heading text-2xl font-bold text-white">Shows</h1>
+          <h1 className="font-heading text-2xl font-bold text-gray-900">Shows</h1>
           <p className="text-muted text-sm mt-1">{shows.length} total shows</p>
         </div>
         <button
@@ -372,8 +372,8 @@ const Shows = () => {
 
       {/* Add Form */}
       {showForm && (
-        <div className="bg-card border border-border rounded-2xl p-5 mb-6">
-          <h2 className="font-heading text-base font-semibold text-white mb-4">Create New Show</h2>
+        <div className="bg-white border border-gray-100 rounded-2xl p-5 mb-6">
+          <h2 className="font-heading text-base font-semibold text-gray-900 mb-4">Create New Show</h2>
           <form onSubmit={handleAdd} className="grid grid-cols-1 sm:grid-cols-2 gap-4">
 
             {/* Movie */}
@@ -383,7 +383,7 @@ const Shows = () => {
                 value={form.movieId}
                 onChange={(e) => handleMovieChange(e.target.value)}
                 required
-                className="w-full bg-dark border border-border text-white rounded-xl px-4 py-2.5 outline-none focus:border-primary text-sm"
+                className="w-full bg-gray-50 border border-gray-200 text-gray-900 rounded-xl px-4 py-2.5 outline-none focus:border-primary text-sm"
               >
                 <option value="">Select movie</option>
                 {movies.map((m) => <option key={m.id} value={m.id}>{m.title}</option>)}
@@ -397,7 +397,7 @@ const Shows = () => {
                 value={form.theatreId}
                 onChange={(e) => setForm({ ...form, theatreId: e.target.value })}
                 required
-                className="w-full bg-dark border border-border text-white rounded-xl px-4 py-2.5 outline-none focus:border-primary text-sm"
+                className="w-full bg-gray-50 border border-gray-200 text-gray-900 rounded-xl px-4 py-2.5 outline-none focus:border-primary text-sm"
               >
                 <option value="">Select theatre</option>
                 {theatres.map((t) => <option key={t.id} value={t.id}>{t.name} — {t.location}</option>)}
@@ -412,7 +412,7 @@ const Shows = () => {
                 value={form.startTime}
                 onChange={(e) => setForm({ ...form, startTime: e.target.value })}
                 required
-                className="w-full bg-dark border border-border text-white rounded-xl px-4 py-2.5 outline-none focus:border-primary text-sm"
+                className="w-full bg-gray-50 border border-gray-200 text-gray-900 rounded-xl px-4 py-2.5 outline-none focus:border-primary text-sm"
               />
             </div>
 
@@ -427,7 +427,7 @@ const Shows = () => {
                 onChange={(e) => setForm({ ...form, showType: e.target.value })}
                 required
                 disabled={availableFormats.length === 0}
-                className="w-full bg-dark border border-border text-white rounded-xl px-4 py-2.5 outline-none focus:border-primary text-sm disabled:opacity-50"
+                className="w-full bg-gray-50 border border-gray-200 text-gray-900 rounded-xl px-4 py-2.5 outline-none focus:border-primary text-sm disabled:opacity-50"
               >
                 {availableFormats.length === 0
                   ? <option value="">Select a movie first</option>
@@ -447,7 +447,7 @@ const Shows = () => {
                 onChange={(e) => setForm({ ...form, language: e.target.value })}
                 required
                 disabled={availableLanguages.length === 0}
-                className="w-full bg-dark border border-border text-white rounded-xl px-4 py-2.5 outline-none focus:border-primary text-sm disabled:opacity-50"
+                className="w-full bg-gray-50 border border-gray-200 text-gray-900 rounded-xl px-4 py-2.5 outline-none focus:border-primary text-sm disabled:opacity-50"
               >
                 {availableLanguages.length === 0
                   ? <option value="">Select a movie first</option>
@@ -462,7 +462,7 @@ const Shows = () => {
               <select
                 value={form.totalSeats}
                 onChange={(e) => setForm({ ...form, totalSeats: e.target.value })}
-                className="w-full bg-dark border border-border text-white rounded-xl px-4 py-2.5 outline-none focus:border-primary text-sm"
+                className="w-full bg-gray-50 border border-gray-200 text-gray-900 rounded-xl px-4 py-2.5 outline-none focus:border-primary text-sm"
               >
                 {SEAT_COUNTS.map((s) => <option key={s} value={s}>{s}</option>)}
               </select>
@@ -478,7 +478,7 @@ const Shows = () => {
                 onChange={(e) => setForm({ ...form, regularPrice: e.target.value })}
                 required
                 min="1"
-                className="w-full bg-dark border border-border text-white rounded-xl px-4 py-2.5 outline-none focus:border-primary text-sm"
+                className="w-full bg-gray-50 border border-gray-200 text-gray-900 rounded-xl px-4 py-2.5 outline-none focus:border-primary text-sm"
               />
             </div>
 
@@ -507,7 +507,7 @@ const Shows = () => {
                     type="number" placeholder="Min 30" value={form.goldenSeats}
                     onChange={(e) => setForm({ ...form, goldenSeats: e.target.value })}
                     required min="30"
-                    className="w-full bg-dark border border-border text-white rounded-xl px-4 py-2.5 outline-none focus:border-primary text-sm"
+                    className="w-full bg-gray-50 border border-gray-200 text-gray-900 rounded-xl px-4 py-2.5 outline-none focus:border-primary text-sm"
                   />
                 </div>
                 <div>
@@ -516,7 +516,7 @@ const Shows = () => {
                     type="number" placeholder="Must be > regular price" value={form.goldenPrice}
                     onChange={(e) => setForm({ ...form, goldenPrice: e.target.value })}
                     required min="1"
-                    className="w-full bg-dark border border-border text-white rounded-xl px-4 py-2.5 outline-none focus:border-primary text-sm"
+                    className="w-full bg-gray-50 border border-gray-200 text-gray-900 rounded-xl px-4 py-2.5 outline-none focus:border-primary text-sm"
                   />
                 </div>
               </>
@@ -533,7 +533,7 @@ const Shows = () => {
               <button
                 type="button"
                 onClick={() => setShowForm(false)}
-                className="bg-card border border-border text-muted hover:text-white px-6 py-2.5 rounded-xl text-sm transition"
+                className="bg-white border border-gray-200 text-gray-500 hover:text-gray-900 px-6 py-2.5 rounded-xl text-sm transition"
               >
                 Cancel
               </button>
@@ -549,7 +549,7 @@ const Shows = () => {
             key={tab}
             onClick={() => setActiveTab(tab)}
             className={`px-4 py-1.5 rounded-full text-sm font-medium transition
-              ${activeTab === tab ? "bg-primary text-white" : "bg-card border border-border text-muted hover:text-white"}`}
+              ${activeTab === tab ? "bg-primary text-white" : "bg-white border border-gray-200 text-gray-500 hover:text-gray-900"}`}
           >
             {tab === "ALL" ? `All (${shows.length})` : `${tab} (${countByStatus(tab)})`}
           </button>
@@ -560,7 +560,7 @@ const Shows = () => {
       {loading ? (
         <div className="space-y-3">
           {[...Array(4)].map((_, i) => (
-            <div key={i} className="bg-card border border-border rounded-2xl h-20 animate-pulse" />
+            <div key={i} className="bg-white border border-gray-100 rounded-2xl h-20 animate-pulse" />
           ))}
         </div>
       ) : filteredShows.length === 0 ? (

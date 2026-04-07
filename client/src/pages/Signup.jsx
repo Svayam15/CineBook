@@ -49,7 +49,7 @@ const Signup = () => {
 
     return (
     <AuthLayout subtitle="Create your account">
-          <h2 className="font-heading text-xl font-semibold text-white mb-6">
+          <h2 className="font-heading text-xl font-semibold text-gray-900 mb-6">
             Join CineBook 🎬
           </h2>
 
@@ -58,7 +58,7 @@ const Signup = () => {
             {/* Name + Surname */}
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-sm text-muted mb-1.5">First Name</label>
+                <label className="block text-sm text-gray-600 mb-1.5">First Name</label>
                 <input
                   type="text"
                   name="name"
@@ -66,13 +66,13 @@ const Signup = () => {
                   onChange={handleChange}
                   placeholder="John"
                   required
-                  className={`w-full bg-dark border text-white rounded-xl px-4 py-3 outline-none focus:ring-1 transition placeholder-zinc-700 text-sm
-                    ${errors.name ? "border-red-500 focus:border-red-500 focus:ring-red-500" : "border-border focus:border-primary focus:ring-primary"}`}
+                  className={`w-full bg-gray-50 border text-gray-900 rounded-xl px-4 py-3 outline-none focus:ring-1 transition placeholder:text-gray-400 text-sm
+                    ${errors.name ? "border-red-500 focus:border-red-500 focus:ring-red-500" : "border-gray-200 focus:border-primary focus:ring-primary"}`}
                 />
                 {errors.name && <p className="text-red-400 text-xs mt-1">⚠️ {errors.name}</p>}
               </div>
               <div>
-                <label className="block text-sm text-muted mb-1.5">Last Name</label>
+                <label className="block text-sm text-gray-600 mb-1.5">Last Name</label>
                 <input
                   type="text"
                   name="surname"
@@ -80,8 +80,8 @@ const Signup = () => {
                   onChange={handleChange}
                   placeholder="Doe"
                   required
-                  className={`w-full bg-dark border text-white rounded-xl px-4 py-3 outline-none focus:ring-1 transition placeholder-zinc-700 text-sm
-                    ${errors.surname ? "border-red-500 focus:border-red-500 focus:ring-red-500" : "border-border focus:border-primary focus:ring-primary"}`}
+                  className={`w-full bg-gray-50 border text-gray-900 rounded-xl px-4 py-3 outline-none focus:ring-1 transition placeholder:text-gray-400 text-sm
+                    ${errors.surname ? "border-red-500 focus:border-red-500 focus:ring-red-500" : "border-gray-200 focus:border-primary focus:ring-primary"}`}
                 />
                 {errors.surname && <p className="text-red-400 text-xs mt-1">⚠️ {errors.surname}</p>}
               </div>
@@ -89,7 +89,7 @@ const Signup = () => {
 
             {/* Username */}
             <div>
-              <label className="block text-sm text-muted mb-1.5">Username</label>
+              <label className="block text-sm text-gray-600 mb-1.5">Username</label>
               <input
                 type="text"
                 name="username"
@@ -97,15 +97,15 @@ const Signup = () => {
                 onChange={handleChange}
                 placeholder="john_doe"
                 required
-                className={`w-full bg-dark border text-white rounded-xl px-4 py-3 outline-none focus:ring-1 transition placeholder-zinc-700 text-sm
-                  ${errors.username ? "border-red-500 focus:border-red-500 focus:ring-red-500" : "border-border focus:border-primary focus:ring-primary"}`}
+                className={`w-full bg-gray-50 border text-gray-900 rounded-xl px-4 py-3 outline-none focus:ring-1 transition placeholder:text-gray-400 text-sm
+                  ${errors.username ? "border-red-500 focus:border-red-500 focus:ring-red-500" : "border-gray-200 focus:border-primary focus:ring-primary"}`}
               />
               {errors.username && <p className="text-red-400 text-xs mt-1">⚠️ {errors.username}</p>}
             </div>
 
             {/* Email */}
             <div>
-              <label className="block text-sm text-muted mb-1.5">Email</label>
+              <label className="block text-sm text-gray-600 mb-1.5">Email</label>
               <input
                 type="email"
                 name="email"
@@ -113,15 +113,15 @@ const Signup = () => {
                 onChange={handleChange}
                 placeholder="john@example.com"
                 required
-                className={`w-full bg-dark border text-white rounded-xl px-4 py-3 outline-none focus:ring-1 transition placeholder-zinc-700 text-sm
-                  ${errors.email ? "border-red-500 focus:border-red-500 focus:ring-red-500" : "border-border focus:border-primary focus:ring-primary"}`}
+                className={`w-full bg-gray-50 border text-gray-900 rounded-xl px-4 py-3 outline-none focus:ring-1 transition placeholder:text-gray-400 text-sm
+                  ${errors.email ? "border-red-500 focus:border-red-500 focus:ring-red-500" : "border-gray-200 focus:border-primary focus:ring-primary"}`}
               />
               {errors.email && <p className="text-red-400 text-xs mt-1">⚠️ {errors.email}</p>}
             </div>
 
             {/* Password */}
             <div>
-              <label className="block text-sm text-muted mb-1.5">Password</label>
+              <label className="block text-sm text-gray-600 mb-1.5">Password</label>
               <div className="relative">
                 <input
                   type={showPassword ? "text" : "password"}
@@ -130,13 +130,13 @@ const Signup = () => {
                   onChange={handleChange}
                   placeholder="Min 8 chars with uppercase, number & symbol"
                   required
-                  className={`w-full bg-dark border text-white rounded-xl px-4 py-3 pr-12 outline-none focus:ring-1 transition placeholder-zinc-700 text-sm
-                    ${errors.password ? "border-red-500 focus:border-red-500 focus:ring-red-500" : "border-border focus:border-primary focus:ring-primary"}`}
+                  className={`w-full bg-gray-50 border text-gray-900 rounded-xl px-4 py-3 pr-12 outline-none focus:ring-1 transition placeholder:text-gray-400 text-sm
+                    ${errors.password ? "border-red-500 focus:border-red-500 focus:ring-red-500" : "border-gray-200 focus:border-primary focus:ring-primary"}`}
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-muted hover:text-white transition"
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-700 transition"
                 >
                   {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                 </button>

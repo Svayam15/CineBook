@@ -28,22 +28,22 @@ const AdminLayout = ({ children }) => {
   };
 
 return (
-    <div className="min-h-screen bg-dark flex flex-col">
-      <header className="bg-card border-b border-border px-4 md:px-6 py-4 flex items-center justify-between sticky top-0 z-50">
+    <div className="min-h-screen bg-gray-50 flex flex-col">
+      <header className="bg-white border-b border-gray-200 px-4 md:px-6 py-4 flex items-center justify-between sticky top-0 z-50">
         <div className="flex items-center gap-2">
           <Film className="text-primary" size={22} />
-          <span className="font-heading text-lg md:text-xl font-bold text-white">
+          <span className="font-heading text-lg md:text-xl font-bold text-gray-900">
             Cine<span className="text-primary">Book</span>
-            <span className="text-muted text-xs md:text-sm font-normal ml-2">Admin</span>
+            <span className="text-gray-500 text-xs md:text-sm font-normal ml-2">Admin</span>
           </span>
         </div>
         <div className="flex items-center gap-2 md:gap-4">
-          <span className="text-xs md:text-sm text-muted hidden sm:block">
+          <span className="text-xs md:text-sm text-gray-500 hidden sm:block">
             👋 {user?.name} {user?.surname}
           </span>
           <button
             onClick={handleLogout}
-            className="flex items-center gap-1.5 text-xs md:text-sm text-muted hover:text-red-400 transition"
+            className="flex items-center gap-1.5 text-xs md:text-sm text-gray-500 hover:text-red-500 transition"
           >
             <LogOut size={15} />
             <span className="hidden sm:block">Logout</span>
@@ -52,7 +52,7 @@ return (
       </header>
 
       <div className="flex flex-1">
-        <aside className="hidden md:flex w-56 bg-card border-r border-border p-4 flex-col gap-1 sticky top-16 h-[calc(100vh-64px)]">
+        <aside className="hidden md:flex w-56 bg-white border-r border-gray-200 p-4 flex-col gap-1 sticky top-16 h-[calc(100vh-64px)]">
           {navItems.map((item) => {
             const Icon = item.icon;
             return (
@@ -62,7 +62,7 @@ return (
                 end={item.exact}
                 className={({ isActive }) =>
                   `flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-all duration-200
-                  ${isActive ? "bg-primary/10 text-primary font-medium" : "text-muted hover:bg-white/5 hover:text-white"}`
+                  ${isActive ? "bg-primary/10 text-primary font-medium" : "text-gray-600 hover:bg-gray-100 hover:text-gray-900"}`
                 }
               >
                 <Icon size={18} />
@@ -77,7 +77,7 @@ return (
         </main>
       </div>
 
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-card border-t border-border px-2 py-2">
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-gray-200 px-2 py-2">
         <div className="flex items-center justify-around">
           {navItems.map((item) => {
             const Icon = item.icon;
@@ -88,7 +88,7 @@ return (
                 end={item.exact}
                 className={({ isActive }) =>
                   `flex flex-col items-center gap-0.5 px-2 py-1 rounded-xl transition-all
-                  ${isActive ? "text-primary" : "text-muted"}`
+                  ${isActive ? "text-primary" : "text-gray-400"}`
                 }
               >
                 <Icon size={20} />

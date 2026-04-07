@@ -40,11 +40,17 @@
   }
 }
 
-.scrollbar-hide {
-  -ms-overflow-style: none;
-  scrollbar-width: none;
+/* ── Smooth scrolling ── */
+html {
+  scroll-behavior: smooth;
 }
-.scrollbar-hide::-webkit-scrollbar {
+
+/* ── No scrollbar anywhere ── */
+* {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+*::-webkit-scrollbar {
   display: none;
 }
 

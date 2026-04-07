@@ -15,7 +15,7 @@ const DrawerCard = ({ children }) => (
   </div>
 );
 
-const DrawerRow = ({icon: Icon, label, onClick }) => (
+const DrawerRow = ({ icon: Icon, label, onClick }) => (
   <button
     onClick={onClick}
     className="w-full flex items-center gap-4 px-4 py-4 text-left hover:bg-gray-50 transition"
@@ -26,63 +26,60 @@ const DrawerRow = ({icon: Icon, label, onClick }) => (
   </button>
 );
 
-// ─── Profile Drawer ───────────────────────────────────────────────────────────
+// ─── Profile Drawer content ───────────────────────────────────────────────────
 const ProfileDrawer = ({ onClose, user, onLogout, navigate }) => {
   const initials = user ? `${user.name?.[0] ?? ""}`.toUpperCase() : "?";
 
   return (
     <>
-      <div className="fixed inset-0 z-40 bg-black/20 backdrop-blur-sm" onClick={onClose} />
-<div className="fixed top-0 right-0 h-full w-screen md:w-80 bg-gray-50 z-50 flex flex-col shadow-2xl overflow-y-auto">
-        <div className="flex items-center gap-3 px-5 py-5 bg-white border-b border-gray-100">
-          <button onClick={onClose} className="text-gray-500 hover:text-gray-800 transition">
-            <ArrowLeft size={20} />
+      <div className="flex items-center gap-3 px-5 py-5 bg-white border-b border-gray-100">
+        <button onClick={onClose} className="text-gray-500 hover:text-gray-800 transition">
+          <ArrowLeft size={20} />
+        </button>
+        <h2 className="text-base font-bold text-gray-900">Profile</h2>
+      </div>
+
+      <div className="flex flex-col gap-4 px-4 py-5">
+        <div className="flex items-center gap-4 px-1 py-2">
+          <div className="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-xl shrink-0">
+            {initials}
+          </div>
+          <div>
+            <p className="text-gray-900 font-bold text-sm leading-tight">
+              {user?.name} {user?.surname}
+            </p>
+            <p className="text-gray-400 text-xs mt-0.5">{user?.email}</p>
+          </div>
+        </div>
+
+        <DrawerCard>
+          <DrawerRow icon={BookMarked} label="My Bookings" onClick={() => { onClose(); navigate("/my-bookings"); }} />
+        </DrawerCard>
+
+        <div className="space-y-2">
+          <p className="text-gray-400 text-xs font-semibold uppercase tracking-wider px-1">Support</p>
+          <DrawerCard>
+            <DrawerRow icon={MessageSquare} label="Chat with us" onClick={() => { onClose(); navigate("/support"); }} />
+          </DrawerCard>
+        </div>
+
+        <div className="space-y-2">
+          <p className="text-gray-400 text-xs font-semibold uppercase tracking-wider px-1">Legal</p>
+          <DrawerCard>
+            <DrawerRow icon={HelpCircle} label="Terms & Conditions" onClick={() => { onClose(); navigate("/terms"); }} />
+            <DrawerRow icon={FileText} label="Privacy Policy" onClick={() => { onClose(); navigate("/privacy"); }} />
+          </DrawerCard>
+        </div>
+
+        <DrawerCard>
+          <button
+            onClick={onLogout}
+            className="w-full flex items-center gap-4 px-4 py-4 text-left hover:bg-gray-50 transition"
+          >
+            <LogOut size={18} className="text-red-400 shrink-0" strokeWidth={1.5} />
+            <span className="flex-1 text-sm font-medium text-red-500">Logout</span>
           </button>
-          <h2 className="text-base font-bold text-gray-900">Profile</h2>
-        </div>
-
-        <div className="flex flex-col gap-4 px-4 py-5">
-          <div className="flex items-center gap-4 px-1 py-2">
-            <div className="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-xl shrink-0">
-              {initials}
-            </div>
-            <div>
-              <p className="text-gray-900 font-bold text-sm leading-tight">
-                {user?.name} {user?.surname}
-              </p>
-              <p className="text-gray-400 text-xs mt-0.5">{user?.email}</p>
-            </div>
-          </div>
-
-          <DrawerCard>
-            <DrawerRow icon={BookMarked} label="My Bookings" onClick={() => { onClose(); navigate("/my-bookings"); }} />
-          </DrawerCard>
-
-          <div className="space-y-2">
-            <p className="text-gray-400 text-xs font-semibold uppercase tracking-wider px-1">Support</p>
-            <DrawerCard>
-              <DrawerRow icon={MessageSquare} label="Chat with us" onClick={() => { onClose(); navigate("/support"); }} />
-            </DrawerCard>
-          </div>
-
-          <div className="space-y-2">
-            <p className="text-gray-400 text-xs font-semibold uppercase tracking-wider px-1">Legal</p>
-            <DrawerCard>
-              <DrawerRow icon={HelpCircle} label="Terms & Conditions" onClick={() => { onClose(); navigate("/terms"); }} />
-              <DrawerRow icon={FileText} label="Privacy Policy" onClick={() => { onClose(); navigate("/privacy"); }} />
-            </DrawerCard>
-          </div>
-
-          <DrawerCard>
-            <button
-              onClick={onLogout}
-              className="w-full flex items-center gap-4 px-4 py-4 text-left hover:bg-gray-50 transition"
-            >
-              <LogOut size={18} className="text-red-400 shrink-0" strokeWidth={1.5} />
-              <span className="flex-1 text-sm font-medium text-red-500">Logout</span>
-            </button>
-          </DrawerCard>
-        </div>
+        </DrawerCard>
       </div>
     </>
   );
@@ -108,10 +105,9 @@ const Navbar = ({ onSearchChange, searchValue }) => {
   const isActive = (path) => location.pathname === path;
   const initials = user ? `${user.name?.[0] ?? ""}`.toUpperCase() : "?";
 
-useEffect(() => {
-  const id = setTimeout(() => setDrawerOpen(false), 0);
-  return () => clearTimeout(id);
-}, [location.pathname]);
+  useEffect(() => {
+    setDrawerOpen(false);
+  }, [location.pathname]);
 
   return (
     <>
@@ -136,9 +132,8 @@ useEffect(() => {
             <ChevronRight size={13} className="text-gray-400 rotate-90" />
           </button>
 
-          {/* ── Search + icon — right side, both mobile and desktop ── */}
+          {/* Search + avatar */}
           <div className="flex items-center gap-2 ml-auto">
-            {/* Search input */}
             <div className="relative">
               <input
                 type="text"
@@ -157,12 +152,10 @@ useEffect(() => {
               )}
             </div>
 
-            {/* Search icon button — outside the bar */}
             <button className="p-2 text-gray-500 hover:text-gray-900 transition shrink-0">
               <Search size={19} strokeWidth={1.8} />
             </button>
 
-            {/* Avatar — desktop only */}
             <button
               onClick={() => setDrawerOpen(true)}
               className="hidden md:flex w-9 h-9 rounded-full bg-primary/10 items-center justify-center font-bold text-sm text-primary hover:bg-primary/20 transition shrink-0"
@@ -170,21 +163,32 @@ useEffect(() => {
               {initials}
             </button>
           </div>
-
         </div>
       </header>
 
-      {/* Profile Drawer */}
-      {drawerOpen && (
-        <ProfileDrawer
-          user={user}
-          onClose={() => setDrawerOpen(false)}
-          onLogout={handleLogout}
-          navigate={navigate}
+      {/* ✅ Drawer with smooth slide-in animation */}
+      <div className={`fixed inset-0 z-40 pointer-events-none`}>
+        {/* Backdrop */}
+        <div
+          className={`absolute inset-0 bg-black/20 backdrop-blur-sm transition-opacity duration-300
+            ${drawerOpen ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"}`}
+          onClick={() => setDrawerOpen(false)}
         />
-      )}
+        {/* Drawer panel */}
+        <div
+          className={`absolute top-0 right-0 h-full w-full md:w-80 bg-gray-50 flex flex-col shadow-2xl overflow-y-auto transition-transform duration-300 ease-out
+            ${drawerOpen ? "translate-x-0 pointer-events-auto" : "translate-x-full pointer-events-none"}`}
+        >
+          <ProfileDrawer
+            user={user}
+            onClose={() => setDrawerOpen(false)}
+            onLogout={handleLogout}
+            navigate={navigate}
+          />
+        </div>
+      </div>
 
-      {/* ── Mobile Bottom Tab Bar ── */}
+      {/* Mobile Bottom Tab Bar */}
       <nav className="md:hidden fixed bottom-0 left-0 right-0 z-30 bg-white border-t border-gray-200">
         <div className="grid grid-cols-3 h-16">
           <Link

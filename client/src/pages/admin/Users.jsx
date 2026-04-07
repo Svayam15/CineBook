@@ -31,13 +31,13 @@ const CreateStaffModal = ({ onClose, onCreated }) => {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm px-4">
-      <div className="bg-card border border-border rounded-2xl w-full max-w-md shadow-2xl">
-        <div className="flex items-center justify-between px-5 py-4 border-b border-border">
+      <div className="bg-white border border-gray-100 rounded-2xl w-full max-w-md shadow-2xl">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
           <div className="flex items-center gap-2">
             <ShieldCheck size={18} className="text-primary" />
-            <span className="font-heading font-semibold text-white">Create Staff Account</span>
+            <span className="font-heading font-semibold text-gray-900">Create Staff Account</span>
           </div>
-          <button onClick={onClose} className="text-muted hover:text-white transition">
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-700 transition">
             <X size={18} />
           </button>
         </div>
@@ -56,7 +56,7 @@ const CreateStaffModal = ({ onClose, onCreated }) => {
                 onChange={(e) => set("name", e.target.value)}
                 required
                 placeholder="Rahul"
-                className="bg-dark border border-border text-white rounded-xl px-3 py-2 outline-none focus:border-primary text-sm placeholder:text-muted"
+                className="bg-gray-50 border border-gray-200 text-gray-900 rounded-xl px-3 py-2 outline-none focus:border-primary text-sm placeholder:text-gray-400"
               />
             </div>
             <div className="flex flex-col gap-1.5">
@@ -67,7 +67,7 @@ const CreateStaffModal = ({ onClose, onCreated }) => {
                 onChange={(e) => set("surname", e.target.value)}
                 required
                 placeholder="Sharma"
-                className="bg-dark border border-border text-white rounded-xl px-3 py-2 outline-none focus:border-primary text-sm placeholder:text-muted"
+                className="bg-gray-50 border border-gray-200 text-gray-900 rounded-xl px-3 py-2 outline-none focus:border-primary text-sm placeholder:text-gray-400"
               />
             </div>
           </div>
@@ -80,7 +80,7 @@ const CreateStaffModal = ({ onClose, onCreated }) => {
               onChange={(e) => set("username", e.target.value)}
               required
               placeholder="rahul_staff"
-              className="bg-dark border border-border text-white rounded-xl px-3 py-2 outline-none focus:border-primary text-sm placeholder:text-muted"
+              className="bg-gray-50 border border-gray-200 text-gray-900 rounded-xl px-3 py-2 outline-none focus:border-primary text-sm placeholder:text-gray-400"
             />
           </div>
 
@@ -92,7 +92,7 @@ const CreateStaffModal = ({ onClose, onCreated }) => {
               onChange={(e) => set("email", e.target.value)}
               required
               placeholder="rahul@cinebook.com"
-              className="bg-dark border border-border text-white rounded-xl px-3 py-2 outline-none focus:border-primary text-sm placeholder:text-muted"
+              className="bg-gray-50 border border-gray-200 text-gray-900 rounded-xl px-3 py-2 outline-none focus:border-primary text-sm placeholder:text-gray-400"
             />
           </div>
 
@@ -104,7 +104,7 @@ const CreateStaffModal = ({ onClose, onCreated }) => {
               onChange={(e) => set("password", e.target.value)}
               required
               placeholder="Min 6 characters"
-              className="bg-dark border border-border text-white rounded-xl px-3 py-2 outline-none focus:border-primary text-sm placeholder:text-muted"
+              className="bg-gray-50 border border-gray-200 text-gray-900 rounded-xl px-3 py-2 outline-none focus:border-primary text-sm placeholder:text-gray-400"
             />
           </div>
 
@@ -119,7 +119,7 @@ const CreateStaffModal = ({ onClose, onCreated }) => {
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2.5 rounded-xl border border-border text-muted hover:text-white text-sm transition"
+              className="px-4 py-2.5 rounded-xl border border-gray-200 text-gray-500 hover:text-gray-900 text-sm transition"
             >
               Cancel
             </button>
@@ -172,7 +172,7 @@ const Users = () => {
     const map = {
       ADMIN: "bg-primary/10 text-primary border border-primary/20",
       STAFF: "bg-yellow-500/10 text-yellow-400 border border-yellow-500/20",
-      USER: "bg-zinc-500/10 text-zinc-400 border border-zinc-500/20",
+      USER: "bg-gray-100 text-gray-600 border border-gray-200",
     };
     return (
       <span className={`text-xs px-2 py-0.5 rounded-full border ${map[role] || map.USER}`}>
@@ -192,7 +192,7 @@ const Users = () => {
 
       <div className="flex items-center justify-between mb-6 gap-4 flex-wrap">
         <div>
-          <h1 className="font-heading text-2xl font-bold text-white">Users</h1>
+          <h1 className="font-heading text-2xl font-bold text-gray-900">Users</h1>
           <p className="text-muted text-sm mt-1">{pagination.total || 0} total users</p>
         </div>
         {/* ✅ Create Staff button */}
@@ -208,7 +208,7 @@ const Users = () => {
       {loading ? (
         <div className="space-y-3">
           {[...Array(5)].map((_, i) => (
-            <div key={i} className="bg-card border border-border rounded-2xl h-16 animate-pulse" />
+            <div key={i} className="bg-white border border-gray-100 rounded-2xl h-16 animate-pulse" />
           ))}
         </div>
       ) : users.length === 0 ? (
@@ -220,10 +220,10 @@ const Users = () => {
         <>
           <div className="space-y-3">
             {users.map((user) => (
-              <div key={user.id} className="bg-card border border-border rounded-2xl px-5 py-4 flex items-center justify-between">
+              <div key={user.id} className="bg-white border border-gray-100 rounded-2xl px-5 py-4 flex items-center justify-between">
                 <div>
                   <div className="flex items-center gap-2 flex-wrap">
-                    <p className="text-white font-medium">{user.name} {user.surname}</p>
+                    <p className="text-gray-900 font-medium">{user.name} {user.surname}</p>
                     {roleBadge(user.role)}
                   </div>
                   <p className="text-muted text-sm">@{user.username} · {user.email}</p>
@@ -250,14 +250,14 @@ const Users = () => {
               <button
                 onClick={() => setPage(page - 1)}
                 disabled={page === 1}
-                className="p-2 bg-card border border-border rounded-xl text-muted hover:text-white transition disabled:opacity-50"
+                className="p-2 bg-white border border-gray-200 rounded-xl text-gray-500 hover:text-gray-900 transition disabled:opacity-50"
               >
                 <ChevronLeft size={16} />
               </button>
               <button
                 onClick={() => setPage(page + 1)}
                 disabled={page === pagination.totalPages}
-                className="p-2 bg-card border border-border rounded-xl text-muted hover:text-white transition disabled:opacity-50"
+                className="p-2 bg-white border border-gray-200 rounded-xl text-gray-500 hover:text-gray-900 transition disabled:opacity-50"
               >
                 <ChevronRight size={16} />
               </button>

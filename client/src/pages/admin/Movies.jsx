@@ -15,10 +15,10 @@ const GENRES = ["Action", "Adventure", "Animation", "Comedy", "Crime", "Drama", 
 const FORMATS = ["2D", "3D", "4D"];
 
 const RATING_COLORS = {
-  U: "bg-green-500/20 text-green-400 border-green-500/30",
-  UA: "bg-yellow-500/20 text-yellow-400 border-yellow-500/30",
-  A: "bg-red-500/20 text-red-400 border-red-500/30",
-  S: "bg-blue-500/20 text-blue-400 border-blue-500/30",
+  U: "bg-green-100 text-green-700 border-green-200",
+  UA: "bg-yellow-100 text-yellow-700 border-yellow-200",
+  A: "bg-red-100 text-red-700 border-red-200",
+  S: "bg-blue-100 text-blue-700 border-blue-200",
 };
 
 // ─── Multi Select Chips ───────────────────────────────────────────────────────
@@ -50,7 +50,7 @@ const ChipSelect = ({ label, options, selected, onChange, max, required }) => {
             className={`px-3 py-1.5 rounded-xl text-xs font-medium border transition
               ${selected.includes(opt)
                 ? "bg-primary border-primary text-white"
-                : "bg-dark border-border text-muted hover:border-primary/50 hover:text-white"
+                : "bg-gray-50 border-gray-200 text-gray-600 hover:border-primary/50 hover:text-gray-900"
               }`}
           >
             {opt}
@@ -111,7 +111,7 @@ const PosterUpload = ({ value, onChange }) => {
       <div
         onClick={() => !uploading && inputRef.current?.click()}
         className={`relative w-full h-48 rounded-2xl border-2 border-dashed flex flex-col items-center justify-center cursor-pointer transition overflow-hidden
-          ${preview ? "border-primary/40" : "border-border hover:border-primary/50"}`}
+          ${preview ? "border-primary/40" : "border-gray-200 hover:border-primary/50"}`}
       >
         {preview ? (
           <>
@@ -187,7 +187,7 @@ const MovieForm = ({ initial, onSubmit, onCancel, submitting }) => {
             onChange={(e) => set("title", e.target.value)}
             required
             placeholder="e.g. Dhurandhaar"
-            className="bg-dark border border-border text-white rounded-xl px-4 py-2.5 outline-none focus:border-primary text-sm placeholder:text-muted"
+            className="bg-gray-50 border border-gray-200 text-gray-900 rounded-xl px-4 py-2.5 outline-none focus:border-primary text-sm placeholder:text-gray-400"
           />
         </div>
         <div className="flex flex-col gap-1.5">
@@ -200,7 +200,7 @@ const MovieForm = ({ initial, onSubmit, onCancel, submitting }) => {
             min="1"
             max="600"
             placeholder="e.g. 148"
-            className="bg-dark border border-border text-white rounded-xl px-4 py-2.5 outline-none focus:border-primary text-sm placeholder:text-muted"
+            className="bg-gray-50 border border-gray-200 text-gray-900 rounded-xl px-4 py-2.5 outline-none focus:border-primary text-sm placeholder:text-gray-400"
           />
         </div>
       </div>
@@ -241,7 +241,7 @@ const MovieForm = ({ initial, onSubmit, onCancel, submitting }) => {
             value={form.rating}
             onChange={(e) => set("rating", e.target.value)}
             required
-            className="bg-dark border border-border text-white rounded-xl px-4 py-2.5 outline-none focus:border-primary text-sm"
+            className="bg-gray-50 border border-gray-200 text-gray-900 rounded-xl px-4 py-2.5 outline-none focus:border-primary text-sm"
           >
             <option value="">Select rating</option>
             {RATINGS.map((r) => (
@@ -256,7 +256,7 @@ const MovieForm = ({ initial, onSubmit, onCancel, submitting }) => {
             value={form.releaseDate}
             onChange={(e) => set("releaseDate", e.target.value)}
             required
-            className="bg-dark border border-border text-white rounded-xl px-4 py-2.5 outline-none focus:border-primary text-sm"
+            className="bg-gray-50 border border-gray-200 text-gray-900 rounded-xl px-4 py-2.5 outline-none focus:border-primary text-sm"
           />
         </div>
       </div>
@@ -270,7 +270,7 @@ const MovieForm = ({ initial, onSubmit, onCancel, submitting }) => {
           required
           rows={3}
           placeholder="Movie synopsis..."
-          className="bg-dark border border-border text-white rounded-xl px-4 py-2.5 outline-none focus:border-primary text-sm placeholder:text-muted resize-none"
+          className="bg-gray-50 border border-gray-200 text-gray-900 rounded-xl px-4 py-2.5 outline-none focus:border-primary text-sm placeholder:text-gray-400 resize-none"
         />
       </div>
 
@@ -283,7 +283,7 @@ const MovieForm = ({ initial, onSubmit, onCancel, submitting }) => {
             value={form.director}
             onChange={(e) => set("director", e.target.value)}
             placeholder="e.g. SS Rajamouli"
-            className="bg-dark border border-border text-white rounded-xl px-4 py-2.5 outline-none focus:border-primary text-sm placeholder:text-muted"
+            className="bg-gray-50 border border-gray-200 text-gray-900 rounded-xl px-4 py-2.5 outline-none focus:border-primary text-sm placeholder:text-gray-400"
           />
         </div>
         <div className="flex flex-col gap-1.5">
@@ -293,7 +293,7 @@ const MovieForm = ({ initial, onSubmit, onCancel, submitting }) => {
             value={form.cast}
             onChange={(e) => set("cast", e.target.value)}
             placeholder="e.g. Prabhas, Deepika"
-            className="bg-dark border border-border text-white rounded-xl px-4 py-2.5 outline-none focus:border-primary text-sm placeholder:text-muted"
+            className="bg-gray-50 border border-gray-200 text-gray-900 rounded-xl px-4 py-2.5 outline-none focus:border-primary text-sm placeholder:text-gray-400"
           />
         </div>
       </div>
@@ -310,7 +310,7 @@ const MovieForm = ({ initial, onSubmit, onCancel, submitting }) => {
         <button
           type="button"
           onClick={onCancel}
-          className="flex items-center gap-2 border border-border text-muted hover:text-white px-5 py-2.5 rounded-xl text-sm transition"
+          className="flex items-center gap-2 border border-gray-200 text-gray-600 hover:text-gray-900 px-5 py-2.5 rounded-xl text-sm transition"
         >
           <X size={14} /> Cancel
         </button>
@@ -322,11 +322,11 @@ const MovieForm = ({ initial, onSubmit, onCancel, submitting }) => {
 // ─── Confirm Modal ────────────────────────────────────────────────────────────
 const ConfirmModal = ({ title, message, confirmLabel, confirmClass, onConfirm, onCancel }) => (
   <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-    <div className="bg-card border border-border rounded-2xl p-6 w-full max-w-sm mx-4 shadow-2xl">
-      <h3 className="text-white font-semibold text-lg mb-2">{title}</h3>
+    <div className="bg-white border border-gray-100 rounded-2xl p-6 w-full max-w-sm mx-4 shadow-2xl">
+      <h3 className="text-gray-900 font-semibold text-lg mb-2">{title}</h3>
       <p className="text-muted text-sm mb-6">{message}</p>
       <div className="flex gap-3 justify-end">
-        <button onClick={onCancel} className="px-4 py-2 rounded-xl border border-border text-muted hover:text-white text-sm transition">Cancel</button>
+        <button onClick={onCancel} className="px-4 py-2 rounded-xl border border-gray-200 text-gray-600 hover:text-gray-900 text-sm transition">Cancel</button>
         <button onClick={onConfirm} className={`px-4 py-2 rounded-xl text-white text-sm font-medium transition ${confirmClass}`}>{confirmLabel}</button>
       </div>
     </div>
@@ -338,9 +338,9 @@ const MovieCard = ({ movie, onEdit, onDelete, onRestore, deleting, restoring }) 
   const isDeleted = movie.isDeleted;
 
   return (
-    <div className={`border rounded-2xl overflow-hidden transition-all ${isDeleted ? "bg-dark/40 border-border/40 opacity-60" : "bg-card border-border"}`}>
+    <div className={`border rounded-2xl overflow-hidden transition-all ${isDeleted ? "bg-gray-50/80 border-gray-200/40 opacity-60" : "bg-white border-gray-100"}`}>
       <div className="flex gap-4 p-4">
-        <div className="w-16 h-20 rounded-xl overflow-hidden flex-shrink-0 bg-dark border border-border">
+        <div className="w-16 h-20 rounded-xl overflow-hidden flex-shrink-0 bg-gray-100 border border-gray-200">
           {movie.posterUrl ? (
             <img src={movie.posterUrl} alt={movie.title} className="w-full h-full object-cover" />
           ) : (
@@ -352,7 +352,7 @@ const MovieCard = ({ movie, onEdit, onDelete, onRestore, deleting, restoring }) 
 
         <div className="flex-1 min-w-0">
           <div className="flex items-start justify-between gap-2 mb-1.5">
-            <p className={`font-semibold text-sm truncate ${isDeleted ? "text-muted line-through" : "text-white"}`}>
+            <p className={`font-semibold text-sm truncate ${isDeleted ? "text-muted line-through" : "text-gray-900"}`}>
               {movie.title}
             </p>
             {isDeleted && (
@@ -362,7 +362,7 @@ const MovieCard = ({ movie, onEdit, onDelete, onRestore, deleting, restoring }) 
 
           <div className="flex flex-wrap gap-1.5 mb-1.5">
             {movie.rating && (
-              <span className={`text-xs px-2 py-0.5 rounded-full border font-medium ${RATING_COLORS[movie.rating] || "bg-zinc-800 text-zinc-400"}`}>
+              <span className={`text-xs px-2 py-0.5 rounded-full border font-medium ${RATING_COLORS[movie.rating] || "bg-gray-100 text-gray-600"}`}>
                 {movie.rating}
               </span>
             )}
@@ -370,7 +370,7 @@ const MovieCard = ({ movie, onEdit, onDelete, onRestore, deleting, restoring }) 
               <span key={f} className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full">{f}</span>
             ))}
             {movie.genres?.slice(0, 2).map((g) => (
-              <span key={g} className="text-xs bg-zinc-800 text-zinc-300 px-2 py-0.5 rounded-full">{g}</span>
+              <span key={g} className="text-xs bg-gray-100 text-gray-700 px-2 py-0.5 rounded-full">{g}</span>
             ))}
           </div>
 
@@ -404,7 +404,7 @@ const MovieCard = ({ movie, onEdit, onDelete, onRestore, deleting, restoring }) 
           <>
             <button
               onClick={() => onEdit(movie)}
-              className="flex items-center gap-1.5 text-muted hover:text-white border border-border px-3 py-1.5 rounded-xl text-xs transition"
+              className="flex items-center gap-1.5 text-gray-500 hover:text-gray-900 border border-gray-200 px-3 py-1.5 rounded-xl text-xs transition"
             >
               <Pencil size={12} /> Edit
             </button>
@@ -522,7 +522,7 @@ const Movies = () => {
 
       <div className="flex items-center justify-between mb-6 gap-4 flex-wrap">
         <div>
-          <h1 className="font-heading text-2xl font-bold text-white">Movies</h1>
+          <h1 className="font-heading text-2xl font-bold text-gray-900">Movies</h1>
           <p className="text-muted text-sm mt-1">
             {active.length} active{deleted.length > 0 && ` · ${deleted.length} deleted`}
           </p>
@@ -531,7 +531,7 @@ const Movies = () => {
           {deleted.length > 0 && (
             <button
               onClick={() => setShowDeleted((v) => !v)}
-              className={`text-sm px-4 py-2 rounded-xl border transition ${showDeleted ? "border-primary text-primary bg-primary/10" : "border-border text-muted hover:text-white"}`}
+              className={`text-sm px-4 py-2 rounded-xl border transition ${showDeleted ? "border-primary text-primary bg-primary/10" : "border-gray-200 text-gray-600 hover:text-gray-900"}`}
             >
               {showDeleted ? "Hide deleted" : `Show deleted (${deleted.length})`}
             </button>
@@ -547,15 +547,15 @@ const Movies = () => {
       </div>
 
       {showForm && !editingMovie && (
-        <div className="bg-card border border-border rounded-2xl p-5 mb-6">
-          <h2 className="font-heading text-base font-semibold text-white mb-4">New Movie</h2>
+        <div className="bg-white border border-gray-100 rounded-2xl p-5 mb-6">
+          <h2 className="font-heading text-base font-semibold text-gray-900 mb-4">New Movie</h2>
           <MovieForm onSubmit={handleAdd} onCancel={() => setShowForm(false)} submitting={submitting} />
         </div>
       )}
 
       {editingMovie && (
-        <div className="bg-card border border-primary/30 rounded-2xl p-5 mb-6">
-          <h2 className="font-heading text-base font-semibold text-white mb-4">Edit — {editingMovie.title}</h2>
+        <div className="bg-white border border-primary/30 rounded-2xl p-5 mb-6">
+          <h2 className="font-heading text-base font-semibold text-gray-900 mb-4">Edit — {editingMovie.title}</h2>
           <MovieForm
             initial={editingMovie}
             onSubmit={handleEdit}
@@ -568,7 +568,7 @@ const Movies = () => {
       {loading ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {[...Array(6)].map((_, i) => (
-            <div key={i} className="bg-card border border-border rounded-2xl h-36 animate-pulse" />
+            <div key={i} className="bg-white border border-gray-100 rounded-2xl h-36 animate-pulse" />
           ))}
         </div>
       ) : displayed.length === 0 ? (

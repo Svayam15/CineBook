@@ -8,10 +8,10 @@ import { formatDate } from "@/utils/formatDate.js";
 import { QRCodeSVG } from "qrcode.react";
 
 const statusColors = {
-  PAID:      "bg-green-500/10 text-green-400 border-green-500/20",
-  PENDING:   "bg-yellow-500/10 text-yellow-400 border-yellow-500/20",
-  CANCELLED: "bg-red-500/10 text-red-400 border-red-500/20",
-  FAILED:    "bg-zinc-500/10 text-zinc-400 border-zinc-500/20",
+  PAID:      "bg-green-100 text-green-700 border-green-200",
+  PENDING:   "bg-yellow-100 text-yellow-700 border-yellow-200",
+  CANCELLED: "bg-red-100 text-red-700 border-red-200",
+  FAILED:    "bg-gray-100 text-gray-600 border-gray-200",
 };
 
 const formatIST = (dateStr) => {
@@ -55,48 +55,48 @@ const CancelModal = ({ booking, onClose, onConfirm, cancelling }) => {
     : 0;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm px-4">
-      <div className="bg-card border border-border rounded-2xl w-full max-w-sm shadow-2xl overflow-hidden">
-        <div className="flex items-center justify-between px-5 py-4 border-b border-border">
-          <span className="font-heading font-semibold text-white">Cancel Booking</span>
-          <button onClick={onClose} className="text-muted hover:text-white transition">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm px-4">
+      <div className="bg-white border border-gray-100 rounded-2xl w-full max-w-sm shadow-2xl overflow-hidden">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+          <span className="font-heading font-semibold text-gray-900">Cancel Booking</span>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-700 transition">
             <X size={18} />
           </button>
         </div>
 
         <div className="p-5 space-y-4">
-          <p className="text-white text-sm">
+          <p className="text-gray-900 text-sm">
             Are you sure you want to cancel your booking for{" "}
             <span className="font-semibold text-primary">
               {booking.show?.movie?.title}
             </span>?
           </p>
 
-          <div className="bg-dark rounded-xl px-4 py-3 space-y-2">
-            <p className="text-muted text-xs font-medium uppercase tracking-wide">
+          <div className="bg-gray-50 rounded-xl px-4 py-3 space-y-2">
+            <p className="text-gray-500 text-xs font-medium uppercase tracking-wide">
               Refund Policy
             </p>
 
             {policy?.isPending ? (
-              <p className="text-zinc-400 text-sm">
+              <p className="text-gray-500 text-sm">
                 No payment was made — nothing to refund. Seats will be released.
               </p>
             ) : policy ? (
               <>
                 <div className="flex justify-between items-center">
-                  <span className="text-muted text-sm">Refund</span>
+                  <span className="text-gray-500 text-sm">Refund</span>
                   <span className={`text-sm font-semibold ${policy.color}`}>
                     {policy.label}
                   </span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-muted text-sm">Amount paid</span>
-                  <span className="text-white text-sm">₹{booking.totalAmount}</span>
+                  <span className="text-gray-500 text-sm">Amount paid</span>
+                  <span className="text-gray-900 text-sm">₹{booking.totalAmount}</span>
                 </div>
                 {policy.percent > 0 && (
-                  <div className="flex justify-between items-center border-t border-border pt-2">
-                    <span className="text-white text-sm font-medium">You will get</span>
-                    <span className="text-green-400 text-sm font-bold">₹{refundAmount}</span>
+                  <div className="flex justify-between items-center border-t border-gray-100 pt-2">
+                    <span className="text-gray-900 text-sm font-medium">You will get</span>
+                    <span className="text-green-600 text-sm font-bold">₹{refundAmount}</span>
                   </div>
                 )}
                 {policy.percent === 0 && (
@@ -120,7 +120,7 @@ const CancelModal = ({ booking, onClose, onConfirm, cancelling }) => {
           <div className="flex gap-3 pt-1">
             <button
               onClick={onClose}
-              className="flex-1 py-2.5 rounded-xl border border-border text-muted hover:text-white text-sm transition"
+              className="flex-1 py-2.5 rounded-xl border border-gray-200 text-gray-500 hover:text-gray-900 text-sm transition"
             >
               Keep Booking
             </button>
@@ -145,16 +145,16 @@ const TicketModal = ({ booking, onClose }) => {
   const qrValue = `CINEBOOK-${booking.id}-${booking.show?.id ?? ""}`;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm px-4">
-      <div className="bg-card border border-border rounded-2xl w-full max-w-sm md:max-w-2xl shadow-2xl overflow-hidden">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm px-4">
+      <div className="bg-white border border-gray-100 rounded-2xl w-full max-w-sm md:max-w-2xl shadow-2xl overflow-hidden">
 
         {/* Header */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-border">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
           <div className="flex items-center gap-2">
             <Ticket size={18} className="text-primary" />
-            <span className="font-heading font-semibold text-white">Your Ticket</span>
+            <span className="font-heading font-semibold text-gray-900">Your Ticket</span>
           </div>
-          <button onClick={onClose} className="text-muted hover:text-white transition">
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-700 transition">
             <X size={18} />
           </button>
         </div>
@@ -164,9 +164,9 @@ const TicketModal = ({ booking, onClose }) => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-0">
 
             {/* Left column — ticket info */}
-            <div className="p-5 space-y-4 md:border-r md:border-border">
+            <div className="p-5 space-y-4 md:border-r md:border-gray-100">
               <div>
-                <h3 className="font-heading text-lg font-bold text-white leading-tight">
+                <h3 className="font-heading text-lg font-bold text-gray-900 leading-tight">
                   {booking.show?.movie?.title}
                 </h3>
                 <div className="flex items-center gap-2 mt-1 flex-wrap">
@@ -174,7 +174,7 @@ const TicketModal = ({ booking, onClose }) => {
                     {booking.status}
                   </span>
                   {booking.isUsed && (
-                    <span className="text-xs px-2 py-0.5 rounded-full border bg-zinc-500/10 text-zinc-400 border-zinc-500/20 flex items-center gap-1">
+                    <span className="text-xs px-2 py-0.5 rounded-full border bg-gray-100 text-gray-600 border-gray-200 flex items-center gap-1">
                       <CheckCircle2 size={10} />
                       USED
                     </span>
@@ -185,25 +185,25 @@ const TicketModal = ({ booking, onClose }) => {
                 </div>
               </div>
 
-              <div className="border-t border-dashed border-border" />
+              <div className="border-t border-dashed border-gray-200" />
 
               <div className="space-y-2 text-sm">
-                <div className="flex items-start gap-2 text-muted">
+                <div className="flex items-start gap-2 text-gray-500">
                   <MapPin size={13} className="mt-0.5 shrink-0 text-primary" />
                   <span>{booking.show?.theatre?.name}, {booking.show?.theatre?.location}</span>
                 </div>
-                <div className="flex items-center gap-2 text-muted">
+                <div className="flex items-center gap-2 text-gray-500">
                   <Clock size={13} className="shrink-0 text-primary" />
                   <span>{formatIST(booking.show?.rawStartTime || booking.show?.startTime)}</span>
                 </div>
-                <div className="flex items-center gap-2 text-muted">
+                <div className="flex items-center gap-2 text-gray-500">
                   <Calendar size={13} className="shrink-0 text-primary" />
                   <span>Booked on {formatDate(booking.createdAt)}</span>
                 </div>
               </div>
 
               <div>
-                <p className="text-muted text-xs mb-2">Seats</p>
+                <p className="text-gray-400 text-xs mb-2">Seats</p>
                 <div className="flex flex-wrap gap-1.5">
                   {booking.seats?.map((bs) => (
                     <span
@@ -211,7 +211,7 @@ const TicketModal = ({ booking, onClose }) => {
                       className={`text-xs px-2.5 py-1 rounded-lg border font-medium
                         ${bs.seatType === "GOLDEN"
                           ? "bg-golden/10 text-golden border-golden/20"
-                          : "bg-zinc-800 text-zinc-300 border-zinc-700"
+                          : "bg-gray-100 text-gray-700 border-gray-200"
                         }`}
                     >
                       {bs.showSeat?.row}{bs.showSeat?.number}
@@ -220,14 +220,14 @@ const TicketModal = ({ booking, onClose }) => {
                 </div>
               </div>
 
-              <div className="flex justify-between items-center bg-dark rounded-xl px-4 py-3">
-                <span className="text-muted text-sm">Total Paid</span>
-                <span className="text-white font-bold text-lg">₹{booking.totalAmount}</span>
+              <div className="flex justify-between items-center bg-gray-50 rounded-xl px-4 py-3">
+                <span className="text-gray-500 text-sm">Total Paid</span>
+                <span className="text-gray-900 font-bold text-lg">₹{booking.totalAmount}</span>
               </div>
 
               {booking.isUsed && booking.usedAt && (
-                <div className="bg-zinc-500/10 border border-zinc-500/20 rounded-xl px-4 py-3">
-                  <p className="text-zinc-400 text-xs flex items-center gap-1.5">
+                <div className="bg-gray-100 border border-gray-200 rounded-xl px-4 py-3">
+                  <p className="text-gray-600 text-xs flex items-center gap-1.5">
                     <CheckCircle2 size={12} />
                     Used at {formatIST(booking.usedAt)}
                   </p>
@@ -236,9 +236,9 @@ const TicketModal = ({ booking, onClose }) => {
             </div>
 
             {/* Right column — QR code */}
-            <div className="p-5 flex flex-col items-center justify-center gap-4 bg-dark/30">
-              <div className="border-t border-dashed border-border w-full md:hidden" />
-              <p className="text-muted text-xs text-center">Show this QR at the entrance</p>
+            <div className="p-5 flex flex-col items-center justify-center gap-4 bg-gray-50">
+              <div className="border-t border-dashed border-gray-200 w-full md:hidden" />
+              <p className="text-gray-500 text-xs text-center">Show this QR at the entrance</p>
               <div className="bg-white p-4 rounded-2xl">
                 <QRCodeSVG
                   value={qrValue}
@@ -248,12 +248,12 @@ const TicketModal = ({ booking, onClose }) => {
                   level="H"
                 />
               </div>
-              <p className="text-muted text-xs font-mono tracking-wide text-center break-all">
+              <p className="text-gray-400 text-xs font-mono tracking-wide text-center break-all">
                 {qrValue}
               </p>
               <div className="bg-primary/5 border border-primary/20 rounded-xl px-4 py-3 w-full text-center">
                 <p className="text-primary text-xs font-medium">Booking #{booking.id}</p>
-                <p className="text-muted text-xs mt-0.5">{booking.paymentType} Payment</p>
+                <p className="text-gray-500 text-xs mt-0.5">{booking.paymentType} Payment</p>
               </div>
             </div>
 
@@ -331,7 +331,7 @@ const MyBookings = () => {
   };
 
   return (
-    <div className="min-h-screen bg-dark pb-20 md:pb-0">
+    <div className="min-h-screen bg-gray-50 pb-20 md:pb-0">
       <Navbar />
 
       {selectedTicket && (
@@ -352,31 +352,31 @@ const MyBookings = () => {
 
       <div className="max-w-3xl mx-auto px-4 sm:px-6 py-8">
         <div className="mb-6">
-          <h1 className="font-heading text-2xl font-bold text-white">My Bookings</h1>
-          <p className="text-muted text-sm mt-1">{bookings.length} booking(s)</p>
+          <h1 className="font-heading text-2xl font-bold text-gray-900">My Bookings</h1>
+          <p className="text-gray-500 text-sm mt-1">{bookings.length} booking(s)</p>
         </div>
 
         {loading ? (
           <div className="space-y-4">
             {[...Array(3)].map((_, i) => (
-              <div key={i} className="bg-card border border-border rounded-2xl h-36 animate-pulse" />
+              <div key={i} className="bg-white border border-gray-100 rounded-2xl h-36 animate-pulse" />
             ))}
           </div>
         ) : bookings.length === 0 ? (
           <div className="text-center py-16">
-            <Ticket size={40} className="text-muted mx-auto mb-3" />
-            <p className="text-muted text-lg">No bookings yet</p>
-            <p className="text-muted text-sm mt-1">Book your first movie experience!</p>
+            <Ticket size={40} className="text-gray-300 mx-auto mb-3" />
+            <p className="text-gray-500 text-lg">No bookings yet</p>
+            <p className="text-gray-400 text-sm mt-1">Book your first movie experience!</p>
           </div>
         ) : (
           <div className="space-y-4">
             {bookings.map((booking) => (
-              <div key={booking.id} className="bg-card border border-border rounded-2xl p-5">
+              <div key={booking.id} className="bg-white border border-gray-100 rounded-2xl p-5">
                 <div className="flex items-start justify-between gap-4 flex-wrap">
                   <div className="flex-1 min-w-0">
 
                     <div className="flex items-center gap-2 mb-2 flex-wrap">
-                      <h3 className="font-heading text-base sm:text-lg font-semibold text-white">
+                      <h3 className="font-heading text-base sm:text-lg font-semibold text-gray-900">
                         {booking.show?.movie?.title}
                       </h3>
                       <span className={`text-xs px-2 py-0.5 rounded-full border ${statusColors[booking.status]}`}>
@@ -384,7 +384,7 @@ const MyBookings = () => {
                       </span>
                       {/* ✅ USED badge on card */}
                       {booking.isUsed && (
-                        <span className="text-xs px-2 py-0.5 rounded-full border bg-zinc-500/10 text-zinc-400 border-zinc-500/20 flex items-center gap-1">
+                        <span className="text-xs px-2 py-0.5 rounded-full border bg-gray-100 text-gray-600 border-gray-200 flex items-center gap-1">
                           <CheckCircle2 size={10} />
                           USED
                         </span>
@@ -395,17 +395,17 @@ const MyBookings = () => {
                     </div>
 
                     <div className="space-y-1.5">
-                      <p className="text-muted text-xs sm:text-sm flex items-center gap-1.5">
+                      <p className="text-gray-500 text-xs sm:text-sm flex items-center gap-1.5">
                         <MapPin size={12} className="shrink-0" />
                         <span className="truncate">
                           {booking.show?.theatre?.name}, {booking.show?.theatre?.location}
                         </span>
                       </p>
-                      <p className="text-muted text-xs sm:text-sm flex items-center gap-1.5">
+                      <p className="text-gray-500 text-xs sm:text-sm flex items-center gap-1.5">
                         <Clock size={12} className="shrink-0" />
                         {formatIST(booking.show?.rawStartTime || booking.show?.startTime)}
                       </p>
-                      <p className="text-muted text-xs sm:text-sm flex items-center gap-1.5">
+                      <p className="text-gray-500 text-xs sm:text-sm flex items-center gap-1.5">
                         <Calendar size={12} className="shrink-0" />
                         Booked on {formatDate(booking.createdAt)}
                       </p>
@@ -418,7 +418,7 @@ const MyBookings = () => {
                           className={`text-xs px-2 py-1 rounded-lg border
                             ${bs.seatType === "GOLDEN"
                               ? "bg-golden/10 text-golden border-golden/20"
-                              : "bg-zinc-800 text-zinc-300 border-zinc-700"
+                              : "bg-gray-100 text-gray-700 border-gray-200"
                             }`}
                         >
                           {bs.showSeat?.row}{bs.showSeat?.number}
@@ -434,7 +434,7 @@ const MyBookings = () => {
 
                     {/* ✅ Used at info on card */}
                     {booking.isUsed && booking.usedAt && (
-                      <p className="text-zinc-500 text-xs mt-2 flex items-center gap-1">
+                      <p className="text-gray-400 text-xs mt-2 flex items-center gap-1">
                         <CheckCircle2 size={10} />
                         Used at {formatIST(booking.usedAt)}
                       </p>
@@ -442,9 +442,9 @@ const MyBookings = () => {
                   </div>
 
                   <div className="text-right shrink-0 flex flex-col items-end gap-2">
-                    <p className="text-white font-bold text-xl">₹{booking.totalAmount}</p>
-                    <p className="text-muted text-xs">{booking.paymentType}</p>
-                    <p className="text-muted text-xs">#{booking.id}</p>
+                    <p className="text-gray-900 font-bold text-xl">₹{booking.totalAmount}</p>
+                    <p className="text-gray-500 text-xs">{booking.paymentType}</p>
+                    <p className="text-gray-400 text-xs">#{booking.id}</p>
 
                     {booking.status === "PAID" && (
                       <button

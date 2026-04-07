@@ -269,10 +269,10 @@ const Payment = () => {
   const seatCount = selectedSeats?.length ?? 0;
 
   return (
-    <div className="min-h-screen bg-dark pb-20 md:pb-0">
+    <div className="min-h-screen bg-gray-50 pb-20 md:pb-0">
       <Navbar />
       <div className="max-w-lg mx-auto px-4 sm:px-6 py-8">
-        <h1 className="font-heading text-2xl font-bold text-white mb-2">
+        <h1 className="font-heading text-2xl font-bold text-gray-900 mb-2">
           Complete Payment
         </h1>
 
@@ -291,37 +291,37 @@ const Payment = () => {
         )}
 
         {/* Order Summary */}
-        <div className="bg-card border border-border rounded-2xl p-5 mb-6">
-          <h2 className="font-heading text-lg font-semibold text-white mb-3">Order Summary</h2>
+        <div className="bg-white border border-gray-100 rounded-2xl p-5 mb-6">
+          <h2 className="font-heading text-lg font-semibold text-gray-900 mb-3">Order Summary</h2>
           <div className="space-y-2 text-sm">
             <div className="flex justify-between">
-              <span className="text-muted">Movie</span>
-              <span className="text-white">{show?.movie?.title}</span>
+              <span className="text-gray-500">Movie</span>
+              <span className="text-gray-900">{show?.movie?.title}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-muted">Theatre</span>
-              <span className="text-white">{show?.theatre?.name}</span>
+              <span className="text-gray-500">Theatre</span>
+              <span className="text-gray-900">{show?.theatre?.name}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-muted">Show Time</span>
-              <span className="text-white">
+              <span className="text-gray-500">Show Time</span>
+              <span className="text-gray-900">
                 {formatIST(show?.rawStartTime || show?.startTime)}
               </span>
             </div>
             <div className="flex justify-between">
-              <span className="text-muted">Seats</span>
-              <span className="text-white">{seatCount} seat(s)</span>
+              <span className="text-gray-500">Seats</span>
+              <span className="text-gray-900">{seatCount} seat(s)</span>
             </div>
-            <div className="flex justify-between border-t border-border pt-2 mt-2">
-              <span className="text-white font-semibold">Total</span>
-              <span className="text-white font-bold text-lg">₹{totalAmount}</span>
+            <div className="flex justify-between border-t border-gray-100 pt-2 mt-2">
+              <span className="text-gray-900 font-semibold">Total</span>
+              <span className="text-gray-900 font-bold text-lg">₹{totalAmount}</span>
             </div>
           </div>
         </div>
 
         {/* Payment Form */}
-        <div className="bg-card border border-border rounded-2xl p-5">
-          <h2 className="font-heading text-lg font-semibold text-white mb-4">Payment Details</h2>
+        <div className="bg-white border border-gray-100 rounded-2xl p-5">
+          <h2 className="font-heading text-lg font-semibold text-gray-900 mb-4">Payment Details</h2>
 
           {loadingIntent || !clientSecret ? (
             <div className="flex items-center justify-center py-8">
@@ -333,11 +333,11 @@ const Payment = () => {
               options={{
                 clientSecret,
                 appearance: {
-                  theme: "night",
+                  theme: "stripe",
                   variables: {
                     colorPrimary: "#7C3AED",
-                    colorBackground: "#161616",
-                    colorText: "#ffffff",
+                    colorBackground: "#ffffff",
+                    colorText: "#111111",
                     colorDanger: "#ef4444",
                     borderRadius: "12px",
                   },

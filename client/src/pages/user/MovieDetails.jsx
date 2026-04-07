@@ -6,10 +6,10 @@ import toast from "react-hot-toast";
 import { Clock, MapPin, Calendar, ArrowLeft, Film, Star } from "lucide-react";
 
 const RATING_COLORS = {
-  U: "bg-green-500/20 text-green-400 border-green-500/30",
-  UA: "bg-yellow-500/20 text-yellow-400 border-yellow-500/30",
-  A: "bg-red-500/20 text-red-400 border-red-500/30",
-  S: "bg-blue-500/20 text-blue-400 border-blue-500/30",
+  U: "bg-green-100 text-green-700 border-green-200",
+  UA: "bg-yellow-100 text-yellow-700 border-yellow-200",
+  A: "bg-red-100 text-red-700 border-red-200",
+  S: "bg-blue-100 text-blue-700 border-blue-200",
 };
 
 const RATING_LABELS = {
@@ -65,10 +65,10 @@ const MovieDetails = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-dark flex items-center justify-center">
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="flex flex-col items-center gap-3">
           <div className="w-8 h-8 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
-          <p className="text-muted text-sm">Loading movie...</p>
+          <p className="text-gray-500 text-sm">Loading movie...</p>
         </div>
       </div>
     );
@@ -77,7 +77,7 @@ const MovieDetails = () => {
   if (!movie) return null;
 
   return (
-    <div className="min-h-screen bg-dark pb-20 md:pb-8">
+    <div className="min-h-screen bg-gray-50 pb-20 md:pb-8">
       <Navbar />
 
       <div className="max-w-4xl mx-auto px-4 sm:px-6 py-6">
@@ -85,7 +85,7 @@ const MovieDetails = () => {
         {/* Back button */}
         <button
           onClick={() => navigate(-1)}
-          className="flex items-center gap-2 text-muted hover:text-white transition mb-6 text-sm"
+          className="flex items-center gap-2 text-gray-500 hover:text-gray-900 transition mb-6 text-sm"
         >
           <ArrowLeft size={16} /> Back
         </button>
@@ -95,12 +95,12 @@ const MovieDetails = () => {
 
           {/* Poster */}
           <div className="w-full sm:w-48 flex-shrink-0">
-            <div className="w-full sm:w-48 aspect-[2/3] rounded-2xl overflow-hidden bg-card border border-border">
+            <div className="w-full sm:w-48 aspect-[2/3] rounded-2xl overflow-hidden bg-gray-100 border border-gray-200">
               {movie.posterUrl ? (
                 <img src={movie.posterUrl} alt={movie.title} className="w-full h-full object-cover" />
               ) : (
                 <div className="w-full h-full flex items-center justify-center">
-                  <Film size={40} className="text-muted" />
+                  <Film size={40} className="text-gray-300" />
                 </div>
               )}
             </div>
@@ -108,7 +108,7 @@ const MovieDetails = () => {
 
           {/* Info */}
           <div className="flex-1">
-            <h1 className="font-heading text-2xl sm:text-3xl font-bold text-white mb-3 leading-tight">
+            <h1 className="font-heading text-2xl sm:text-3xl font-bold text-gray-900 mb-3 leading-tight">
               {movie.title}
             </h1>
 
@@ -120,7 +120,7 @@ const MovieDetails = () => {
                 </span>
               )}
               {movie.language && (
-                <span className="text-xs px-3 py-1 rounded-full bg-zinc-800 text-zinc-300 border border-zinc-700">
+                <span className="text-xs px-3 py-1 rounded-full bg-gray-100 text-gray-700 border border-gray-200">
                   {movie.language}
                 </span>
               )}
@@ -133,20 +133,20 @@ const MovieDetails = () => {
 
             {/* Meta */}
             <div className="space-y-2 mb-4">
-              <div className="flex items-center gap-2 text-muted text-sm">
+              <div className="flex items-center gap-2 text-gray-500 text-sm">
                 <Clock size={14} className="text-primary" />
                 <span>{movie.duration} minutes</span>
               </div>
               {movie.releaseDate && (
-                <div className="flex items-center gap-2 text-muted text-sm">
+                <div className="flex items-center gap-2 text-gray-500 text-sm">
                   <Calendar size={14} className="text-primary" />
                   <span>Released {formatDate(movie.releaseDate)}</span>
                 </div>
               )}
               {movie.director && (
-                <div className="flex items-center gap-2 text-muted text-sm">
+                <div className="flex items-center gap-2 text-gray-500 text-sm">
                   <Star size={14} className="text-primary" />
-                  <span>Director: <span className="text-white">{movie.director}</span></span>
+                  <span>Director: <span className="text-gray-900">{movie.director}</span></span>
                 </div>
               )}
             </div>
@@ -154,16 +154,16 @@ const MovieDetails = () => {
             {/* Cast */}
             {movie.cast && (
               <div className="mb-4">
-                <p className="text-muted text-xs uppercase tracking-wide mb-1">Cast</p>
-                <p className="text-white text-sm">{movie.cast}</p>
+                <p className="text-gray-400 text-xs uppercase tracking-wide mb-1">Cast</p>
+                <p className="text-gray-900 text-sm">{movie.cast}</p>
               </div>
             )}
 
             {/* Description */}
             {movie.description && (
               <div>
-                <p className="text-muted text-xs uppercase tracking-wide mb-1">Synopsis</p>
-                <p className="text-zinc-300 text-sm leading-relaxed">{movie.description}</p>
+                <p className="text-gray-400 text-xs uppercase tracking-wide mb-1">Synopsis</p>
+                <p className="text-gray-600 text-sm leading-relaxed">{movie.description}</p>
               </div>
             )}
           </div>
@@ -171,19 +171,19 @@ const MovieDetails = () => {
 
         {/* Shows Section */}
         <div>
-          <h2 className="font-heading text-xl font-bold text-white mb-4">
+          <h2 className="font-heading text-xl font-bold text-gray-900 mb-4">
             Available Shows
             {movie.shows?.length > 0 && (
-              <span className="ml-2 text-sm text-muted font-normal">
+              <span className="ml-2 text-sm text-gray-500 font-normal">
                 ({movie.shows.length} show{movie.shows.length !== 1 ? "s" : ""})
               </span>
             )}
           </h2>
 
           {!movie.shows || movie.shows.length === 0 ? (
-            <div className="text-center py-12 bg-card border border-border rounded-2xl">
-              <Film size={32} className="text-muted mx-auto mb-3" />
-              <p className="text-muted text-sm">No upcoming shows available for this movie</p>
+            <div className="text-center py-12 bg-white border border-gray-100 rounded-2xl">
+              <Film size={32} className="text-gray-300 mx-auto mb-3" />
+              <p className="text-gray-500 text-sm">No upcoming shows available for this movie</p>
             </div>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -191,12 +191,12 @@ const MovieDetails = () => {
                 <div
                   key={show.id}
                   onClick={() => navigate(`/shows/${show.id}`)}
-                  className="bg-card border border-border rounded-2xl p-4 cursor-pointer hover:border-primary/50 active:scale-[0.98] transition"
+                  className="bg-white border border-gray-100 rounded-2xl p-4 cursor-pointer hover:border-primary/50 active:scale-[0.98] transition"
                 >
                   <div className="flex items-start justify-between gap-2 mb-3">
                     <div>
-                      <p className="text-white font-semibold text-sm">{show.theatre?.name}</p>
-                      <p className="text-muted text-xs flex items-center gap-1 mt-0.5">
+                      <p className="text-gray-900 font-semibold text-sm">{show.theatre?.name}</p>
+                      <p className="text-gray-500 text-xs flex items-center gap-1 mt-0.5">
                         <MapPin size={10} /> {show.theatre?.location}
                       </p>
                     </div>
@@ -205,16 +205,16 @@ const MovieDetails = () => {
                     </span>
                   </div>
 
-                  <div className="flex items-center gap-2 text-muted text-xs mb-3">
+                  <div className="flex items-center gap-2 text-gray-500 text-xs mb-3">
                     <Clock size={11} />
                     {formatIST(show.startTime)}
                   </div>
 
-                  <div className="flex items-center justify-between pt-3 border-t border-border">
+                  <div className="flex items-center justify-between pt-3 border-t border-gray-100">
                     <div>
-                      <p className="text-white font-semibold text-sm">₹{show.regularPrice}</p>
+                      <p className="text-gray-900 font-semibold text-sm">₹{show.regularPrice}</p>
                       {show.hasGoldenSeats && (
-                        <p className="text-yellow-400 text-xs">Golden: ₹{show.goldenPrice}</p>
+                        <p className="text-yellow-600 text-xs">Golden: ₹{show.goldenPrice}</p>
                       )}
                     </div>
                     <button

@@ -12,15 +12,15 @@ import html2canvas from "html2canvas";
 import jsPDF from "jspdf";
 
 const statusColors = {
-  PAID:      "bg-green-500/10 text-green-400 border border-green-500/20",
-  PENDING:   "bg-yellow-500/10 text-yellow-400 border border-yellow-500/20",
-  CANCELLED: "bg-red-500/10 text-red-400 border border-red-500/20",
-  FAILED:    "bg-zinc-500/10 text-zinc-400 border border-zinc-500/20",
+  PAID:      "bg-green-100 text-green-700 border border-green-200",
+  PENDING:   "bg-yellow-100 text-yellow-700 border border-yellow-200",
+  CANCELLED: "bg-red-100 text-red-700 border border-red-200",
+  FAILED:    "bg-gray-100 text-gray-600 border border-gray-200",
 };
 
 const paymentColors = {
   CARD: "bg-primary/10 text-primary border border-primary/20",
-  CASH: "bg-yellow-500/10 text-yellow-400 border border-yellow-500/20",
+  CASH: "bg-yellow-100 text-yellow-700 border border-yellow-200",
 };
 
 const formatIST = (dateStr) => {
@@ -174,21 +174,21 @@ const TicketModal = ({ booking, onClose }) => {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm px-4">
-      <div className="bg-card border border-border rounded-2xl w-full max-w-sm md:max-w-2xl shadow-2xl overflow-hidden">
+      <div className="bg-white border border-gray-100 rounded-2xl w-full max-w-sm md:max-w-2xl shadow-2xl overflow-hidden">
 
         {/* Header */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-border">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
           <div className="flex items-center gap-2">
             <Ticket size={18} className="text-primary" />
             <div>
-              <span className="font-heading font-semibold text-white">Ticket</span>
-              <span className="text-muted text-xs ml-2">
+              <span className="font-heading font-semibold text-gray-900">Ticket</span>
+              <span className="text-gray-500 text-xs ml-2">
                 {booking.user?.name} {booking.user?.surname}
-                <span className="text-zinc-600 ml-1">@{booking.user?.username}</span>
+                <span className="text-gray-400 ml-1">@{booking.user?.username}</span>
               </span>
             </div>
           </div>
-          <button onClick={onClose} className="text-muted hover:text-white transition">
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-700 transition">
             <X size={18} />
           </button>
         </div>
@@ -197,9 +197,9 @@ const TicketModal = ({ booking, onClose }) => {
         <div ref={ticketRef} className="grid grid-cols-1 md:grid-cols-2 gap-0">
 
           {/* Left — ticket info */}
-          <div className="p-5 space-y-4 md:border-r md:border-border">
+          <div className="p-5 space-y-4 md:border-r md:border-gray-100">
             <div>
-              <h3 className="font-heading text-lg font-bold text-white leading-tight">
+              <h3 className="font-heading text-lg font-bold text-gray-900 leading-tight">
                 {booking.show?.movie?.title}
               </h3>
               <div className="flex items-center gap-2 mt-1 flex-wrap">
@@ -207,7 +207,7 @@ const TicketModal = ({ booking, onClose }) => {
                   {booking.status}
                 </span>
                 {booking.isUsed && (
-                  <span className="text-xs px-2 py-0.5 rounded-full border bg-zinc-500/10 text-zinc-400 border-zinc-500/20 flex items-center gap-1">
+                  <span className="text-xs px-2 py-0.5 rounded-full border bg-gray-100 text-gray-600 border-gray-200 flex items-center gap-1">
                     <CheckCircle2 size={10} />
                     USED
                   </span>
@@ -216,14 +216,14 @@ const TicketModal = ({ booking, onClose }) => {
                   {booking.show?.showType}
                 </span>
                 {booking.show?.language && (
-                  <span className="text-xs bg-zinc-800 text-zinc-300 px-2 py-0.5 rounded-full">
+                  <span className="text-xs bg-gray-100 text-gray-700 px-2 py-0.5 rounded-full">
                     {booking.show.language}
                   </span>
                 )}
               </div>
             </div>
 
-            <div className="border-t border-dashed border-border" />
+            <div className="border-t border-dashed border-gray-200" />
 
             <div className="space-y-2 text-sm">
               <div className="flex items-start gap-2 text-muted">
@@ -249,7 +249,7 @@ const TicketModal = ({ booking, onClose }) => {
                     className={`text-xs px-2.5 py-1 rounded-lg border font-medium
                       ${bs.seatType === "GOLDEN"
                         ? "bg-yellow-500/10 text-yellow-400 border-yellow-500/20"
-                        : "bg-zinc-800 text-zinc-300 border-zinc-700"
+                        : "bg-gray-100 text-gray-700 border-gray-200"
                       }`}
                   >
                     {bs.showSeat?.row}{bs.showSeat?.number}
@@ -258,26 +258,26 @@ const TicketModal = ({ booking, onClose }) => {
               </div>
             </div>
 
-            <div className="border-t border-dashed border-border" />
+            <div className="border-t border-dashed border-gray-200" />
 
-            <div className="flex justify-between items-center bg-dark rounded-xl px-4 py-3">
-              <span className="text-muted text-sm">Total Paid</span>
-              <span className="text-white font-bold text-lg">₹{booking.totalAmount}</span>
+            <div className="flex justify-between items-center bg-gray-50 rounded-xl px-4 py-3">
+              <span className="text-gray-500 text-sm">Total Paid</span>
+              <span className="text-gray-900 font-bold text-lg">₹{booking.totalAmount}</span>
             </div>
 
             <div className="flex justify-between items-center text-sm">
-              <span className="text-muted">Payment</span>
-              <span className="text-white">{booking.paymentType}</span>
+              <span className="text-gray-500">Payment</span>
+              <span className="text-gray-900">{booking.paymentType}</span>
             </div>
 
             <div className="flex justify-between items-center text-sm">
-              <span className="text-muted">Booking ID</span>
-              <span className="text-white font-mono">#{booking.id}</span>
+              <span className="text-gray-500">Booking ID</span>
+              <span className="text-gray-900 font-mono">#{booking.id}</span>
             </div>
 
             {booking.isUsed && booking.usedAt && (
-              <div className="bg-zinc-500/10 border border-zinc-500/20 rounded-xl px-4 py-3">
-                <p className="text-zinc-400 text-xs flex items-center gap-1.5">
+              <div className="bg-gray-100 border border-gray-200 rounded-xl px-4 py-3">
+                <p className="text-gray-600 text-xs flex items-center gap-1.5">
                   <CheckCircle2 size={12} />
                   Used at {formatIST(booking.usedAt)}
                 </p>
@@ -286,8 +286,8 @@ const TicketModal = ({ booking, onClose }) => {
           </div>
 
           {/* Right — QR */}
-          <div className="p-5 flex flex-col items-center justify-center gap-4 bg-dark/30">
-            <div className="border-t border-dashed border-border w-full md:hidden" />
+          <div className="p-5 flex flex-col items-center justify-center gap-4 bg-gray-50">
+            <div className="border-t border-dashed border-gray-200 w-full md:hidden" />
             <p className="text-muted text-xs text-center">Show this QR at the entrance</p>
             <div className="bg-white p-4 rounded-2xl" ref={qrRef}>
               <QRCodeSVG
@@ -309,7 +309,7 @@ const TicketModal = ({ booking, onClose }) => {
         </div>
 
         {/* Action buttons */}
-        <div className="px-5 pb-5 pt-2 flex flex-col gap-2 border-t border-border">
+        <div className="px-5 pb-5 pt-2 flex flex-col gap-2 border-t border-gray-100">
           <button
             onClick={handleDownload}
             className="w-full flex items-center justify-center gap-2 bg-primary/10 hover:bg-primary/20 border border-primary/20 text-primary font-semibold py-3 rounded-xl transition text-sm"
@@ -319,14 +319,14 @@ const TicketModal = ({ booking, onClose }) => {
           </button>
           <button
             onClick={handlePrint}
-            className="w-full flex items-center justify-center gap-2 bg-card border border-border text-muted hover:text-white font-semibold py-3 rounded-xl transition text-sm"
+            className="w-full flex items-center justify-center gap-2 bg-card border border-gray-200 text-gray-500 hover:text-gray-900 font-semibold py-3 rounded-xl transition text-sm"
           >
             <Printer size={16} />
             Print Ticket
           </button>
           <button
             onClick={onClose}
-            className="w-full bg-dark border border-border text-muted hover:text-white py-2.5 rounded-xl text-sm transition"
+            className="w-full bg-white border border-gray-200 text-gray-500 hover:text-gray-900 py-2.5 rounded-xl text-sm transition"
           >
             Close
           </button>
@@ -339,10 +339,10 @@ const TicketModal = ({ booking, onClose }) => {
 // ─── Cancel Confirm Modal ─────────────────────────────────────────────────────
 const ConfirmModal = ({ booking, onConfirm, onCancel }) => (
   <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-    <div className="bg-card border border-border rounded-2xl p-6 w-full max-w-sm mx-4 shadow-2xl">
-      <h3 className="text-white font-semibold text-lg mb-2">Cancel Booking?</h3>
-      <p className="text-muted text-sm mb-1">
-        Booking <span className="text-white">#{booking.id}</span> — {booking.user?.name} {booking.user?.surname}
+    <div className="bg-white border border-gray-100 rounded-2xl p-6 w-full max-w-sm mx-4 shadow-2xl">
+      <h3 className="text-gray-900 font-semibold text-lg mb-2">Cancel Booking?</h3>
+      <p className="text-gray-500 text-sm mb-1">
+        Booking <span className="text-gray-900">#{booking.id}</span> — {booking.user?.name} {booking.user?.surname}
       </p>
       <p className="text-muted text-sm mb-6">
         {booking.paymentType === "CARD"
@@ -352,7 +352,7 @@ const ConfirmModal = ({ booking, onConfirm, onCancel }) => (
       <div className="flex gap-3 justify-end">
         <button
           onClick={onCancel}
-          className="px-4 py-2 rounded-xl border border-border text-muted hover:text-white text-sm transition"
+          className="px-4 py-2 rounded-xl border border-gray-200 text-gray-500 hover:text-gray-900 text-sm transition"
         >
           Go Back
         </button>
@@ -445,7 +445,7 @@ const Bookings = () => {
 
       <div className="flex items-center justify-between mb-6 gap-4 flex-wrap">
         <div>
-          <h1 className="font-heading text-2xl font-bold text-white">Bookings</h1>
+          <h1 className="font-heading text-2xl font-bold text-gray-900">Bookings</h1>
           <p className="text-muted text-sm mt-1">
             {pagination.total || 0}{" "}
             {appliedSearch ? `result(s) for "${appliedSearch}"` : "total bookings"}
@@ -462,7 +462,7 @@ const Bookings = () => {
             value={searchInput}
             onChange={(e) => setSearchInput(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && applySearch()}
-            className="w-full bg-dark border border-border text-white rounded-xl pl-9 pr-4 py-2.5 outline-none focus:border-primary text-sm placeholder:text-muted"
+            className="w-full bg-gray-50 border border-gray-200 text-gray-900 rounded-xl pl-9 pr-4 py-2.5 outline-none focus:border-primary text-sm placeholder:text-muted"
           />
         </div>
         <button
@@ -474,7 +474,7 @@ const Bookings = () => {
         {appliedSearch && (
           <button
             onClick={clearSearch}
-            className="flex items-center gap-1.5 border border-border text-muted hover:text-white px-4 py-2.5 rounded-xl text-sm transition"
+            className="flex items-center gap-1.5 border border-gray-200 text-gray-500 hover:text-gray-900 px-4 py-2.5 rounded-xl text-sm transition"
           >
             <X size={14} /> Clear
           </button>
@@ -488,7 +488,7 @@ const Bookings = () => {
       {loading ? (
         <div className="space-y-3">
           {[...Array(5)].map((_, i) => (
-            <div key={i} className="bg-card border border-border rounded-2xl h-20 animate-pulse" />
+            <div key={i} className="bg-white border border-gray-100 rounded-2xl h-20 animate-pulse" />
           ))}
         </div>
       ) : bookings.length === 0 ? (
@@ -506,11 +506,11 @@ const Bookings = () => {
               return (
                 <div
                   key={booking.id}
-                  className="bg-card border border-border rounded-2xl px-5 py-4 flex items-center justify-between gap-4"
+                  className="bg-white border border-gray-100 rounded-2xl px-5 py-4 flex items-center justify-between gap-4"
                 >
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <p className="text-white font-medium text-sm">
+                      <p className="text-gray-900 font-medium text-sm">
                         #{booking.id} — {booking.user?.name} {booking.user?.surname}
                       </p>
                       <span className="text-muted text-xs">
@@ -582,7 +582,7 @@ const Bookings = () => {
                     )}
 
                     {booking.status === "PAID" && showStarted && (
-                      <span className="text-muted text-xs border border-border px-3 py-1.5 rounded-xl opacity-50">
+                      <span className="text-gray-400 text-xs border border-gray-200 px-3 py-1.5 rounded-xl opacity-50">
                         Show started
                       </span>
                     )}
@@ -600,14 +600,14 @@ const Bookings = () => {
               <button
                 onClick={() => setPage((p) => p - 1)}
                 disabled={page === 1}
-                className="p-2 bg-card border border-border rounded-xl text-muted hover:text-white transition disabled:opacity-50"
+                className="p-2 bg-white border border-gray-200 rounded-xl text-gray-500 hover:text-gray-900 transition disabled:opacity-50"
               >
                 <ChevronLeft size={16} />
               </button>
               <button
                 onClick={() => setPage((p) => p + 1)}
                 disabled={page === pagination.totalPages}
-                className="p-2 bg-card border border-border rounded-xl text-muted hover:text-white transition disabled:opacity-50"
+                className="p-2 bg-white border border-gray-200 rounded-xl text-gray-500 hover:text-gray-900 transition disabled:opacity-50"
               >
                 <ChevronRight size={16} />
               </button>

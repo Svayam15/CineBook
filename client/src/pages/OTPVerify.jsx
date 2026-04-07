@@ -140,13 +140,13 @@ const OTPVerify = () => {
             <div className="w-14 h-14 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
               <span className="text-2xl">📧</span>
             </div>
-            <h2 className="font-heading text-xl font-semibold text-white">
+            <h2 className="font-heading text-xl font-semibold text-gray-900">
               {titles[type] || "Verify OTP"}
             </h2>
-            <p className="text-muted text-sm mt-2">
+            <p className="text-gray-500 text-sm mt-2">
               We sent a 6-digit OTP to
             </p>
-            <p className="text-white text-sm font-medium">{email}</p>
+            <p className="text-gray-900 text-sm font-medium">{email}</p>
           </div>
 
           <form onSubmit={handleSubmit}>
@@ -161,8 +161,8 @@ const OTPVerify = () => {
                   value={digit}
                   onChange={(e) => handleChange(index, e.target.value)}
                   onKeyDown={(e) => handleKeyDown(index, e)}
-                  className={`w-12 h-12 text-center text-xl font-bold bg-dark border-2 rounded-xl text-white outline-none transition
-                    ${digit ? "border-primary" : "border-border"}
+                  className={`w-12 h-12 text-center text-xl font-bold bg-gray-50 border-2 rounded-xl text-gray-900 outline-none transition
+                    ${digit ? "border-primary" : "border-gray-200"}
                     focus:border-primary focus:ring-1 focus:ring-primary`}
                 />
               ))}
@@ -197,7 +197,7 @@ const OTPVerify = () => {
 
           {/* Back */}
           <div className="text-center mt-4">
-            <Link to="/login" className="text-muted text-sm hover:text-white transition">
+            <Link to="/login" className="text-gray-500 text-sm hover:text-gray-900 transition">
               ← Back to login
             </Link>
           </div>
