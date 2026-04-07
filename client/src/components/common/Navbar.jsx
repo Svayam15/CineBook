@@ -1,100 +1,103 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import {
-  Film, Ticket, LogOut, Home, User,
+  Film, Ticket, LogOut, Home,
   FileText, Shield, ArrowLeft, ChevronRight,
 } from "lucide-react";
 import useAuthStore from "../../store/authStore";
 import toast from "react-hot-toast";
 
-// ─── Profile Drawer (desktop only) ───────────────────────────────────────────
-const ProfileDrawer = ({ onClose, user, onLogout }) => {
-  const navigate = useNavigate();
+// ─── Shared subcomponents — defined OUTSIDE to avoid static-components error ──
 
-  const initials = user
-    ? `${user.name?.[0] ?? ""}${user.surname?.[0] ?? ""}`.toUpperCase()
-    : "?";
+const DrawerCard = ({ children }) => (
+  <div className="bg-white rounded-2xl overflow-hidden shadow-sm border border-gray-100 divide-y divide-gray-100">
+    {children}
+  </div>
+);
 
-  const Row = ({ icon: Icon, label, to, onClick, danger }) => {
-    const handleClick = () => {
-      if (danger && onClick) return onClick();
-      if (to) { onClose(); navigate(to); }
-      if (onClick) onClick();
-    };
-    return (
-      <button
-        onClick={handleClick}
-        className={`w-full flex items-center gap-4 px-5 py-4 transition text-left
-          ${danger ? "hover:bg-red-500/5" : "hover:bg-white/3"}`}
-      >
-        <Icon size={17} className={danger ? "text-red-400" : "text-muted"} />
-        <span className={`flex-1 text-sm font-medium ${danger ? "text-red-400" : "text-white"}`}>
-          {label}
-        </span>
-        {!danger && <ChevronRight size={15} className="text-muted" />}
-      </button>
-    );
-  };
+const DrawerRow = ({ icon: Icon, label, onClick }) => (
+  <button
+    onClick={onClick}
+    className="w-full flex items-center gap-4 px-4 py-4 text-left hover:bg-gray-50 transition"
+  >
+    <Icon size={18} className="text-gray-500 shrink-0" />
+    <span className="flex-1 text-sm font-medium text-gray-800">{label}</span>
+    <ChevronRight size={16} className="text-gray-400" />
+  </button>
+);
 
-  const CardGroup = ({ children }) => (
-    <div className="bg-dark border border-border rounded-2xl overflow-hidden divide-y divide-border mx-5">
-      {children}
-    </div>
-  );
+// ─── Profile Drawer ───────────────────────────────────────────────────────────
+const ProfileDrawer = ({ onClose, user, onLogout, navigate }) => {
+  const initials = user ? `${user.name?.[0] ?? ""}`.toUpperCase() : "?";
 
   return (
     <>
       {/* Backdrop */}
-      <div
-        className="fixed inset-0 z-40 bg-black/30"
-        onClick={onClose}
-      />
+      <div className="fixed inset-0 z-40 bg-black/20" onClick={onClose} />
 
       {/* Drawer panel */}
-      <div className="fixed top-0 right-0 h-full w-80 bg-card border-l border-border z-50 flex flex-col shadow-2xl animate-slide-in-right overflow-y-auto">
+      <div className="fixed top-0 right-0 h-full w-80 bg-gray-100 z-50 flex flex-col shadow-2xl overflow-y-auto animate-slide-in-right">
 
         {/* Header */}
-        <div className="flex items-center gap-3 px-5 py-5 border-b border-border shrink-0">
-          <button onClick={onClose} className="text-muted hover:text-white transition">
-            <ArrowLeft size={18} />
+        <div className="flex items-center gap-3 px-5 py-5 bg-white border-b border-gray-200">
+          <button onClick={onClose} className="text-gray-600 hover:text-gray-900 transition">
+            <ArrowLeft size={20} />
           </button>
-          <h2 className="font-heading text-base font-bold text-white">Profile</h2>
+          <h2 className="text-base font-bold text-gray-900">Profile</h2>
         </div>
 
-        {/* Avatar + name */}
-        <div className="flex items-center gap-4 px-5 py-6">
-          <div className="w-16 h-16 rounded-full bg-primary/20 border-2 border-primary/30 flex items-center justify-center text-primary font-bold text-2xl shrink-0">
-            {initials}
-          </div>
-          <div>
-            <p className="text-white font-bold text-base leading-tight">
-              {user?.name} {user?.surname}
-            </p>
-            <p className="text-muted text-sm mt-0.5">{user?.email}</p>
-          </div>
-        </div>
+        <div className="flex flex-col gap-5 px-4 py-6">
 
-        {/* Body */}
-        <div className="flex flex-col gap-5 pb-8">
+          {/* Avatar + name */}
+          <div className="flex items-center gap-4 px-1">
+            <div className="w-16 h-16 rounded-full bg-primary/20 flex items-center justify-center text-primary font-bold text-2xl shrink-0">
+              {initials}
+            </div>
+            <div>
+              <p className="text-gray-900 font-bold text-base leading-tight">
+                {user?.name} {user?.surname}
+              </p>
+              <p className="text-gray-500 text-sm mt-0.5">{user?.email}</p>
+            </div>
+          </div>
 
           {/* Bookings */}
-          <CardGroup>
-            <Row icon={Ticket} label="View all bookings" to="/my-bookings" />
-          </CardGroup>
+          <DrawerCard>
+            <DrawerRow
+              icon={Ticket}
+              label="View all bookings"
+              onClick={() => { onClose(); navigate("/my-bookings"); }}
+            />
+          </DrawerCard>
 
           {/* More */}
-          <div>
-            <p className="text-white text-xs font-semibold px-5 mb-2 uppercase tracking-wide">More</p>
-            <CardGroup>
-              <Row icon={FileText} label="Terms & Conditions" to="/terms" />
-              <Row icon={Shield} label="Privacy Policy" to="/privacy" />
-            </CardGroup>
+          <div className="space-y-2">
+            <p className="text-gray-900 text-sm font-bold px-1">More</p>
+            <DrawerCard>
+              <DrawerRow
+                icon={FileText}
+                label="Terms & Conditions"
+                onClick={() => { onClose(); navigate("/terms"); }}
+              />
+              <DrawerRow
+                icon={Shield}
+                label="Privacy Policy"
+                onClick={() => { onClose(); navigate("/privacy"); }}
+              />
+            </DrawerCard>
           </div>
 
           {/* Logout */}
-          <CardGroup>
-            <Row icon={LogOut} label="Logout" onClick={onLogout} danger />
-          </CardGroup>
+          <DrawerCard>
+            <button
+              onClick={onLogout}
+              className="w-full flex items-center gap-4 px-4 py-4 text-left hover:bg-gray-50 transition"
+            >
+              <LogOut size={18} className="text-gray-500 shrink-0" />
+              <span className="flex-1 text-sm font-medium text-gray-800">Logout</span>
+            </button>
+          </DrawerCard>
+
         </div>
       </div>
     </>
@@ -119,12 +122,17 @@ const Navbar = () => {
   };
 
   const isActive = (path) => location.pathname === path;
-
   const initials = user ? `${user.name?.[0] ?? ""}`.toUpperCase() : "?";
+
+  // Close drawer on route change — use pathname as dep, not setter
+  const pathname = location.pathname;
+  useEffect(() => {
+    setDrawerOpen(false);
+  }, [pathname]);
 
   return (
     <>
-      {/* ── Desktop/Mobile Top Bar ── */}
+      {/* ── Top Bar ── */}
       <header className="bg-card border-b border-border px-4 sm:px-6 py-4 sticky top-0 z-30">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
 
@@ -154,22 +162,23 @@ const Navbar = () => {
             </Link>
           </nav>
 
-          {/* Avatar — opens drawer on desktop, goes to /profile on mobile */}
+          {/* Avatar — opens drawer */}
           <button
             onClick={() => setDrawerOpen(true)}
-            className="w-9 h-9 rounded-full bg-primary flex items-center justify-center font-bold text-sm text-white hover:opacity-90 transition"
+            className="w-9 h-9 rounded-full bg-primary/20 flex items-center justify-center font-bold text-sm text-primary hover:bg-primary/30 transition"
           >
             {initials}
           </button>
         </div>
       </header>
 
-      {/* Desktop drawer */}
+      {/* Profile Drawer */}
       {drawerOpen && (
         <ProfileDrawer
           user={user}
           onClose={() => setDrawerOpen(false)}
           onLogout={handleLogout}
+          navigate={navigate}
         />
       )}
 
@@ -197,8 +206,8 @@ const Navbar = () => {
             className={`flex flex-col items-center justify-center gap-1 text-xs transition
               ${isActive("/profile") ? "text-primary" : "text-muted"}`}
           >
-            <div className={`w-6 h-6 rounded-full flex items-center justify-center font-bold text-[10px] text-white
-              ${isActive("/profile") ? "bg-primary" : "bg-primary/70"}`}>
+            <div className={`w-6 h-6 rounded-full flex items-center justify-center font-bold text-[10px]
+              ${isActive("/profile") ? "bg-primary text-white" : "bg-primary/20 text-primary"}`}>
               {initials}
             </div>
             <span>Profile</span>
