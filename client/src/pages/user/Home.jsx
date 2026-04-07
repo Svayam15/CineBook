@@ -3,13 +3,13 @@ import { useNavigate } from "react-router-dom";
 import Navbar from "../../components/common/Navbar";
 import api from "../../api/axios";
 import toast from "react-hot-toast";
-import { Film, Tv, Clock, MapPin, Search, X, Star } from "lucide-react";
+import { Film, Clock, MapPin, Search, X, ChevronRight } from "lucide-react";
 
 const RATING_COLORS = {
-  U: "bg-green-500/20 text-green-400",
-  UA: "bg-yellow-500/20 text-yellow-400",
-  A: "bg-red-500/20 text-red-400",
-  S: "bg-blue-500/20 text-blue-400",
+  U:  "bg-green-100 text-green-700",
+  UA: "bg-yellow-100 text-yellow-700",
+  A:  "bg-red-100 text-red-700",
+  S:  "bg-blue-100 text-blue-700",
 };
 
 const formatIST = (dateStr) => {
@@ -30,8 +30,6 @@ const Home = () => {
   const [shows, setShows] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
-  const [activeTab, setActiveTab] = useState("movies");
-  const [selectedMovie, setSelectedMovie] = useState(null);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -55,127 +53,170 @@ const Home = () => {
     m.title.toLowerCase().includes(search.toLowerCase())
   );
 
-  const filteredShows = shows.filter((s) => {
-    const notStarted = new Date(s.rawStartTime) > new Date();
-    const matchesSearch =
-      s.movie?.title.toLowerCase().includes(search.toLowerCase()) ||
-      s.theatre?.name.toLowerCase().includes(search.toLowerCase());
-    const matchesMovie = selectedMovie ? s.movie?.id === selectedMovie.id : true;
-    return notStarted && matchesSearch && matchesMovie;
-  });
+  const upcomingShows = shows.filter(
+    (s) => new Date(s.rawStartTime) > new Date()
+  );
 
   const getAvailableShowCount = (movieId) =>
     shows.filter(
       (s) => s.movie?.id === movieId && new Date(s.rawStartTime) > new Date()
     ).length;
 
+  // Featured movie — first with available shows
+  const featuredMovie = movies.find((m) => getAvailableShowCount(m.id) > 0);
+
   return (
-    <div className="min-h-screen bg-dark pb-20 md:pb-0">
+    <div className="min-h-screen bg-gray-50 pb-20 md:pb-0">
       <Navbar />
 
-      {/* Hero */}
-      <div className="bg-gradient-to-b from-primary/10 to-dark px-4 sm:px-6 py-10 sm:py-14">
-        <div className="max-w-7xl mx-auto text-center">
-          <h1 className="font-heading text-3xl sm:text-4xl md:text-5xl font-bold text-white mb-2 sm:mb-3 leading-tight">
-            Book Your{" "}
-            <span className="text-primary">Perfect</span>{" "}
-            <br className="sm:hidden" />
-            Movie Experience
-          </h1>
-          <p className="text-muted text-sm sm:text-lg mb-6 sm:mb-8">
-            Choose from the latest movies and shows near you
-          </p>
+      {/* ── DESKTOP: District-style hero banner ── */}
+      {featuredMovie && (
+        <div className="hidden md:block relative overflow-hidden bg-gradient-to-r from-gray-900 via-gray-800 to-gray-900 min-h-[420px]">
+          {/* Background poster blur */}
+          <div
+            className="absolute inset-0 bg-cover bg-center opacity-20 scale-105"
+            style={{ backgroundImage: `url(${featuredMovie.posterUrl})` }}
+          />
+          <div className="absolute inset-0 bg-gradient-to-r from-gray-900/90 via-gray-900/60 to-transparent" />
 
-          {/* Search */}
-          <div className="relative max-w-md mx-auto">
-            <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-muted" />
-            <input
-              type="text"
-              placeholder="Search movies or theatres..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="w-full bg-card border border-border text-white rounded-2xl pl-10 pr-10 py-3 outline-none focus:border-primary transition text-sm"
-            />
-            {search && (
+          <div className="relative max-w-7xl mx-auto px-6 py-14 flex items-center gap-12">
+            {/* Text */}
+            <div className="flex-1 max-w-xl">
+              <div className="flex items-center gap-2 mb-3 flex-wrap">
+                {featuredMovie.rating && (
+                  <span className="text-xs bg-white/10 text-white px-2.5 py-0.5 rounded-full border border-white/20">
+                    {featuredMovie.rating}
+                  </span>
+                )}
+                {featuredMovie.genres?.slice(0, 2).map((g) => (
+                  <span key={g} className="text-xs bg-white/10 text-white/80 px-2.5 py-0.5 rounded-full">
+                    {g}
+                  </span>
+                ))}
+              </div>
+              <h1 className="font-heading text-4xl font-bold text-white mb-3 leading-tight">
+                {featuredMovie.title}
+              </h1>
+              <p className="text-white/60 text-sm mb-6 line-clamp-2 leading-relaxed">
+                {featuredMovie.description}
+              </p>
               <button
-                onClick={() => setSearch("")}
-                className="absolute right-4 top-1/2 -translate-y-1/2 text-muted hover:text-white transition"
+                onClick={() => navigate(`/movies/${featuredMovie.id}`)}
+                className="bg-white text-gray-900 font-bold px-8 py-3 rounded-full text-sm hover:bg-gray-100 transition"
               >
-                <X size={14} />
+                Book now
               </button>
-            )}
+            </div>
+
+            {/* Poster */}
+            <div className="hidden lg:block shrink-0">
+              <img
+                src={featuredMovie.posterUrl}
+                alt={featuredMovie.title}
+                className="w-56 h-80 object-cover rounded-2xl shadow-2xl"
+              />
+            </div>
           </div>
+
+          {/* Slide dots */}
+          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2">
+            <span className="w-6 h-1.5 rounded-full bg-white" />
+            <span className="w-1.5 h-1.5 rounded-full bg-white/40" />
+            <span className="w-1.5 h-1.5 rounded-full bg-white/40" />
+          </div>
+        </div>
+      )}
+
+      {/* ── MOBILE: BMS-style header ── */}
+      <div className="md:hidden bg-white px-4 pt-4 pb-3 border-b border-gray-100">
+        <div className="flex items-center justify-between mb-3">
+          <div>
+            <h2 className="font-heading text-xl font-bold text-gray-900">It All Starts Here!</h2>
+          </div>
+          <div className="flex items-center gap-3">
+            <button className="text-gray-600">
+              <Search size={22} strokeWidth={1.8} />
+            </button>
+          </div>
+        </div>
+
+        {/* Mobile search */}
+        <div className="relative">
+          <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+          <input
+            type="text"
+            placeholder="Search movies or theatres..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="w-full bg-gray-100 text-gray-900 rounded-xl pl-9 pr-9 py-2.5 outline-none text-sm placeholder:text-gray-400"
+          />
+          {search && (
+            <button onClick={() => setSearch("")} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">
+              <X size={14} />
+            </button>
+          )}
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
-
-        {/* Tabs */}
-        <div className="grid grid-cols-2 gap-2 mb-5 sm:flex sm:w-auto">
-          <button
-            onClick={() => setActiveTab("movies")}
-            className={`flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium transition
-              ${activeTab === "movies" ? "bg-primary text-white" : "bg-card border border-border text-muted hover:text-white"}`}
-          >
-            <Film size={15} />
-            <span>Movies</span>
-            <span className={`text-xs px-1.5 py-0.5 rounded-full ${activeTab === "movies" ? "bg-white/20" : "bg-border"}`}>
-              {filteredMovies.length}
-            </span>
-          </button>
-          <button
-            onClick={() => { setActiveTab("shows"); setSelectedMovie(null); }}
-            className={`flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium transition
-              ${activeTab === "shows" ? "bg-primary text-white" : "bg-card border border-border text-muted hover:text-white"}`}
-          >
-            <Tv size={15} />
-            <span>Shows</span>
-            <span className={`text-xs px-1.5 py-0.5 rounded-full ${activeTab === "shows" ? "bg-white/20" : "bg-border"}`}>
-              {filteredShows.length}
-            </span>
-          </button>
-        </div>
-
-        {/* Active movie filter pill */}
-        {activeTab === "shows" && selectedMovie && (
-          <div className="flex items-center gap-2 mb-4 flex-wrap">
-            <span className="text-muted text-xs sm:text-sm">Showing shows for:</span>
-            <span className="bg-primary/10 text-primary border border-primary/20 text-xs px-3 py-1 rounded-full font-medium">
-              {selectedMovie.title}
-            </span>
-            <button onClick={() => setSelectedMovie(null)} className="flex items-center gap-1 text-muted text-xs hover:text-white transition">
-              <X size={12} /> Clear
+      {/* ── Desktop search bar ── */}
+      <div className="hidden md:block max-w-7xl mx-auto px-6 py-5">
+        <div className="relative max-w-md">
+          <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
+          <input
+            type="text"
+            placeholder="Search movies or theatres..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="w-full bg-white border border-gray-200 text-gray-900 rounded-2xl pl-10 pr-10 py-3 outline-none focus:border-primary transition text-sm shadow-sm"
+          />
+          {search && (
+            <button onClick={() => setSearch("")} className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+              <X size={14} />
             </button>
-          </div>
-        )}
+          )}
+        </div>
+      </div>
 
-        {/* Loading */}
-        {loading ? (
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-4">
-            {[...Array(8)].map((_, i) => (
-              <div key={i} className="bg-card border border-border rounded-2xl h-64 animate-pulse" />
-            ))}
-          </div>
-        ) : activeTab === "movies" ? (
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 pb-8">
 
-          /* ── Movies Grid ── */
-          filteredMovies.length === 0 ? (
+        {/* ── Movies Section ── */}
+        <div className="mb-8">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="font-heading text-lg font-bold text-gray-900">
+              {search ? `Results for "${search}"` : "Now Showing"}
+            </h2>
+            {!search && (
+              <button className="flex items-center gap-1 text-primary text-sm font-medium">
+                See All <ChevronRight size={16} />
+              </button>
+            )}
+          </div>
+
+          {loading ? (
+            /* Loading skeletons */
+            <div className="flex gap-3 overflow-x-auto scrollbar-hide pb-2 md:grid md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 md:overflow-visible">
+              {[...Array(6)].map((_, i) => (
+                <div key={i} className="shrink-0 w-36 md:w-auto bg-gray-100 rounded-2xl aspect-[2/3] animate-pulse" />
+              ))}
+            </div>
+          ) : filteredMovies.length === 0 ? (
             <div className="text-center py-16">
-              <Film size={36} className="text-muted mx-auto mb-3" />
-              <p className="text-muted text-sm">No movies found</p>
+              <Film size={36} className="text-gray-300 mx-auto mb-3" />
+              <p className="text-gray-400 text-sm">No movies found</p>
             </div>
           ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-4">
+            /* ── Mobile: horizontal scroll (BMS style) | Desktop: grid (District style) ── */
+            <div className="flex gap-3 overflow-x-auto scrollbar-hide pb-2 md:grid md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 md:overflow-visible md:pb-0">
               {filteredMovies.map((movie) => {
                 const availableShows = getAvailableShowCount(movie.id);
                 return (
                   <div
                     key={movie.id}
                     onClick={() => navigate(`/movies/${movie.id}`)}
-                    className="bg-card border border-border rounded-2xl overflow-hidden cursor-pointer hover:border-primary/50 active:scale-[0.98] transition group"
+                    className="shrink-0 w-36 md:w-auto cursor-pointer group"
                   >
                     {/* Poster */}
-                    <div className="relative w-full aspect-[2/3] bg-dark overflow-hidden">
+                    <div className="relative w-full aspect-[2/3] rounded-2xl overflow-hidden bg-gray-100 mb-2 shadow-sm">
                       {movie.posterUrl ? (
                         <img
                           src={movie.posterUrl}
@@ -184,121 +225,100 @@ const Home = () => {
                         />
                       ) : (
                         <div className="w-full h-full flex items-center justify-center">
-                          <Film size={32} className="text-muted" />
+                          <Film size={32} className="text-gray-300" />
                         </div>
                       )}
-                      {/* Rating badge on poster */}
                       {movie.rating && (
-                        <span className={`absolute top-2 left-2 text-xs px-2 py-0.5 rounded-full font-bold ${RATING_COLORS[movie.rating]}`}>
+                        <span className={`absolute top-2 left-2 text-[10px] px-1.5 py-0.5 rounded font-bold ${RATING_COLORS[movie.rating]}`}>
                           {movie.rating}
                         </span>
                       )}
-                      {/* Shows count badge */}
-                      <span className={`absolute top-2 right-2 text-xs px-2 py-0.5 rounded-full font-medium ${availableShows > 0 ? "bg-primary/90 text-white" : "bg-black/60 text-muted"}`}>
-                        {availableShows} show{availableShows !== 1 ? "s" : ""}
-                      </span>
                     </div>
 
                     {/* Info */}
-                    <div className="p-3">
-                      <h3 className="text-white font-semibold text-sm line-clamp-1 leading-snug mb-1">
+                    <div>
+                      <h3 className="text-gray-900 font-semibold text-sm line-clamp-1 leading-snug">
                         {movie.title}
                       </h3>
-                      <div className="flex items-center gap-1.5 flex-wrap">
-                        {movie.language && (
-                          <span className="text-xs text-muted">{movie.language}</span>
-                        )}
-                        {movie.genre && (
-                          <>
-                            <span className="text-muted text-xs">·</span>
-                            <span className="text-xs text-muted">{movie.genre}</span>
-                          </>
-                        )}
-                      </div>
-                      <p className="text-muted text-xs flex items-center gap-1 mt-1">
+                      <p className="text-gray-400 text-xs mt-0.5 flex items-center gap-1">
                         <Clock size={10} /> {movie.duration} mins
                       </p>
+                      {availableShows > 0 && (
+                        <p className="text-primary text-xs mt-0.5 font-medium">
+                          {availableShows} show{availableShows !== 1 ? "s" : ""}
+                        </p>
+                      )}
                     </div>
                   </div>
                 );
               })}
             </div>
-          )
+          )}
+        </div>
 
-        ) : (
-
-          /* ── Shows Grid ── */
-          filteredShows.length === 0 ? (
-            <div className="text-center py-16">
-              <Tv size={36} className="text-muted mx-auto mb-3" />
-              <p className="text-muted text-sm">
-                {selectedMovie ? `No shows available for ${selectedMovie.title}` : "No shows found"}
-              </p>
+        {/* ── Upcoming Shows Section ── */}
+        {!search && upcomingShows.length > 0 && (
+          <div>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="font-heading text-lg font-bold text-gray-900">Upcoming Shows</h2>
+              <button className="flex items-center gap-1 text-primary text-sm font-medium">
+                See All <ChevronRight size={16} />
+              </button>
             </div>
-          ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
-              {filteredShows.map((show) => (
+
+            {/* Mobile: horizontal scroll | Desktop: grid */}
+            <div className="flex gap-3 overflow-x-auto scrollbar-hide pb-2 md:grid md:grid-cols-2 lg:grid-cols-3 md:overflow-visible md:pb-0">
+              {upcomingShows.slice(0, 6).map((show) => (
                 <div
                   key={show.id}
                   onClick={() => navigate(`/shows/${show.id}`)}
-                  className="bg-card border border-border rounded-2xl overflow-hidden cursor-pointer hover:border-primary/50 active:scale-[0.98] transition group"
+                  className="shrink-0 w-72 md:w-auto bg-white rounded-2xl overflow-hidden cursor-pointer border border-gray-100 shadow-sm hover:shadow-md hover:border-primary/20 transition group"
                 >
                   {/* Poster strip */}
                   {show.movie?.posterUrl && (
-                    <div className="w-full h-24 overflow-hidden relative">
+                    <div className="w-full h-28 overflow-hidden relative">
                       <img
                         src={show.movie.posterUrl}
                         alt={show.movie.title}
-                        className="w-full h-full object-cover object-top group-hover:scale-105 transition duration-300 opacity-60"
+                        className="w-full h-full object-cover object-top group-hover:scale-105 transition duration-300 opacity-80"
                       />
-                      <div className="absolute inset-0 bg-gradient-to-b from-transparent to-card" />
-                      {show.movie.rating && (
-                        <span className={`absolute top-2 left-3 text-xs px-2 py-0.5 rounded-full font-bold ${RATING_COLORS[show.movie.rating]}`}>
+                      <div className="absolute inset-0 bg-gradient-to-b from-transparent to-black/40" />
+                      {show.movie?.rating && (
+                        <span className={`absolute top-2 left-3 text-[10px] px-1.5 py-0.5 rounded font-bold ${RATING_COLORS[show.movie.rating]}`}>
                           {show.movie.rating}
                         </span>
                       )}
-                      <span className="absolute top-2 right-3 text-xs bg-primary/90 text-white px-2 py-0.5 rounded-full">
+                      <span className="absolute top-2 right-3 text-xs bg-primary text-white px-2 py-0.5 rounded-full font-medium">
                         {show.showType}
                       </span>
                     </div>
                   )}
 
                   <div className="p-4">
-                    {/* Title */}
-                    <div className="flex items-start justify-between gap-2 mb-3">
-                      <h3 className="text-white font-semibold text-sm group-hover:text-primary transition line-clamp-1 leading-snug">
-                        {show.movie?.title}
-                      </h3>
-                      {!show.movie?.posterUrl && (
-                        <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full shrink-0">
-                          {show.showType}
-                        </span>
-                      )}
-                    </div>
-
-                    {/* Info */}
-                    <div className="space-y-1.5 mb-4">
-                      <p className="text-muted text-xs flex items-start gap-1.5">
-                        <MapPin size={11} className="mt-0.5 shrink-0" />
+                    <h3 className="text-gray-900 font-semibold text-sm line-clamp-1 mb-2">
+                      {show.movie?.title}
+                    </h3>
+                    <div className="space-y-1 mb-3">
+                      <p className="text-gray-500 text-xs flex items-center gap-1.5">
+                        <MapPin size={11} className="shrink-0 text-primary" />
                         <span className="line-clamp-1">{show.theatre?.name}, {show.theatre?.location}</span>
                       </p>
-                      <p className="text-muted text-xs flex items-center gap-1.5">
-                        <Clock size={11} className="shrink-0" />
+                      <p className="text-gray-500 text-xs flex items-center gap-1.5">
+                        <Clock size={11} className="shrink-0 text-primary" />
                         {formatIST(show.rawStartTime || show.startTime)}
                       </p>
                     </div>
 
-                    {/* Price + CTA */}
-                    <div className="flex items-center justify-between pt-3 border-t border-border gap-2">
+                    <div className="flex items-center justify-between pt-3 border-t border-gray-100">
                       <div>
-                        <p className="text-white font-semibold text-sm">₹{show.regularPrice}</p>
+                        <p className="text-gray-900 font-bold text-sm">₹{show.regularPrice}</p>
                         {show.hasGoldenSeats && (
-                          <p className="text-yellow-400 text-xs">Golden: ₹{show.goldenPrice}</p>
+                          <p className="text-yellow-600 text-xs">Golden: ₹{show.goldenPrice}</p>
                         )}
                       </div>
                       <button
                         onClick={(e) => { e.stopPropagation(); navigate(`/shows/${show.id}`); }}
-                        className="bg-primary hover:bg-primary-dark active:scale-95 text-white text-xs px-3 py-2 rounded-xl transition"
+                        className="bg-primary hover:bg-primary-dark text-white text-xs font-semibold px-4 py-2 rounded-full transition"
                       >
                         Book Now
                       </button>
@@ -307,7 +327,7 @@ const Home = () => {
                 </div>
               ))}
             </div>
-          )
+          </div>
         )}
       </div>
     </div>

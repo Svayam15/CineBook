@@ -7,18 +7,22 @@ export default {
   theme: {
     extend: {
       fontFamily: {
-        sans: ["Manrope", "sans-serif"],
-        heading: ["Plus Jakarta Sans", "sans-serif"],
+        sans: ["DM Sans", "sans-serif"],
+        heading: ["Sora", "sans-serif"],
       },
       colors: {
         primary: "#7C3AED",
         "primary-dark": "#5B21B6",
         golden: "#F59E0B",
         "golden-dark": "#D97706",
-        dark: "#0D0D0D",
-        card: "#161616",
-        border: "#27272A",
-        muted: "#71717A",
+
+        // Light theme surfaces
+        dark: "#ffffff",          // was dark bg — now white (so old dark: classes go white)
+        card: "#ffffff",          // card bg
+        border: "#e5e7eb",        // gray-200
+        muted: "#6b7280",         // gray-500
+        surface: "#f9fafb",       // gray-50 — page bg
+        "surface-2": "#f3f4f6",   // gray-100 — section bg
       },
     },
   },
