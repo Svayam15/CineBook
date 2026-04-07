@@ -33,7 +33,7 @@ const ProfileDrawer = ({ onClose, user, onLogout, navigate }) => {
   return (
     <>
       <div className="fixed inset-0 z-40 bg-black/20 backdrop-blur-sm" onClick={onClose} />
-      <div className="fixed top-0 right-0 h-full w-80 bg-gray-50 z-50 flex flex-col shadow-2xl overflow-y-auto animate-slide-in-right">
+      <div className="fixed top-0 right-0 h-full w-80 bg-gray-50 z-50 flex flex-col shadow-2xl overflow-y-auto">
         <div className="flex items-center gap-3 px-5 py-5 bg-white border-b border-gray-100">
           <button onClick={onClose} className="text-gray-500 hover:text-gray-800 transition">
             <ArrowLeft size={20} />
@@ -112,9 +112,8 @@ const Navbar = ({ onSearchChange, searchValue }) => {
 
   return (
     <>
-      {/* ── Desktop Navbar — District style ── */}
       <header className="bg-white border-b border-gray-200 sticky top-0 z-30">
-        <div className="max-w-7xl mx-auto px-6 h-16 flex items-center gap-6">
+        <div className="max-w-7xl mx-auto px-4 md:px-6 h-14 md:h-16 flex items-center gap-3 md:gap-6">
 
           {/* Logo */}
           <Link to="/" className="flex items-center gap-2 shrink-0">
@@ -126,7 +125,7 @@ const Navbar = ({ onSearchChange, searchValue }) => {
             </span>
           </Link>
 
-          {/* Location — fixed Mumbai */}
+          {/* Location — desktop only */}
           <button className="hidden md:flex items-center gap-1.5 text-sm text-gray-600 hover:text-gray-900 transition shrink-0">
             <MapPin size={14} className="text-primary shrink-0" />
             <span className="font-medium">{LOCATION.city}:</span>
@@ -134,50 +133,41 @@ const Navbar = ({ onSearchChange, searchValue }) => {
             <ChevronRight size={13} className="text-gray-400 rotate-90" />
           </button>
 
-          {/* Search — center, flex-1 */}
-          <div className="flex-1 hidden md:block max-w-lg">
+          {/* ── Search + icon — right side, both mobile and desktop ── */}
+          <div className="flex items-center gap-2 ml-auto">
+            {/* Search input */}
             <div className="relative">
-              <Search size={15} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
               <input
                 type="text"
-                placeholder="Search for movies, events, plays, sports and activities"
+                placeholder="Search movies or theatres..."
                 value={searchValue || ""}
                 onChange={(e) => onSearchChange?.(e.target.value)}
-                className="w-full bg-gray-100 text-gray-900 rounded-full pl-10 pr-4 py-2.5 text-sm outline-none focus:bg-white focus:ring-2 focus:ring-primary/20 transition placeholder:text-gray-400 border border-transparent focus:border-gray-200"
+                className="bg-gray-100 text-gray-900 rounded-full pl-4 pr-8 py-2 md:py-2.5 text-sm outline-none focus:bg-white focus:ring-2 focus:ring-primary/20 transition placeholder:text-gray-400 border border-transparent focus:border-gray-200 w-44 sm:w-56 md:w-80"
               />
+              {searchValue && (
+                <button
+                  onClick={() => onSearchChange?.("")}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                >
+                  <X size={13} />
+                </button>
+              )}
             </div>
+
+            {/* Search icon button — outside the bar */}
+            <button className="p-2 text-gray-500 hover:text-gray-900 transition shrink-0">
+              <Search size={19} strokeWidth={1.8} />
+            </button>
+
+            {/* Avatar — desktop only */}
+            <button
+              onClick={() => setDrawerOpen(true)}
+              className="hidden md:flex w-9 h-9 rounded-full bg-primary/10 items-center justify-center font-bold text-sm text-primary hover:bg-primary/20 transition shrink-0"
+            >
+              {initials}
+            </button>
           </div>
 
-          {/* Right — Avatar */}
-          <div className="flex items-center gap-3 ml-auto md:ml-0 shrink-0">
-            {/* Mobile search bar — always visible inline */}
-<div className="md:hidden flex-1 relative">
-  <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-  <input
-    type="text"
-    placeholder="Search movies or theatres..."
-    value={searchValue || ""}
-    onChange={(e) => onSearchChange?.(e.target.value)}
-    className="w-full bg-gray-100 text-gray-900 rounded-full pl-9 pr-9 py-2 text-sm outline-none focus:bg-white focus:ring-2 focus:ring-primary/20 transition placeholder:text-gray-400"
-  />
-  {searchValue && (
-    <button
-      onClick={() => onSearchChange?.("")}
-      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400"
-    >
-      <X size={13} />
-    </button>
-  )}
-</div>
-
-            {/* Avatar — hidden on mobile since bottom tab has Profile */}
-          <button
-                  onClick={() => setDrawerOpen(true)}
-                  className="hidden md:flex w-9 h-9 rounded-full bg-primary/10 items-center justify-center font-bold text-sm text-primary hover:bg-primary/20 transition"
-                  >
-          {initials}
-          </button>
-          </div>
         </div>
       </header>
 
@@ -191,8 +181,8 @@ const Navbar = ({ onSearchChange, searchValue }) => {
         />
       )}
 
-      {/* ── Mobile Bottom Tab Bar — BMS style ── */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-30 bg-white border-t border-gray-200 safe-area-pb">
+      {/* ── Mobile Bottom Tab Bar ── */}
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-30 bg-white border-t border-gray-200">
         <div className="grid grid-cols-3 h-16">
           <Link
             to="/"
@@ -212,7 +202,7 @@ const Navbar = ({ onSearchChange, searchValue }) => {
           </Link>
           <button
             onClick={() => setDrawerOpen(true)}
-            className={`flex flex-col items-center justify-center gap-1 text-xs font-medium transition text-gray-400`}
+            className="flex flex-col items-center justify-center gap-1 text-xs font-medium transition text-gray-400"
           >
             <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center font-bold text-[10px] text-primary">
               {initials}
