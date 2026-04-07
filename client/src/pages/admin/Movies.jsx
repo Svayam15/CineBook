@@ -166,38 +166,24 @@
     const handleSubmit = (e) => {
   e.preventDefault();
   if (!form.posterUrl) return toast.error("Please upload a poster");
-  if (!form.title.trim())
-  return toast.error("Title is required");
-if (!/[a-zA-Z]/.test(form.title))
-  return toast.error("Title must contain at least one letter");
-if (!form.duration)
-  return toast.error("Duration is required");
-  if (!/[a-zA-Z]/.test(form.title))
-    return toast.error("Title must contain at least one letter");
+  if (!form.title.trim()) return toast.error("Title is required");
+  if (!/[a-zA-Z]/.test(form.title)) return toast.error("Title must contain at least one letter");
+  if (!form.duration.trim()) return toast.error("Duration is required");
+  if (!/^\d+$/.test(form.duration.trim())) return toast.error(`"${form.duration}" is not valid — enter a whole number only, no decimals (e.g. 148)`);
   const dur = Number(form.duration);
-if (!Number.isInteger(dur))
-  return toast.error(`"${form.duration}" is not accepted — duration must be a whole number, not a decimal (e.g. 148)`);
-if (dur < 1)
-  return toast.error("Duration must be at least 1 minute");
-if (dur > 600)
-  return toast.error("Duration cannot exceed 600 minutes");
-
-  // AFTER the duration check, BEFORE languages check — add:
-const namePattern = /^[a-zA-Z]+(\s[a-zA-Z]+)*(,\s[a-zA-Z]+(\s[a-zA-Z]+)*)*$/;
-
-if (!form.director.trim())
-  return toast.error("Director is required");
-if (!namePattern.test(form.director.trim()))
-  return toast.error("Director: only letter, commas, one space between name and after each comma allowed");
-
-if (!form.cast.trim())
-  return toast.error("Cast is required");
-if (!namePattern.test(form.cast.trim()))
-  return toast.error("Cast: only letters, commas, one space between name and after each comma allowed");
-
+  if (dur < 1) return toast.error("Duration must be at least 1 minute");
+  if (dur > 600) return toast.error("Duration cannot exceed 600 minutes");
+  const namePattern = /^[a-zA-Z]+(\s[a-zA-Z]+)*(,\s[a-zA-Z]+(\s[a-zA-Z]+)*)*$/;
+  if (!form.director.trim()) return toast.error("Director is required");
+  if (!namePattern.test(form.director.trim())) return toast.error("Director: only letters, commas, one space between names and after each comma allowed");
+  if (!form.cast.trim()) return toast.error("Cast is required");
+  if (!namePattern.test(form.cast.trim())) return toast.error("Cast: only letters, commas, one space between names and after each comma allowed");
   if (form.languages.length === 0) return toast.error("Select at least one language");
   if (form.genres.length === 0) return toast.error("Select at least one genre");
   if (form.formats.length === 0) return toast.error("Select at least one format (2D/3D/4D)");
+  if (!form.rating) return toast.error("Please select a rating");
+if (!form.description.trim()) return toast.error("Description is required");
+if (!form.releaseDate) return toast.error("Please select a release date");
   onSubmit({ ...form, duration: dur });
 };
 
@@ -221,7 +207,8 @@ if (!namePattern.test(form.cast.trim()))
           <div className="flex flex-col gap-1.5">
             <label className="text-sm text-muted font-medium">Duration (mins) <span className="text-red-400">*</span></label>
             <input
-              type="number"
+              type="text"
+              inputMode="numeric"
               value={form.duration}
               onChange={(e) => set("duration", e.target.value)}
               min="1"
@@ -267,7 +254,6 @@ if (!namePattern.test(form.cast.trim()))
             <select
               value={form.rating}
               onChange={(e) => set("rating", e.target.value)}
-              required
               className="bg-gray-50 border border-gray-200 text-gray-900 rounded-xl px-4 py-2.5 outline-none focus:border-primary text-sm"
             >
               <option value="">Select rating</option>
@@ -282,7 +268,6 @@ if (!namePattern.test(form.cast.trim()))
               type="date"
               value={form.releaseDate}
               onChange={(e) => set("releaseDate", e.target.value)}
-              required
               className="bg-gray-50 border border-gray-200 text-gray-900 rounded-xl px-4 py-2.5 outline-none focus:border-primary text-sm"
             />
           </div>
