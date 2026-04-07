@@ -211,8 +211,6 @@ if (!form.releaseDate) return toast.error("Please select a release date");
               inputMode="numeric"
               value={form.duration}
               onChange={(e) => set("duration", e.target.value)}
-              min="1"
-              max="600"
               placeholder="e.g. 148"
               className="bg-gray-50 border border-gray-200 text-gray-900 rounded-xl px-4 py-2.5 outline-none focus:border-primary text-sm placeholder:text-gray-400"
             />
