@@ -297,7 +297,7 @@ if (!namePattern.test(form.cast.trim()))
         {/* Director + Cast */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div className="flex flex-col gap-1.5">
-            <label className="text-sm text-muted font-medium">Director <span className="text-muted/60 text-xs"></span></label>
+            <label className="text-sm text-muted font-medium">Director <span className="text-red-400">*</span></label>
             <input
               type="text"
               value={form.director}
@@ -307,7 +307,7 @@ if (!namePattern.test(form.cast.trim()))
             />
           </div>
           <div className="flex flex-col gap-1.5">
-            <label className="text-sm text-muted font-medium">Cast <span className="text-muted/60 text-xs"></span></label>
+            <label className="text-sm text-muted font-medium">Cast <span className="text-red-400"></span>*</label>
             <input
               type="text"
               value={form.cast}
