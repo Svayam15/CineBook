@@ -1,8 +1,34 @@
 import { useNavigate } from "react-router-dom";
-import { LogOut, HelpCircle, FileText, Shield } from "lucide-react";
+import {
+  ArrowLeft, ChevronRight, LogOut,
+  HelpCircle, FileText, Shield,
+} from "lucide-react";
 import useAuthStore from "../../store/authStore";
-import StaffLayout from "./StaffLayout"; // adjust path if needed
 import toast from "react-hot-toast";
+
+const Row = ({ icon: Icon, label, to, onClick, danger }) => {
+  const navigate = useNavigate();
+  const handleClick = () => {
+    if (onClick) return onClick();
+    if (to) navigate(to);
+  };
+  return (
+    <button
+      onClick={handleClick}
+      className="w-full flex items-center gap-4 px-4 py-4 text-left hover:bg-gray-50 transition"
+    >
+      <Icon
+        size={18}
+        className={`${danger ? "text-red-400" : "text-gray-500"} shrink-0`}
+        strokeWidth={1.5}
+      />
+      <span className={`flex-1 text-sm font-medium ${danger ? "text-red-500" : "text-gray-800"}`}>
+        {label}
+      </span>
+      {!danger && <ChevronRight size={16} className="text-gray-400" />}
+    </button>
+  );
+};
 
 const Card = ({ children }) => (
   <div className="bg-white rounded-2xl overflow-hidden shadow-sm border border-gray-100 divide-y divide-gray-100">
@@ -10,27 +36,9 @@ const Card = ({ children }) => (
   </div>
 );
 
-const Row = ({ icon: Icon, label, onClick, danger }) => (
-  <button
-    onClick={onClick}
-    className="w-full flex items-center gap-4 px-4 py-4 text-left hover:bg-gray-50 transition-colors"
-  >
-    <Icon
-      size={18}
-      className={danger ? "text-red-400 shrink-0" : "text-gray-400 shrink-0"}
-      strokeWidth={1.5}
-    />
-    <span className={`flex-1 text-sm font-medium ${danger ? "text-red-500" : "text-gray-800"}`}>
-      {label}
-    </span>
-  </button>
-);
-
 const StaffProfile = () => {
   const { user, logout } = useAuthStore();
   const navigate = useNavigate();
-
-  const initials = user ? `${user.name?.[0] ?? ""}`.toUpperCase() : "?";
 
   const handleLogout = async () => {
     try {
@@ -41,22 +49,22 @@ const StaffProfile = () => {
     }
   };
 
+  const initials = user ? `${user.name?.[0] ?? ""}`.toUpperCase() : "?";
+
   return (
-    <StaffLayout>
-      {/* Same ease-in-out slide as the desktop drawer */}
-      <style>{`
-        @keyframes staffProfileIn {
-          from { opacity: 0; transform: translateX(20px); }
-          to   { opacity: 1; transform: translateX(0); }
-        }
-        .staff-profile-animate {
-          animation: staffProfileIn 0.3s ease-in-out both;
-        }
-      `}</style>
+    <div className="min-h-screen bg-gray-100 pb-24">
 
-      <div className="staff-profile-animate max-w-xl mx-auto space-y-5 py-2">
+      {/* Sticky header */}
+      <div className="sticky top-0 z-40 bg-white border-b border-gray-200 px-4 py-4 flex items-center gap-3">
+        <button onClick={() => navigate(-1)} className="text-gray-600 hover:text-gray-900 transition">
+          <ArrowLeft size={20} />
+        </button>
+        <h1 className="text-base font-bold text-gray-900">Profile</h1>
+      </div>
 
-        {/* Avatar + info */}
+      <div className="max-w-xl mx-auto px-4 sm:px-6 py-6 space-y-5">
+
+        {/* Avatar + name + staff badge */}
         <div className="flex items-center gap-4 px-1 py-2">
           <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-2xl shrink-0">
             {initials}
@@ -66,8 +74,8 @@ const StaffProfile = () => {
               <p className="text-gray-900 font-bold text-lg leading-tight">
                 {user?.name} {user?.surname}
               </p>
-              <span className="inline-flex items-center gap-1 bg-yellow-100 text-yellow-700 text-[10px] font-semibold px-2 py-0.5 rounded-full border border-yellow-200">
-                <Shield size={9} />
+              <span className="inline-flex items-center gap-1 bg-yellow-50 border border-yellow-200 text-yellow-700 text-[10px] font-semibold px-2 py-0.5 rounded-full">
+                <Shield size={9} strokeWidth={2} />
                 Staff
               </span>
             </div>
@@ -77,10 +85,10 @@ const StaffProfile = () => {
 
         {/* Legal */}
         <div className="space-y-2">
-          <p className="text-gray-500 text-xs font-semibold uppercase tracking-wider px-1">Legal</p>
+          <p className="text-gray-900 text-sm font-bold px-1">Legal</p>
           <Card>
-            <Row icon={HelpCircle} label="Terms & Conditions" onClick={() => navigate("/terms")} />
-            <Row icon={FileText}   label="Privacy Policy"     onClick={() => navigate("/privacy")} />
+            <Row icon={HelpCircle} label="Terms & Conditions" to="/terms" />
+            <Row icon={FileText}   label="Privacy Policy"     to="/privacy" />
           </Card>
         </div>
 
@@ -90,7 +98,7 @@ const StaffProfile = () => {
         </Card>
 
       </div>
-    </StaffLayout>
+    </div>
   );
 };
 

@@ -8,7 +8,7 @@ import {
 import useAuthStore from "../../store/authStore";
 import toast from "react-hot-toast";
 
-const Row = ({ icon: Icon, label, to, onClick }) => {
+const Row = ({ icon: Icon, label, to, onClick, danger }) => {
   const navigate = useNavigate();
   const handleClick = () => {
     if (onClick) return onClick();
@@ -19,9 +19,15 @@ const Row = ({ icon: Icon, label, to, onClick }) => {
       onClick={handleClick}
       className="w-full flex items-center gap-4 px-4 py-4 text-left hover:bg-gray-50 transition"
     >
-      <Icon size={18} className="text-gray-500 shrink-0" strokeWidth={1.5} />
-      <span className="flex-1 text-sm font-medium text-gray-800">{label}</span>
-      <ChevronRight size={16} className="text-gray-400" />
+      <Icon
+        size={18}
+        className={`${danger ? "text-red-400" : "text-gray-500"} shrink-0`}
+        strokeWidth={1.5}
+      />
+      <span className={`flex-1 text-sm font-medium ${danger ? "text-red-500" : "text-gray-800"}`}>
+        {label}
+      </span>
+      {!danger && <ChevronRight size={16} className="text-gray-400" />}
     </button>
   );
 };
@@ -79,7 +85,7 @@ const AdminProfile = () => {
           </div>
         </div>
 
-        {/* Quick nav */}
+        {/* Manage */}
         <div className="space-y-2">
           <p className="text-gray-900 text-sm font-bold px-1">Manage</p>
           <Card>
@@ -105,13 +111,7 @@ const AdminProfile = () => {
 
         {/* Logout */}
         <Card>
-          <button
-            onClick={handleLogout}
-            className="w-full flex items-center gap-4 px-4 py-4 text-left hover:bg-gray-50 transition"
-          >
-            <LogOut size={18} className="text-red-400 shrink-0" strokeWidth={1.5} />
-            <span className="flex-1 text-sm font-medium text-red-500">Logout</span>
-          </button>
+          <Row icon={LogOut} label="Logout" onClick={handleLogout} danger />
         </Card>
 
       </div>

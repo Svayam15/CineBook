@@ -6,7 +6,7 @@ import {
 import useAuthStore from "../../store/authStore";
 import toast from "react-hot-toast";
 
-const Row = ({ icon: Icon, label, to, onClick }) => {
+const Row = ({ icon: Icon, label, to, onClick, danger }) => {
   const navigate = useNavigate();
   const handleClick = () => {
     if (onClick) return onClick();
@@ -17,9 +17,15 @@ const Row = ({ icon: Icon, label, to, onClick }) => {
       onClick={handleClick}
       className="w-full flex items-center gap-4 px-4 py-4 text-left hover:bg-gray-50 transition"
     >
-      <Icon size={18} className="text-gray-500 shrink-0" strokeWidth={1.5} />
-      <span className="flex-1 text-sm font-medium text-gray-800">{label}</span>
-      <ChevronRight size={16} className="text-gray-400" />
+      <Icon
+        size={18}
+        className={`${danger ? "text-red-400" : "text-gray-500"} shrink-0`}
+        strokeWidth={1.5}
+      />
+      <span className={`flex-1 text-sm font-medium ${danger ? "text-red-500" : "text-gray-800"}`}>
+        {label}
+      </span>
+      {!danger && <ChevronRight size={16} className="text-gray-400" />}
     </button>
   );
 };
@@ -60,7 +66,7 @@ const Profile = () => {
 
         {/* Avatar + name */}
         <div className="flex items-center gap-4 px-1 py-2">
-          <div className="w-16 h-16 rounded-full bg-violet-200 flex items-center justify-center text-violet-600 font-bold text-2xl shrink-0">
+          <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-2xl shrink-0">
             {initials}
           </div>
           <div>
@@ -84,24 +90,18 @@ const Profile = () => {
           </Card>
         </div>
 
-        {/* More */}
+        {/* Legal */}
         <div className="space-y-2">
-          <p className="text-gray-900 text-sm font-bold px-1">More</p>
+          <p className="text-gray-900 text-sm font-bold px-1">Legal</p>
           <Card>
             <Row icon={HelpCircle} label="Terms & Conditions" to="/terms" />
-            <Row icon={FileText} label="Privacy Policy" to="/privacy" />
+            <Row icon={FileText}   label="Privacy Policy"     to="/privacy" />
           </Card>
         </div>
 
         {/* Logout */}
         <Card>
-          <button
-            onClick={handleLogout}
-            className="w-full flex items-center gap-4 px-4 py-4 text-left hover:bg-gray-50 transition"
-          >
-            <LogOut size={18} className="text-gray-500 shrink-0" strokeWidth={1.5} />
-            <span className="flex-1 text-sm font-medium text-gray-800">Logout</span>
-          </button>
+          <Row icon={LogOut} label="Logout" onClick={handleLogout} danger />
         </Card>
 
       </div>
