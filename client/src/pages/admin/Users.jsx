@@ -2,8 +2,44 @@ import { useEffect, useState } from "react";
 import AdminLayout from "../../components/admin/AdminLayout";
 import api from "../../api/axios";
 import toast from "react-hot-toast";
-import { Users as UsersIcon, Trash2, ChevronLeft, ChevronRight, Plus, X, ShieldCheck } from "lucide-react";
+import { Users as UsersIcon, Trash2, ChevronLeft, ChevronRight, Plus, X, ShieldCheck, Eye, EyeOff } from "lucide-react";
 import Spinner from "../../components/common/Spinner";
+
+// ─── Delete Confirm Modal ─────────────────────────────────────────────────────
+const DeleteModal = ({ user, onClose, onConfirm, deleting }) => (
+  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm px-4">
+    <div className="bg-white border border-gray-100 rounded-2xl w-full max-w-sm shadow-2xl overflow-hidden">
+      <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+        <span className="font-heading font-semibold text-gray-900">Delete User?</span>
+        <button onClick={onClose} className="text-gray-400 hover:text-gray-700 transition">
+          <X size={18} />
+        </button>
+      </div>
+      <div className="p-5 space-y-4">
+        <p className="text-muted text-sm">
+          Are you sure you want to delete{" "}
+          <span className="text-gray-900 font-semibold">"{user.name} {user.surname}"</span>?
+          This cannot be undone.
+        </p>
+        <div className="flex gap-3">
+          <button
+            onClick={onClose}
+            className="flex-1 py-2.5 rounded-xl border border-gray-200 text-gray-500 hover:text-gray-900 text-sm transition"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={onConfirm}
+            disabled={deleting}
+            className="flex-1 py-2.5 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 text-sm font-medium transition disabled:opacity-50"
+          >
+            {deleting ? "Deleting..." : "Delete"}
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+);
 
 // ─── Create Staff Modal ───────────────────────────────────────────────────────
 const CreateStaffModal = ({ onClose, onCreated }) => {
@@ -11,19 +47,30 @@ const CreateStaffModal = ({ onClose, onCreated }) => {
     name: "", surname: "", username: "", email: "", password: "",
   });
   const [creating, setCreating] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [errors, setErrors] = useState({});
 
-  const set = (key, val) => setForm((f) => ({ ...f, [key]: val }));
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setForm((f) => ({ ...f, [name]: value }));
+    if (errors[name]) setErrors((prev) => ({ ...prev, [name]: "" }));
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setCreating(true);
+    setErrors({});
     try {
       await api.post("/admin/staff", form);
       toast.success("Staff account created!");
       onCreated();
       onClose();
     } catch (err) {
-      toast.error(err?.response?.data?.message || "Failed to create staff");
+      if (err.errors) {
+        setErrors(err.errors);
+      } else {
+        toast.error(err?.response?.data?.message || "Failed to create staff");
+      }
     } finally {
       setCreating(false);
     }
@@ -47,65 +94,96 @@ const CreateStaffModal = ({ onClose, onCreated }) => {
             Staff accounts can only access the ticket scanner. They cannot manage movies, shows or bookings.
           </p>
 
+          {/* Name + Surname */}
           <div className="grid grid-cols-2 gap-3">
             <div className="flex flex-col gap-1.5">
               <label className="text-xs text-muted font-medium">First Name</label>
               <input
                 type="text"
+                name="name"
                 value={form.name}
-                onChange={(e) => set("name", e.target.value)}
+                onChange={handleChange}
                 required
                 placeholder="Rahul"
-                className="bg-gray-50 border border-gray-200 text-gray-900 rounded-xl px-3 py-2 outline-none focus:border-primary text-sm placeholder:text-gray-400"
+                className={`bg-gray-50 border text-gray-900 rounded-xl px-3 py-2 outline-none focus:ring-1 transition text-sm placeholder:text-gray-400
+                  ${errors.name ? "border-red-500 focus:border-red-500 focus:ring-red-500" : "border-gray-200 focus:border-primary focus:ring-primary"}`}
               />
+              {errors.name && <p className="text-red-400 text-xs">⚠️ {errors.name}</p>}
             </div>
             <div className="flex flex-col gap-1.5">
               <label className="text-xs text-muted font-medium">Last Name</label>
               <input
                 type="text"
+                name="surname"
                 value={form.surname}
-                onChange={(e) => set("surname", e.target.value)}
+                onChange={handleChange}
                 required
                 placeholder="Sharma"
-                className="bg-gray-50 border border-gray-200 text-gray-900 rounded-xl px-3 py-2 outline-none focus:border-primary text-sm placeholder:text-gray-400"
+                className={`bg-gray-50 border text-gray-900 rounded-xl px-3 py-2 outline-none focus:ring-1 transition text-sm placeholder:text-gray-400
+                  ${errors.surname ? "border-red-500 focus:border-red-500 focus:ring-red-500" : "border-gray-200 focus:border-primary focus:ring-primary"}`}
               />
+              {errors.surname && <p className="text-red-400 text-xs">⚠️ {errors.surname}</p>}
             </div>
           </div>
 
+          {/* Username */}
           <div className="flex flex-col gap-1.5">
             <label className="text-xs text-muted font-medium">Username</label>
             <input
               type="text"
+              name="username"
               value={form.username}
-              onChange={(e) => set("username", e.target.value)}
+              onChange={handleChange}
               required
               placeholder="rahul_staff"
-              className="bg-gray-50 border border-gray-200 text-gray-900 rounded-xl px-3 py-2 outline-none focus:border-primary text-sm placeholder:text-gray-400"
+              className={`bg-gray-50 border text-gray-900 rounded-xl px-3 py-2 outline-none focus:ring-1 transition text-sm placeholder:text-gray-400
+                ${errors.username ? "border-red-500 focus:border-red-500 focus:ring-red-500" : "border-gray-200 focus:border-primary focus:ring-primary"}`}
             />
+            {errors.username && <p className="text-red-400 text-xs">⚠️ {errors.username}</p>}
           </div>
 
+          {/* Email */}
           <div className="flex flex-col gap-1.5">
             <label className="text-xs text-muted font-medium">Email</label>
             <input
               type="email"
+              name="email"
               value={form.email}
-              onChange={(e) => set("email", e.target.value)}
+              onChange={handleChange}
               required
               placeholder="rahul@cinebook.com"
-              className="bg-gray-50 border border-gray-200 text-gray-900 rounded-xl px-3 py-2 outline-none focus:border-primary text-sm placeholder:text-gray-400"
+              className={`bg-gray-50 border text-gray-900 rounded-xl px-3 py-2 outline-none focus:ring-1 transition text-sm placeholder:text-gray-400
+                ${errors.email ? "border-red-500 focus:border-red-500 focus:ring-red-500" : "border-gray-200 focus:border-primary focus:ring-primary"}`}
             />
+            {errors.email && <p className="text-red-400 text-xs">⚠️ {errors.email}</p>}
           </div>
 
+          {/* Password */}
           <div className="flex flex-col gap-1.5">
             <label className="text-xs text-muted font-medium">Password</label>
-            <input
-              type="password"
-              value={form.password}
-              onChange={(e) => set("password", e.target.value)}
-              required
-              placeholder="Min 6 characters"
-              className="bg-gray-50 border border-gray-200 text-gray-900 rounded-xl px-3 py-2 outline-none focus:border-primary text-sm placeholder:text-gray-400"
-            />
+            <div className="relative">
+              <input
+                type={showPassword ? "text" : "password"}
+                name="password"
+                value={form.password}
+                onChange={handleChange}
+                required
+                placeholder="Min 8 chars with uppercase, number & symbol"
+                className={`w-full bg-gray-50 border text-gray-900 rounded-xl px-3 py-2 pr-10 outline-none focus:ring-1 transition text-sm placeholder:text-gray-400
+                  ${errors.password ? "border-red-500 focus:border-red-500 focus:ring-red-500" : "border-gray-200 focus:border-primary focus:ring-primary"}`}
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-700 transition"
+              >
+                {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+              </button>
+            </div>
+            {errors.password
+              ? <p className="text-red-400 text-xs">⚠️ {errors.password}</p>
+              : <p className="text-xs text-muted mt-0.5">8-16 chars with uppercase, lowercase, number & special character</p>
+            }
           </div>
 
           <div className="flex gap-3 pt-2">
@@ -135,6 +213,7 @@ const Users = () => {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [deleting, setDeleting] = useState(null);
+  const [deleteTarget, setDeleteTarget] = useState(null);
   const [page, setPage] = useState(1);
   const [pagination, setPagination] = useState({});
   const [showCreateStaff, setShowCreateStaff] = useState(false);
@@ -154,12 +233,13 @@ const Users = () => {
 
   useEffect(() => { fetchUsers(page).catch(console.error); }, [page]);
 
-  const handleDelete = async (id) => {
-    if (!confirm("Delete this user? This cannot be undone.")) return;
-    setDeleting(id);
+  const handleDelete = async () => {
+    if (!deleteTarget) return;
+    setDeleting(deleteTarget.id);
     try {
-      await api.delete(`/admin/users/${id}`);
+      await api.delete(`/admin/users/${deleteTarget.id}`);
       toast.success("User deleted!");
+      setDeleteTarget(null);
       await fetchUsers(page);
     } catch (err) {
       toast.error(err.message);
@@ -183,6 +263,15 @@ const Users = () => {
 
   return (
     <AdminLayout>
+      {deleteTarget && (
+        <DeleteModal
+          user={deleteTarget}
+          onClose={() => setDeleteTarget(null)}
+          onConfirm={handleDelete}
+          deleting={!!deleting}
+        />
+      )}
+
       {showCreateStaff && (
         <CreateStaffModal
           onClose={() => setShowCreateStaff(false)}
@@ -195,7 +284,6 @@ const Users = () => {
           <h1 className="font-heading text-2xl font-bold text-gray-900">Users</h1>
           <p className="text-muted text-sm mt-1">{pagination.total || 0} total users</p>
         </div>
-        {/* ✅ Create Staff button */}
         <button
           onClick={() => setShowCreateStaff(true)}
           className="flex items-center gap-2 bg-primary hover:bg-primary-dark text-white px-4 py-2 rounded-xl text-sm font-medium transition"
@@ -230,7 +318,7 @@ const Users = () => {
                 </div>
                 {user.role !== "ADMIN" && (
                   <button
-                    onClick={() => handleDelete(user.id)}
+                    onClick={() => setDeleteTarget(user)}
                     disabled={deleting === user.id}
                     className="flex items-center gap-2 text-red-400 hover:text-red-300 text-sm transition disabled:opacity-50"
                   >
