@@ -8,6 +8,20 @@ import Spinner from "../../components/common/Spinner";
 const SEAT_COUNTS = [120, 180, 240, 300];
 const STATUS_TABS = ["ALL", "UPCOMING", "ONGOING", "COMPLETED"];
 
+// ─── Format ISO date to readable IST ─────────────────────────────────────────
+const formatIST = (dateStr) => {
+  if (!dateStr) return "—";
+  return new Date(dateStr).toLocaleString("en-IN", {
+    timeZone: "Asia/Kolkata",
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+  });
+};
+
 const statusBadge = (status) => {
   switch (status) {
     case "UPCOMING":  return "bg-blue-100 text-blue-700 border border-blue-200";
@@ -19,8 +33,8 @@ const statusBadge = (status) => {
 
 // ─── Confirm Modal ────────────────────────────────────────────────────────────
 const ConfirmModal = ({ title, message, confirmLabel, confirmClass, onConfirm, onCancel }) => (
-  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-    <div className="bg-white border border-gray-100 rounded-2xl p-6 w-full max-w-sm mx-4 shadow-2xl">
+  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm px-4">
+    <div className="bg-white border border-gray-100 rounded-2xl p-6 w-full max-w-sm shadow-2xl">
       <h3 className="text-gray-900 font-semibold text-lg mb-2">{title}</h3>
       <p className="text-muted text-sm mb-6">{message}</p>
       <div className="flex gap-3 justify-end">
@@ -39,12 +53,11 @@ const UpdateModal = ({ show, onSave, onClose, saving }) => {
     goldenPrice: show.goldenPrice ? String(show.goldenPrice) : "",
   });
 
-  // Available formats from the movie
   const availableFormats = show.movie?.formats || [];
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-      <div className="bg-white border border-gray-100 rounded-2xl p-6 w-full max-w-md mx-4 shadow-2xl">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm px-4">
+      <div className="bg-white border border-gray-100 rounded-2xl p-6 w-full max-w-md shadow-2xl">
         <div className="flex items-center justify-between mb-5">
           <h3 className="text-gray-900 font-semibold text-lg">Edit Show</h3>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-700 transition"><X size={18} /></button>
@@ -108,8 +121,8 @@ const RescheduleModal = ({ show, onSave, onClose, saving }) => {
   const [startTime, setStartTime] = useState("");
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-      <div className="bg-white border border-gray-100 rounded-2xl p-6 w-full max-w-md mx-4 shadow-2xl">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm px-4">
+      <div className="bg-white border border-gray-100 rounded-2xl p-6 w-full max-w-md shadow-2xl">
         <div className="flex items-center justify-between mb-5">
           <h3 className="text-gray-900 font-semibold text-lg">Reschedule Show</h3>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-700 transition"><X size={18} /></button>
@@ -176,10 +189,10 @@ const ShowRow = ({ show, onEdit, onReschedule, onCancel, cancelling }) => {
         </span>
       </div>
 
-      {/* Meta */}
+      {/* Meta — with properly formatted IST time */}
       <div className="flex flex-col gap-0.5">
         <p className="text-muted text-xs">{show.theatre?.name}</p>
-        <p className="text-muted text-xs">{show.startTime}</p>
+        <p className="text-muted text-xs">{formatIST(show.startTime)}</p>
         <p className="text-muted text-xs">
           {show.totalSeats} seats · ₹{show.regularPrice}
           {show.hasGoldenSeats && ` · ₹${show.goldenPrice} golden`}
@@ -197,14 +210,14 @@ const ShowRow = ({ show, onEdit, onReschedule, onCancel, cancelling }) => {
           </button>
           <button
             onClick={() => onReschedule(show)}
-            className="flex items-center gap-1.5 text-blue-400 hover:text-blue-300 border border-blue-400/20 px-3 py-1.5 rounded-xl text-xs transition"
+            className="flex items-center gap-1.5 text-blue-400 hover:text-blue-600 border border-blue-200 px-3 py-1.5 rounded-xl text-xs transition"
           >
             <CalendarClock size={12} /> Reschedule
           </button>
           <button
             onClick={() => onCancel(show)}
             disabled={cancelling === show.id}
-            className="flex items-center gap-1.5 text-red-400 hover:text-red-300 border border-red-400/10 px-3 py-1.5 rounded-xl text-xs transition disabled:opacity-50"
+            className="flex items-center gap-1.5 text-red-400 hover:text-red-600 border border-red-200 px-3 py-1.5 rounded-xl text-xs transition disabled:opacity-50"
           >
             {cancelling === show.id ? <Spinner /> : <Trash2 size={12} />} Cancel
           </button>
@@ -239,12 +252,10 @@ const Shows = () => {
     hasGoldenSeats: false, goldenSeats: "", goldenPrice: "",
   });
 
-  // ✅ Derived — available formats/languages from selected movie
   const selectedMovie = movies.find((m) => m.id === parseInt(form.movieId));
   const availableFormats = selectedMovie?.formats || [];
   const availableLanguages = selectedMovie?.languages || [];
 
-  // ✅ Auto-select first format and language when movie changes
   const handleMovieChange = (movieId) => {
     const movie = movies.find((m) => m.id === parseInt(movieId));
     setForm((f) => ({
@@ -435,7 +446,7 @@ const Shows = () => {
               />
             </div>
 
-            {/* Show Type — auto from movie formats */}
+            {/* Show Type */}
             <div>
               <label className="block text-sm text-muted mb-1.5">
                 Show Type
@@ -455,7 +466,7 @@ const Shows = () => {
               </select>
             </div>
 
-            {/* Language — auto from movie languages */}
+            {/* Language */}
             <div>
               <label className="block text-sm text-muted mb-1.5">
                 Language

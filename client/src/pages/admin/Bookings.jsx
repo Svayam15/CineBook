@@ -147,7 +147,7 @@ const TicketModal = ({ booking, onClose }) => {
         existingSvg.replaceWith(tempImg);
 
         const canvas = await html2canvas(ticketRef.current, {
-          backgroundColor: "#0D0D0D",
+          backgroundColor: "#ffffff",
           scale: 2,
           useCORS: true,
           allowTaint: true,
@@ -173,143 +173,145 @@ const TicketModal = ({ booking, onClose }) => {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm px-4">
-      <div className="bg-white border border-gray-100 rounded-2xl w-full max-w-sm md:max-w-2xl shadow-2xl overflow-hidden">
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/70 backdrop-blur-sm px-0 sm:px-4">
+      <div className="bg-white border border-gray-100 rounded-t-3xl sm:rounded-2xl w-full max-w-2xl shadow-2xl overflow-hidden max-h-[95dvh] flex flex-col">
 
         {/* Header */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 shrink-0">
           <div className="flex items-center gap-2">
             <Ticket size={18} className="text-primary" />
             <div>
-              <span className="font-heading font-semibold text-gray-900">Ticket</span>
+              <span className="font-heading font-semibold text-gray-900 text-sm">Ticket</span>
               <span className="text-gray-500 text-xs ml-2">
                 {booking.user?.name} {booking.user?.surname}
                 <span className="text-gray-400 ml-1">@{booking.user?.username}</span>
               </span>
             </div>
           </div>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-700 transition">
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-700 transition p-1">
             <X size={18} />
           </button>
         </div>
 
-        {/* Body — no scrollbar, horizontal on desktop */}
-        <div ref={ticketRef} className="grid grid-cols-1 md:grid-cols-2 gap-0">
+        {/* Scrollable body */}
+        <div className="overflow-y-auto flex-1">
+          <div ref={ticketRef} className="flex flex-col sm:grid sm:grid-cols-2">
 
-          {/* Left — ticket info */}
-          <div className="p-5 space-y-4 md:border-r md:border-gray-100">
-            <div>
-              <h3 className="font-heading text-lg font-bold text-gray-900 leading-tight">
-                {booking.show?.movie?.title}
-              </h3>
-              <div className="flex items-center gap-2 mt-1 flex-wrap">
-                <span className={`text-xs px-2 py-0.5 rounded-full border ${statusColors[booking.status]}`}>
-                  {booking.status}
-                </span>
-                {booking.isUsed && (
-                  <span className="text-xs px-2 py-0.5 rounded-full border bg-gray-100 text-gray-600 border-gray-200 flex items-center gap-1">
-                    <CheckCircle2 size={10} />
-                    USED
+            {/* Left — ticket info */}
+            <div className="p-5 space-y-4 sm:border-r sm:border-gray-100">
+              <div>
+                <h3 className="font-heading text-base font-bold text-gray-900 leading-tight">
+                  {booking.show?.movie?.title}
+                </h3>
+                <div className="flex items-center gap-1.5 mt-2 flex-wrap">
+                  <span className={`text-xs px-2 py-0.5 rounded-full border ${statusColors[booking.status]}`}>
+                    {booking.status}
                   </span>
-                )}
-                <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full">
-                  {booking.show?.showType}
-                </span>
-                {booking.show?.language && (
-                  <span className="text-xs bg-gray-100 text-gray-700 px-2 py-0.5 rounded-full">
-                    {booking.show.language}
+                  {booking.isUsed && (
+                    <span className="text-xs px-2 py-0.5 rounded-full border bg-gray-100 text-gray-600 border-gray-200 flex items-center gap-1">
+                      <CheckCircle2 size={10} />
+                      USED
+                    </span>
+                  )}
+                  <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full">
+                    {booking.show?.showType}
                   </span>
-                )}
+                  {booking.show?.language && (
+                    <span className="text-xs bg-gray-100 text-gray-700 px-2 py-0.5 rounded-full">
+                      {booking.show.language}
+                    </span>
+                  )}
+                </div>
               </div>
-            </div>
 
-            <div className="border-t border-dashed border-gray-200" />
+              <div className="border-t border-dashed border-gray-200" />
 
-            <div className="space-y-2 text-sm">
-              <div className="flex items-start gap-2 text-muted">
-                <MapPin size={13} className="mt-0.5 shrink-0 text-primary" />
-                <span>{booking.show?.theatre?.name}, {booking.show?.theatre?.location}</span>
+              <div className="space-y-2 text-sm">
+                <div className="flex items-start gap-2 text-muted">
+                  <MapPin size={13} className="mt-0.5 shrink-0 text-primary" />
+                  <span className="text-xs leading-relaxed">{booking.show?.theatre?.name}, {booking.show?.theatre?.location}</span>
+                </div>
+                <div className="flex items-start gap-2 text-muted">
+                  <Clock size={13} className="mt-0.5 shrink-0 text-primary" />
+                  <span className="text-xs">{formatIST(booking.show?.startTime)}</span>
+                </div>
+                <div className="flex items-start gap-2 text-muted">
+                  <Calendar size={13} className="mt-0.5 shrink-0 text-primary" />
+                  <span className="text-xs">Booked on {formatIST(booking.createdAt)}</span>
+                </div>
               </div>
-              <div className="flex items-center gap-2 text-muted">
-                <Clock size={13} className="shrink-0 text-primary" />
-                <span>{formatIST(booking.show?.startTime)}</span>
+
+              <div>
+                <p className="text-muted text-xs mb-2">Seats</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {(booking.seats || []).map((bs, i) => (
+                    <span
+                      key={i}
+                      className={`text-xs px-2.5 py-1 rounded-lg border font-medium
+                        ${bs.seatType === "GOLDEN"
+                          ? "bg-yellow-500/10 text-yellow-600 border-yellow-500/30"
+                          : "bg-gray-100 text-gray-700 border-gray-200"
+                        }`}
+                    >
+                      {bs.showSeat?.row}{bs.showSeat?.number}
+                    </span>
+                  ))}
+                </div>
               </div>
-              <div className="flex items-center gap-2 text-muted">
-                <Calendar size={13} className="shrink-0 text-primary" />
-                <span>Booked on {formatIST(booking.createdAt)}</span>
+
+              <div className="border-t border-dashed border-gray-200" />
+
+              <div className="flex justify-between items-center bg-gray-50 rounded-xl px-4 py-3">
+                <span className="text-gray-500 text-sm">Total Paid</span>
+                <span className="text-gray-900 font-bold text-lg">₹{booking.totalAmount}</span>
               </div>
-            </div>
 
-            <div>
-              <p className="text-muted text-xs mb-2">Seats</p>
-              <div className="flex flex-wrap gap-1.5">
-                {(booking.seats || []).map((bs, i) => (
-                  <span
-                    key={i}
-                    className={`text-xs px-2.5 py-1 rounded-lg border font-medium
-                      ${bs.seatType === "GOLDEN"
-                        ? "bg-yellow-500/10 text-yellow-400 border-yellow-500/20"
-                        : "bg-gray-100 text-gray-700 border-gray-200"
-                      }`}
-                  >
-                    {bs.showSeat?.row}{bs.showSeat?.number}
-                  </span>
-                ))}
+              <div className="flex justify-between items-center text-sm">
+                <span className="text-gray-500">Payment</span>
+                <span className="text-gray-900">{booking.paymentType}</span>
               </div>
-            </div>
 
-            <div className="border-t border-dashed border-gray-200" />
-
-            <div className="flex justify-between items-center bg-gray-50 rounded-xl px-4 py-3">
-              <span className="text-gray-500 text-sm">Total Paid</span>
-              <span className="text-gray-900 font-bold text-lg">₹{booking.totalAmount}</span>
-            </div>
-
-            <div className="flex justify-between items-center text-sm">
-              <span className="text-gray-500">Payment</span>
-              <span className="text-gray-900">{booking.paymentType}</span>
-            </div>
-
-            <div className="flex justify-between items-center text-sm">
-              <span className="text-gray-500">Booking ID</span>
-              <span className="text-gray-900 font-mono">#{booking.id}</span>
-            </div>
-
-            {booking.isUsed && booking.usedAt && (
-              <div className="bg-gray-100 border border-gray-200 rounded-xl px-4 py-3">
-                <p className="text-gray-600 text-xs flex items-center gap-1.5">
-                  <CheckCircle2 size={12} />
-                  Used at {formatIST(booking.usedAt)}
-                </p>
+              <div className="flex justify-between items-center text-sm">
+                <span className="text-gray-500">Booking ID</span>
+                <span className="text-gray-900 font-mono">#{booking.id}</span>
               </div>
-            )}
-          </div>
 
-          {/* Right — QR */}
-          <div className="p-5 flex flex-col items-center justify-center gap-4 bg-gray-50">
-            <div className="border-t border-dashed border-gray-200 w-full md:hidden" />
-            <p className="text-muted text-xs text-center">Show this QR at the entrance</p>
-            <div className="bg-white p-4 rounded-2xl" ref={qrRef}>
-              <QRCodeSVG
-                value={qrValue}
-                size={180}
-                bgColor="#ffffff"
-                fgColor="#0D0D0D"
-                level="H"
-              />
+              {booking.isUsed && booking.usedAt && (
+                <div className="bg-gray-100 border border-gray-200 rounded-xl px-4 py-3">
+                  <p className="text-gray-600 text-xs flex items-center gap-1.5">
+                    <CheckCircle2 size={12} />
+                    Used at {formatIST(booking.usedAt)}
+                  </p>
+                </div>
+              )}
             </div>
-            <p className="text-muted text-xs font-mono tracking-wide text-center break-all">
-              {qrValue}
-            </p>
-            <div className="bg-primary/5 border border-primary/20 rounded-xl px-4 py-3 w-full text-center">
-              <p className="text-primary text-xs font-medium">Booking #{booking.id}</p>
-              <p className="text-muted text-xs mt-0.5">{booking.paymentType} Payment</p>
+
+            {/* Right — QR */}
+            <div className="px-5 pb-6 pt-2 sm:p-5 flex flex-col items-center justify-center gap-4 bg-gray-50">
+              <div className="border-t border-dashed border-gray-200 w-full sm:hidden" />
+              <p className="text-muted text-xs text-center">Show this QR at the entrance</p>
+              <div className="bg-white p-4 rounded-2xl shadow-sm" ref={qrRef}>
+                <QRCodeSVG
+                  value={qrValue}
+                  size={160}
+                  bgColor="#ffffff"
+                  fgColor="#0D0D0D"
+                  level="H"
+                />
+              </div>
+              <p className="text-muted text-xs font-mono tracking-wide text-center break-all">
+                {qrValue}
+              </p>
+              <div className="bg-primary/5 border border-primary/20 rounded-xl px-4 py-3 w-full text-center">
+                <p className="text-primary text-xs font-medium">Booking #{booking.id}</p>
+                <p className="text-muted text-xs mt-0.5">{booking.paymentType} Payment</p>
+              </div>
             </div>
           </div>
         </div>
 
-        {/* Action buttons */}
-        <div className="px-5 pb-5 pt-2 flex flex-col gap-2 border-t border-gray-100">
+        {/* Action buttons — always visible at bottom */}
+        <div className="px-5 pb-6 pt-3 flex flex-col gap-2 border-t border-gray-100 shrink-0 bg-white">
           <button
             onClick={handleDownload}
             className="w-full flex items-center justify-center gap-2 bg-primary/10 hover:bg-primary/20 border border-primary/20 text-primary font-semibold py-3 rounded-xl transition text-sm"
@@ -319,7 +321,7 @@ const TicketModal = ({ booking, onClose }) => {
           </button>
           <button
             onClick={handlePrint}
-            className="w-full flex items-center justify-center gap-2 bg-card border border-gray-200 text-gray-500 hover:text-gray-900 font-semibold py-3 rounded-xl transition text-sm"
+            className="w-full flex items-center justify-center gap-2 bg-white border border-gray-200 text-gray-500 hover:text-gray-900 font-semibold py-3 rounded-xl transition text-sm"
           >
             <Printer size={16} />
             Print Ticket
@@ -338,8 +340,8 @@ const TicketModal = ({ booking, onClose }) => {
 
 // ─── Cancel Confirm Modal ─────────────────────────────────────────────────────
 const ConfirmModal = ({ booking, onConfirm, onCancel }) => (
-  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-    <div className="bg-white border border-gray-100 rounded-2xl p-6 w-full max-w-sm mx-4 shadow-2xl">
+  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm px-4">
+    <div className="bg-white border border-gray-100 rounded-2xl p-6 w-full max-w-sm shadow-2xl">
       <h3 className="text-gray-900 font-semibold text-lg mb-2">Cancel Booking?</h3>
       <p className="text-gray-500 text-sm mb-1">
         Booking <span className="text-gray-900">#{booking.id}</span> — {booking.user?.name} {booking.user?.surname}
@@ -366,6 +368,99 @@ const ConfirmModal = ({ booking, onConfirm, onCancel }) => (
     </div>
   </div>
 );
+
+// ─── Booking Card (mobile-first) ──────────────────────────────────────────────
+const BookingCard = ({ booking, onViewTicket, onCancel, cancelling }) => {
+  const showStarted = new Date() >= new Date(booking.show?.startTime);
+
+  return (
+    <div className="bg-white border border-gray-100 rounded-2xl px-4 py-4 flex flex-col gap-3">
+
+      {/* Row 1: ID + name */}
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0">
+          <p className="text-gray-900 font-medium text-sm leading-snug">
+            #{booking.id} — {booking.user?.name} {booking.user?.surname}
+          </p>
+          <p className="text-muted text-xs mt-0.5">
+            @{booking.user?.username} · ID: {booking.user?.id}
+          </p>
+        </div>
+      </div>
+
+      {/* Row 2: status + payment badges */}
+      <div className="flex flex-wrap gap-1.5">
+        <span className={`text-xs px-2 py-0.5 rounded-full ${statusColors[booking.status]}`}>
+          {booking.status}
+        </span>
+        <span className={`text-xs px-2 py-0.5 rounded-full ${paymentColors[booking.paymentType]}`}>
+          {booking.paymentType}
+        </span>
+      </div>
+
+      {/* Row 3: show info */}
+      <p className="text-muted text-xs leading-relaxed">
+        {booking.show?.movie?.title}
+        {" · "}{booking.show?.theatre?.name}
+        {" · "}{booking.seats?.length} seat{booking.seats?.length !== 1 ? "s" : ""}
+        {" · "}₹{booking.totalAmount ?? "—"}
+      </p>
+
+      {/* Refund */}
+      {booking.refundAmount > 0 && (
+        <p className="text-yellow-600 text-xs">
+          Refunded: ₹{booking.refundAmount}
+        </p>
+      )}
+
+      {/* Scan status */}
+      {booking.status === "PAID" && (
+        <div className="flex items-center gap-1.5">
+          {booking.isUsed ? (
+            <>
+              <CheckCircle2 size={12} className="text-green-500 shrink-0" />
+              <span className="text-green-600 text-xs">
+                Ticket used · {formatISTShort(booking.usedAt)}
+              </span>
+            </>
+          ) : (
+            <>
+              <Clock size={12} className="text-muted shrink-0" />
+              <span className="text-muted text-xs">Ticket not yet scanned</span>
+            </>
+          )}
+        </div>
+      )}
+
+      {/* Actions */}
+      {(booking.status === "PAID") && (
+        <div className="flex flex-wrap gap-2 pt-1 border-t border-gray-100">
+          <button
+            onClick={() => onViewTicket(booking)}
+            className="flex items-center gap-1.5 bg-primary/10 hover:bg-primary/20 text-primary border border-primary/20 px-3 py-1.5 rounded-xl text-xs font-medium transition"
+          >
+            <QrCode size={13} />
+            View Ticket
+          </button>
+
+          {!showStarted ? (
+            <button
+              onClick={() => onCancel(booking)}
+              disabled={cancelling === booking.id}
+              className="flex items-center gap-1.5 text-red-400 hover:text-red-600 border border-red-200 px-3 py-1.5 rounded-xl text-xs transition disabled:opacity-50"
+            >
+              {cancelling === booking.id ? "Cancelling..." : "Cancel"}
+            </button>
+          ) : (
+            <span className="text-gray-400 text-xs border border-gray-200 px-3 py-1.5 rounded-xl opacity-60">
+              Show started
+            </span>
+          )}
+        </div>
+      )}
+    </div>
+  );
+};
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 const Bookings = () => {
@@ -453,8 +548,9 @@ const Bookings = () => {
         </div>
       </div>
 
+      {/* Search */}
       <div className="flex gap-2 mb-2">
-        <div className="relative flex-1 max-w-sm">
+        <div className="relative flex-1">
           <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted" />
           <input
             type="text"
@@ -467,16 +563,16 @@ const Bookings = () => {
         </div>
         <button
           onClick={applySearch}
-          className="bg-primary hover:bg-primary-dark text-white px-4 py-2.5 rounded-xl text-sm font-medium transition"
+          className="bg-primary hover:bg-primary-dark text-white px-4 py-2.5 rounded-xl text-sm font-medium transition shrink-0"
         >
           Search
         </button>
         {appliedSearch && (
           <button
             onClick={clearSearch}
-            className="flex items-center gap-1.5 border border-gray-200 text-gray-500 hover:text-gray-900 px-4 py-2.5 rounded-xl text-sm transition"
+            className="flex items-center gap-1.5 border border-gray-200 text-gray-500 hover:text-gray-900 px-3 py-2.5 rounded-xl text-sm transition shrink-0"
           >
-            <X size={14} /> Clear
+            <X size={14} />
           </button>
         )}
       </div>
@@ -488,7 +584,7 @@ const Bookings = () => {
       {loading ? (
         <div className="space-y-3">
           {[...Array(5)].map((_, i) => (
-            <div key={i} className="bg-white border border-gray-100 rounded-2xl h-20 animate-pulse" />
+            <div key={i} className="bg-white border border-gray-100 rounded-2xl h-24 animate-pulse" />
           ))}
         </div>
       ) : bookings.length === 0 ? (
@@ -501,95 +597,15 @@ const Bookings = () => {
       ) : (
         <>
           <div className="space-y-3">
-            {bookings.map((booking) => {
-              const showStarted = new Date() >= new Date(booking.show?.startTime);
-              return (
-                <div
-                  key={booking.id}
-                  className="bg-white border border-gray-100 rounded-2xl px-5 py-4 flex items-center justify-between gap-4"
-                >
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <p className="text-gray-900 font-medium text-sm">
-                        #{booking.id} — {booking.user?.name} {booking.user?.surname}
-                      </p>
-                      <span className="text-muted text-xs">
-                        @{booking.user?.username} · ID: {booking.user?.id}
-                      </span>
-                      <span className={`text-xs px-2 py-0.5 rounded-full ${statusColors[booking.status]}`}>
-                        {booking.status}
-                      </span>
-                      <span className={`text-xs px-2 py-0.5 rounded-full ${paymentColors[booking.paymentType]}`}>
-                        {booking.paymentType}
-                      </span>
-                    </div>
-
-                    <p className="text-muted text-xs sm:text-sm mt-1 truncate">
-                      {booking.show?.movie?.title} &nbsp;·&nbsp;
-                      {booking.show?.theatre?.name} &nbsp;·&nbsp;
-                      {booking.seats?.length} seat{booking.seats?.length !== 1 ? "s" : ""} &nbsp;·&nbsp;
-                      ₹{booking.totalAmount ?? "—"}
-                    </p>
-
-                    {booking.refundAmount > 0 && (
-                      <p className="text-yellow-400 text-xs mt-0.5">
-                        Refunded: ₹{booking.refundAmount}
-                      </p>
-                    )}
-
-                    {/* Ticket used status */}
-                    {booking.status === "PAID" && (
-                      <div className="flex items-center gap-1.5 mt-1">
-                        {booking.isUsed ? (
-                          <>
-                            <CheckCircle2 size={12} className="text-green-400" />
-                            <span className="text-green-400 text-xs">
-                              Ticket used · {formatISTShort(booking.usedAt)}
-                            </span>
-                          </>
-                        ) : (
-                          <>
-                            <Clock size={12} className="text-muted" />
-                            <span className="text-muted text-xs">Ticket not yet scanned</span>
-                          </>
-                        )}
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Action buttons */}
-                  <div className="flex items-center gap-2 shrink-0 flex-wrap justify-end">
-                    {/* View Ticket — only for PAID */}
-                    {booking.status === "PAID" && (
-                      <button
-                        onClick={() => setSelectedTicket(booking)}
-                        className="flex items-center gap-1.5 bg-primary/10 hover:bg-primary/20 text-primary border border-primary/20 px-3 py-1.5 rounded-xl text-xs font-medium transition"
-                      >
-                        <QrCode size={13} />
-                        View Ticket
-                      </button>
-                    )}
-
-                    {/* Cancel — only for PAID and show not started */}
-                    {booking.status === "PAID" && !showStarted && (
-                      <button
-                        onClick={() => setConfirmModal(booking)}
-                        disabled={cancelling === booking.id}
-                        className="flex items-center gap-1.5 text-red-400 hover:text-red-300 border border-red-400/10 hover:border-red-400/30 px-3 py-1.5 rounded-xl text-xs transition disabled:opacity-50"
-                      >
-                        {cancelling === booking.id ? "Cancelling..." : "Cancel"}
-                      </button>
-                    )}
-
-                    {booking.status === "PAID" && showStarted && (
-                      <span className="text-gray-400 text-xs border border-gray-200 px-3 py-1.5 rounded-xl opacity-50">
-                        Show started
-                      </span>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
+            {bookings.map((booking) => (
+              <BookingCard
+                key={booking.id}
+                booking={booking}
+                onViewTicket={setSelectedTicket}
+                onCancel={setConfirmModal}
+                cancelling={cancelling}
+              />
+            ))}
           </div>
 
           <div className="flex items-center justify-between mt-6">
