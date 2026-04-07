@@ -207,11 +207,12 @@ if (!form.releaseDate) return toast.error("Please select a release date");
           <div className="flex flex-col gap-1.5">
             <label className="text-sm text-muted font-medium">Duration (mins) <span className="text-red-400">*</span></label>
             <input
-              type="number"
-              value={form.duration}
-              onChange={(e) => set("duration", e.target.value)}
-              placeholder="e.g. 148"
-              className="bg-gray-50 border border-gray-200 text-gray-900 rounded-xl px-4 py-2.5 outline-none focus:border-primary text-sm placeholder:text-gray-400"
+                type="text"
+                inputMode="numeric"
+                value={form.duration}
+                onChange={(e) => set("duration", e.target.value.replace(/[^0-9]/g, ""))}
+                placeholder="e.g. 100"
+                className="bg-gray-50 border border-gray-200 text-gray-900 rounded-xl px-4 py-2.5 outline-none focus:border-primary text-sm placeholder:text-gray-400"
             />
           </div>
         </div>
