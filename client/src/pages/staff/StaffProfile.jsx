@@ -1,10 +1,11 @@
 import { useNavigate } from "react-router-dom";
 import {
-  ArrowLeft, ChevronRight, LogOut,
+  ChevronRight, LogOut,
   HelpCircle, FileText, Shield,
 } from "lucide-react";
 import useAuthStore from "../../store/authStore";
 import toast from "react-hot-toast";
+import StaffLayout from "../staff/StaffLayout"; // adjust path
 
 const Row = ({ icon: Icon, label, to, onClick, danger }) => {
   const navigate = useNavigate();
@@ -52,16 +53,7 @@ const StaffProfile = () => {
   const initials = user ? `${user.name?.[0] ?? ""}`.toUpperCase() : "?";
 
   return (
-    <div className="min-h-screen bg-gray-100 pb-24">
-
-      {/* Sticky header */}
-      <div className="sticky top-0 z-40 bg-white border-b border-gray-200 px-4 py-4 flex items-center gap-3">
-        <button onClick={() => navigate(-1)} className="text-gray-600 hover:text-gray-900 transition">
-          <ArrowLeft size={20} />
-        </button>
-        <h1 className="text-base font-bold text-gray-900">Profile</h1>
-      </div>
-
+    <StaffLayout>
       <div className="max-w-xl mx-auto px-4 sm:px-6 py-6 space-y-5">
 
         {/* Avatar + name + staff badge */}
@@ -98,7 +90,7 @@ const StaffProfile = () => {
         </Card>
 
       </div>
-    </div>
+    </StaffLayout>
   );
 };
 
