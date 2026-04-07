@@ -7,6 +7,7 @@ import {
 import useAuthStore from "../../store/authStore";
 import toast from "react-hot-toast";
 
+
 const navItems = [
   { path: "/staff/scanner", label: "Scanner", icon: ScanLine },
   { path: "/staff/profile", label: "Profile", icon: UserCircle },
