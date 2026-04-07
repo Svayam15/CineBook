@@ -307,7 +307,7 @@ if (!namePattern.test(form.cast.trim()))
             />
           </div>
           <div className="flex flex-col gap-1.5">
-            <label className="text-sm text-muted font-medium">Cast <span className="text-red-400"></span>*</label>
+            <label className="text-sm text-muted font-medium">Cast <span className="text-red-400">*</span></label>
             <input
               type="text"
               value={form.cast}
