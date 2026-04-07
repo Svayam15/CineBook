@@ -19,13 +19,13 @@ const navItems = [
   { path: "/admin/scanner",        label: "Scanner",        icon: ScanLine },
 ];
 
-// Trimmed list for mobile tab bar — 4 key items + Profile
+// Trimmed list for mobile tab bar — 4 key items + StaffProfile
 const mobileNavItems = [
   { path: "/admin",           label: "Dashboard", icon: LayoutDashboard, exact: true },
   { path: "/admin/movies",    label: "Movies",    icon: Film },
   { path: "/admin/theatres",  label: "Theatres",  icon: Theater },
   { path: "/admin/shows",     label: "Shows",     icon: Tv },
-  { path: "/admin/profile",   label: "Profile",   icon: UserCircle },
+  { path: "/admin/profile",   label: "StaffProfile",   icon: UserCircle },
 ];
 
 // ─── Drawer sub-components ────────────────────────────────────────────────────
@@ -52,7 +52,7 @@ const DrawerRow = ({ icon: Icon, label, onClick, danger }) => (
   </button>
 );
 
-// ─── Admin Profile Drawer (desktop only) ─────────────────────────────────────
+// ─── Admin StaffProfile Drawer (desktop only) ─────────────────────────────────────
 const AdminProfileDrawer = ({ user, onClose, onLogout, navigate }) => {
   const initials = user ? `${user.name?.[0] ?? ""}`.toUpperCase() : "?";
 
@@ -182,7 +182,7 @@ const AdminLayout = ({ children }) => {
         </div>
       </header>
 
-      {/* ── Profile Drawer — desktop only ── */}
+      {/* ── StaffProfile Drawer — desktop only ── */}
       <div className="fixed inset-0 z-50 pointer-events-none">
         <div
           className={`absolute inset-0 bg-black/20 backdrop-blur-sm transition-opacity duration-300

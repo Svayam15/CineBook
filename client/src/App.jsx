@@ -35,6 +35,7 @@ import Scanner from "./pages/admin/Scanner"; // ✅ NEW
 
 // Staff pages
 import StaffScanner from "./pages/staff/StaffScanner"; // ✅ NEW
+import StaffProfile from "./pages/staff/StaffProfile";
 
 // Components
 import ProtectedRoute from "./components/common/ProtectedRoute";
@@ -120,6 +121,15 @@ function App() {
           </ProtectedRoute>
         }
       />
+
+      <Route
+  path="/staff/profile"
+  element={
+    <ProtectedRoute staffOnly>
+      <StaffProfile />
+    </ProtectedRoute>
+  }
+/>
 
       {/* Admin routes */}
       <Route path="/admin" element={<ProtectedRoute adminOnly><Dashboard /></ProtectedRoute>} />

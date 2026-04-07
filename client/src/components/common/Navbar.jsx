@@ -26,7 +26,7 @@ const DrawerRow = ({ icon: Icon, label, onClick }) => (
   </button>
 );
 
-// ─── Profile Drawer content ───────────────────────────────────────────────────
+// ─── StaffProfile Drawer content ───────────────────────────────────────────────────
 const ProfileDrawer = ({ onClose, user, onLogout, navigate }) => {
   const initials = user ? `${user.name?.[0] ?? ""}`.toUpperCase() : "?";
 

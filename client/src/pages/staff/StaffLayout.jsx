@@ -10,12 +10,12 @@ import toast from "react-hot-toast";
 
 const navItems = [
   { path: "/staff/scanner", label: "Scanner", icon: ScanLine },
-  { path: "/staff/profile", label: "Profile", icon: UserCircle },
+  { path: "/staff/profile", label: "StaffProfile", icon: UserCircle },
 ];
 
 const mobileNavItems = [
   { path: "/staff/scanner", label: "Scanner", icon: ScanLine },
-  { path: "/staff/profile", label: "Profile", icon: UserCircle },
+  { path: "/staff/profile", label: "StaffProfile", icon: UserCircle },
 ];
 
 // ─── Drawer sub-components ────────────────────────────────────────────────────
@@ -42,7 +42,7 @@ const DrawerRow = ({ icon: Icon, label, onClick, danger }) => (
   </button>
 );
 
-// ─── Staff Profile Drawer (desktop only) ─────────────────────────────────────
+// ─── Staff StaffProfile Drawer (desktop only) ─────────────────────────────────────
 const StaffProfileDrawer = ({ user, onClose, onLogout, navigate }) => {
   const initials = user ? `${user.name?.[0] ?? ""}`.toUpperCase() : "?";
 
@@ -172,7 +172,7 @@ const StaffLayout = ({ children }) => {
         </div>
       </header>
 
-      {/* ── Profile Drawer — desktop only ── */}
+      {/* ── StaffProfile Drawer — desktop only ── */}
       <div className="fixed inset-0 z-50 pointer-events-none">
         <div
           className={`absolute inset-0 bg-black/20 backdrop-blur-sm transition-opacity duration-300
@@ -195,7 +195,7 @@ const StaffLayout = ({ children }) => {
       {/* ── Body: sidebar + main ── */}
       <div className="flex flex-1">
 
-        {/* Desktop sidebar — Scanner + Profile only */}
+        {/* Desktop sidebar — Scanner + StaffProfile only */}
         <aside className="hidden md:flex w-56 bg-white border-r border-gray-200 p-4 flex-col gap-1 sticky top-16 h-[calc(100vh-64px)]">
           {navItems.map(({ path, label, icon: Icon }) => (
             <NavLink
