@@ -1,13 +1,13 @@
 import { useState, useEffect } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import {
-  Film, Ticket, Home, ArrowLeft, ChevronRight,
-  BookMarked, MessageSquare, HelpCircle, FileText, LogOut, Search,
+  Film, Ticket, Home, ArrowLeft, ChevronRight, Search, X,
+  BookMarked, MessageSquare, HelpCircle, FileText, LogOut, MapPin,
 } from "lucide-react";
 import useAuthStore from "../../store/authStore";
 import toast from "react-hot-toast";
 
-// ─── Drawer subcomponents — defined outside to avoid ESLint static-components error ──
+const LOCATION = { city: "Mumbai", region: "Maharashtra" };
 
 const DrawerCard = ({ children }) => (
   <div className="bg-white rounded-2xl overflow-hidden shadow-sm border border-gray-100 divide-y divide-gray-100">
@@ -20,74 +20,68 @@ const DrawerRow = ({ icon: Icon, label, onClick }) => (
     onClick={onClick}
     className="w-full flex items-center gap-4 px-4 py-4 text-left hover:bg-gray-50 transition"
   >
-    <Icon size={18} className="text-gray-500 shrink-0" strokeWidth={1.5} />
+    <Icon size={18} className="text-gray-400 shrink-0" strokeWidth={1.5} />
     <span className="flex-1 text-sm font-medium text-gray-800">{label}</span>
-    <ChevronRight size={16} className="text-gray-400" />
+    <ChevronRight size={15} className="text-gray-300" />
   </button>
 );
 
-// ─── Profile Drawer (desktop) ─────────────────────────────────────────────────
+// ─── Profile Drawer ───────────────────────────────────────────────────────────
 const ProfileDrawer = ({ onClose, user, onLogout, navigate }) => {
   const initials = user ? `${user.name?.[0] ?? ""}`.toUpperCase() : "?";
 
   return (
     <>
-      <div className="fixed inset-0 z-40 bg-black/10 backdrop-blur-sm" onClick={onClose} />
-      <div className="fixed top-0 right-0 h-full w-80 bg-gray-100 z-50 flex flex-col shadow-2xl overflow-y-auto animate-slide-in-right">
-
-        {/* Header */}
-        <div className="flex items-center gap-3 px-5 py-5 bg-white border-b border-gray-200">
-          <button onClick={onClose} className="text-gray-600 hover:text-gray-900 transition">
+      <div className="fixed inset-0 z-40 bg-black/20 backdrop-blur-sm" onClick={onClose} />
+      <div className="fixed top-0 right-0 h-full w-80 bg-gray-50 z-50 flex flex-col shadow-2xl overflow-y-auto animate-slide-in-right">
+        <div className="flex items-center gap-3 px-5 py-5 bg-white border-b border-gray-100">
+          <button onClick={onClose} className="text-gray-500 hover:text-gray-800 transition">
             <ArrowLeft size={20} />
           </button>
           <h2 className="text-base font-bold text-gray-900">Profile</h2>
         </div>
 
-        <div className="flex flex-col gap-5 px-4 py-6">
-
-          {/* Avatar + info */}
-          <div className="flex items-center gap-4 px-1">
-            <div className="w-16 h-16 rounded-full bg-violet-100 flex items-center justify-center text-violet-600 font-bold text-2xl shrink-0">
+        <div className="flex flex-col gap-4 px-4 py-5">
+          <div className="flex items-center gap-4 px-1 py-2">
+            <div className="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-xl shrink-0">
               {initials}
             </div>
             <div>
-              <p className="text-gray-900 font-bold text-base leading-tight">
+              <p className="text-gray-900 font-bold text-sm leading-tight">
                 {user?.name} {user?.surname}
               </p>
-              <p className="text-gray-500 text-sm mt-0.5">{user?.email}</p>
+              <p className="text-gray-400 text-xs mt-0.5">{user?.email}</p>
             </div>
           </div>
 
-          {/* Bookings */}
           <DrawerCard>
-            <DrawerRow icon={BookMarked} label="View all bookings" onClick={() => { onClose(); navigate("/my-bookings"); }} />
+            <DrawerRow icon={BookMarked} label="My Bookings" onClick={() => { onClose(); navigate("/my-bookings"); }} />
           </DrawerCard>
 
-          {/* Support */}
           <div className="space-y-2">
-            <p className="text-gray-900 text-sm font-bold px-1">Support</p>
+            <p className="text-gray-400 text-xs font-semibold uppercase tracking-wider px-1">Support</p>
             <DrawerCard>
               <DrawerRow icon={MessageSquare} label="Chat with us" onClick={() => { onClose(); navigate("/support"); }} />
             </DrawerCard>
           </div>
 
-          {/* More */}
           <div className="space-y-2">
-            <p className="text-gray-900 text-sm font-bold px-1">More</p>
+            <p className="text-gray-400 text-xs font-semibold uppercase tracking-wider px-1">Legal</p>
             <DrawerCard>
               <DrawerRow icon={HelpCircle} label="Terms & Conditions" onClick={() => { onClose(); navigate("/terms"); }} />
               <DrawerRow icon={FileText} label="Privacy Policy" onClick={() => { onClose(); navigate("/privacy"); }} />
             </DrawerCard>
           </div>
 
-          {/* Logout */}
           <DrawerCard>
-            <button onClick={onLogout} className="w-full flex items-center gap-4 px-4 py-4 text-left hover:bg-gray-50 transition">
-              <LogOut size={18} className="text-gray-500 shrink-0" strokeWidth={1.5} />
-              <span className="flex-1 text-sm font-medium text-gray-800">Logout</span>
+            <button
+              onClick={onLogout}
+              className="w-full flex items-center gap-4 px-4 py-4 text-left hover:bg-gray-50 transition"
+            >
+              <LogOut size={18} className="text-red-400 shrink-0" strokeWidth={1.5} />
+              <span className="flex-1 text-sm font-medium text-red-500">Logout</span>
             </button>
           </DrawerCard>
-
         </div>
       </div>
     </>
@@ -95,11 +89,12 @@ const ProfileDrawer = ({ onClose, user, onLogout, navigate }) => {
 };
 
 // ─── Navbar ───────────────────────────────────────────────────────────────────
-const Navbar = () => {
+const Navbar = ({ onSearchChange, searchValue }) => {
   const { user, logout } = useAuthStore();
   const navigate = useNavigate();
   const location = useLocation();
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
 
   const handleLogout = async () => {
     setDrawerOpen(false);
@@ -114,62 +109,93 @@ const Navbar = () => {
   const isActive = (path) => location.pathname === path;
   const initials = user ? `${user.name?.[0] ?? ""}`.toUpperCase() : "?";
 
-  const pathname = location.pathname;
-  useEffect(() => {
-    setDrawerOpen(false);
-  }, [pathname]);
+  useEffect(() => { setDrawerOpen(false); }, [location.pathname]);
 
   return (
     <>
-      {/* ── Desktop Top Bar — District style ── */}
-      <header className="bg-white border-b border-gray-200 px-4 sm:px-6 py-3 sticky top-0 z-30">
-        <div className="max-w-7xl mx-auto flex items-center justify-between gap-6">
+      {/* ── Desktop Navbar — District style ── */}
+      <header className="bg-white border-b border-gray-200 sticky top-0 z-30">
+        <div className="max-w-7xl mx-auto px-6 h-16 flex items-center gap-6">
 
           {/* Logo */}
           <Link to="/" className="flex items-center gap-2 shrink-0">
-            <Film className="text-primary" size={22} />
-            <span className="font-heading text-lg font-bold text-gray-900">
+            <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
+              <Film size={15} className="text-white" />
+            </div>
+            <span className="font-heading text-lg font-bold text-gray-900 tracking-tight">
               Cine<span className="text-primary">Book</span>
             </span>
           </Link>
 
-          {/* Desktop center nav — pill style like District */}
-          <nav className="hidden md:flex items-center gap-1">
-            <Link
-              to="/"
-              className={`px-5 py-2 rounded-full text-sm font-medium transition
-                ${isActive("/") ? "bg-primary/10 text-primary" : "text-gray-600 hover:text-gray-900 hover:bg-gray-100"}`}
-            >
-              Home
-            </Link>
-            <Link
-              to="/my-bookings"
-              className={`px-5 py-2 rounded-full text-sm font-medium transition flex items-center gap-1.5
-                ${isActive("/my-bookings") ? "bg-primary/10 text-primary" : "text-gray-600 hover:text-gray-900 hover:bg-gray-100"}`}
-            >
-              <Ticket size={14} />
-              My Bookings
-            </Link>
-          </nav>
+          {/* Location — fixed Mumbai */}
+          <button className="hidden md:flex items-center gap-1.5 text-sm text-gray-600 hover:text-gray-900 transition shrink-0">
+            <MapPin size={14} className="text-primary shrink-0" />
+            <span className="font-medium">{LOCATION.city}:</span>
+            <span className="text-gray-400">{LOCATION.region}</span>
+            <ChevronRight size={13} className="text-gray-400 rotate-90" />
+          </button>
 
-          {/* Right — search + avatar */}
-          <div className="flex items-center gap-3">
-            <button className="hidden md:flex items-center justify-center w-9 h-9 rounded-full hover:bg-gray-100 transition text-gray-600">
-              <Search size={18} />
+          {/* Search — center, flex-1 */}
+          <div className="flex-1 hidden md:block max-w-lg">
+            <div className="relative">
+              <Search size={15} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
+              <input
+                type="text"
+                placeholder="Search for movies, events, plays, sports and activities"
+                value={searchValue || ""}
+                onChange={(e) => onSearchChange?.(e.target.value)}
+                className="w-full bg-gray-100 text-gray-900 rounded-full pl-10 pr-4 py-2.5 text-sm outline-none focus:bg-white focus:ring-2 focus:ring-primary/20 transition placeholder:text-gray-400 border border-transparent focus:border-gray-200"
+              />
+            </div>
+          </div>
+
+          {/* Right — Avatar */}
+          <div className="flex items-center gap-3 ml-auto md:ml-0 shrink-0">
+            {/* Mobile search toggle */}
+            <button
+              onClick={() => setMobileSearchOpen((v) => !v)}
+              className="md:hidden text-gray-600 p-2"
+            >
+              <Search size={20} strokeWidth={1.8} />
             </button>
 
-            {/* Avatar — opens drawer on desktop */}
+            {/* Avatar */}
             <button
               onClick={() => setDrawerOpen(true)}
-              className="w-9 h-9 rounded-full bg-violet-100 flex items-center justify-center font-bold text-sm text-violet-600 hover:bg-violet-200 transition"
+              className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center font-bold text-sm text-primary hover:bg-primary/20 transition"
             >
               {initials}
             </button>
           </div>
         </div>
+
+        {/* Mobile search bar — slides down */}
+        {mobileSearchOpen && (
+          <div className="md:hidden px-4 pb-3 border-t border-gray-100 bg-white">
+            <div className="relative mt-3">
+              <Search size={15} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
+              <input
+                type="text"
+                placeholder="Search movies or theatres..."
+                value={searchValue || ""}
+                onChange={(e) => onSearchChange?.(e.target.value)}
+                autoFocus
+                className="w-full bg-gray-100 text-gray-900 rounded-full pl-10 pr-10 py-2.5 text-sm outline-none"
+              />
+              {searchValue && (
+                <button
+                  onClick={() => onSearchChange?.("")}
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400"
+                >
+                  <X size={14} />
+                </button>
+              )}
+            </div>
+          </div>
+        )}
       </header>
 
-      {/* Desktop Profile Drawer */}
+      {/* Profile Drawer */}
       {drawerOpen && (
         <ProfileDrawer
           user={user}
@@ -180,14 +206,14 @@ const Navbar = () => {
       )}
 
       {/* ── Mobile Bottom Tab Bar — BMS style ── */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-30 bg-white border-t border-gray-200">
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-30 bg-white border-t border-gray-200 safe-area-pb">
         <div className="grid grid-cols-3 h-16">
           <Link
             to="/"
             className={`flex flex-col items-center justify-center gap-1 text-xs font-medium transition
               ${isActive("/") ? "text-primary" : "text-gray-400"}`}
           >
-            <Home size={20} strokeWidth={isActive("/") ? 2.5 : 1.8} />
+            <Home size={21} strokeWidth={isActive("/") ? 2.5 : 1.8} />
             <span>Home</span>
           </Link>
           <Link
@@ -195,20 +221,18 @@ const Navbar = () => {
             className={`flex flex-col items-center justify-center gap-1 text-xs font-medium transition
               ${isActive("/my-bookings") ? "text-primary" : "text-gray-400"}`}
           >
-            <Ticket size={20} strokeWidth={isActive("/my-bookings") ? 2.5 : 1.8} />
+            <Ticket size={21} strokeWidth={isActive("/my-bookings") ? 2.5 : 1.8} />
             <span>My Bookings</span>
           </Link>
-          <Link
-            to="/profile"
-            className={`flex flex-col items-center justify-center gap-1 text-xs font-medium transition
-              ${isActive("/profile") ? "text-primary" : "text-gray-400"}`}
+          <button
+            onClick={() => setDrawerOpen(true)}
+            className={`flex flex-col items-center justify-center gap-1 text-xs font-medium transition text-gray-400`}
           >
-            <div className={`w-6 h-6 rounded-full flex items-center justify-center font-bold text-[10px]
-              ${isActive("/profile") ? "bg-primary text-white" : "bg-violet-100 text-violet-600"}`}>
+            <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center font-bold text-[10px] text-primary">
               {initials}
             </div>
             <span>Profile</span>
-          </Link>
+          </button>
         </div>
       </nav>
     </>
