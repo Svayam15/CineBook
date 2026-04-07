@@ -10,12 +10,12 @@ import toast from "react-hot-toast";
 
 const navItems = [
   { path: "/staff/scanner", label: "Scanner", icon: ScanLine },
-  { path: "/staff/profile", label: "StaffProfile", icon: UserCircle },
+  { path: "/staff/profile", label: "Profile", icon: UserCircle },
 ];
 
 const mobileNavItems = [
   { path: "/staff/scanner", label: "Scanner", icon: ScanLine },
-  { path: "/staff/profile", label: "StaffProfile", icon: UserCircle },
+  { path: "/staff/profile", label: "Profile", icon: UserCircle }, // Fix 2: "StaffProfile" → "Profile"
 ];
 
 // ─── Drawer sub-components ────────────────────────────────────────────────────
@@ -42,7 +42,7 @@ const DrawerRow = ({ icon: Icon, label, onClick, danger }) => (
   </button>
 );
 
-// ─── Staff StaffProfile Drawer (desktop only) ─────────────────────────────────────
+// ─── Staff Profile Drawer (desktop only) ─────────────────────────────────────
 const StaffProfileDrawer = ({ user, onClose, onLogout, navigate }) => {
   const initials = user ? `${user.name?.[0] ?? ""}`.toUpperCase() : "?";
 
@@ -143,23 +143,22 @@ const StaffLayout = ({ children }) => {
             </span>
           </NavLink>
 
-          {/* Staff badge — desktop */}
-          <div className="hidden md:flex items-center gap-1.5 shrink-0">
+          <div className="flex-1" />
+
+          {/* Fix 1: Desktop — same badge style as mobile, replace old greeting+logout buttons */}
+          <div className="hidden md:flex items-center gap-3 shrink-0">
             <span className="inline-flex items-center gap-1.5 bg-yellow-50 border border-yellow-200 text-yellow-700 text-xs font-semibold px-3 py-1 rounded-full">
               <ScanLine size={11} strokeWidth={2} />
               Scanner Mode
             </span>
+            {/* Avatar opens drawer */}
+            <button
+              onClick={() => setDrawerOpen(true)}
+              className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center font-bold text-sm text-primary hover:bg-primary/20 transition"
+            >
+              {initials}
+            </button>
           </div>
-
-          <div className="flex-1" />
-
-          {/* Avatar — desktop only, opens drawer */}
-          <button
-            onClick={() => setDrawerOpen(true)}
-            className="hidden md:flex w-9 h-9 rounded-full bg-primary/10 items-center justify-center font-bold text-sm text-primary hover:bg-primary/20 transition shrink-0"
-          >
-            {initials}
-          </button>
 
           {/* Mobile: badge only (profile is in tab bar) */}
           <div className="flex md:hidden items-center">
@@ -172,7 +171,7 @@ const StaffLayout = ({ children }) => {
         </div>
       </header>
 
-      {/* ── StaffProfile Drawer — desktop only ── */}
+      {/* ── Profile Drawer — desktop only ── */}
       <div className="fixed inset-0 z-50 pointer-events-none">
         <div
           className={`absolute inset-0 bg-black/20 backdrop-blur-sm transition-opacity duration-300
@@ -180,7 +179,7 @@ const StaffLayout = ({ children }) => {
           onClick={() => setDrawerOpen(false)}
         />
         <div
-          className={`absolute top-0 right-0 h-full w-80 bg-gray-50 flex flex-col shadow-2xl overflow-y-auto transition-transform duration-300 ease-out
+          className={`absolute top-0 right-0 h-full w-80 bg-gray-50 flex flex-col shadow-2xl overflow-y-auto transition-transform duration-300 ease-in-out
             ${drawerOpen ? "translate-x-0 pointer-events-auto" : "translate-x-full pointer-events-none"}`}
         >
           <StaffProfileDrawer
@@ -195,7 +194,7 @@ const StaffLayout = ({ children }) => {
       {/* ── Body: sidebar + main ── */}
       <div className="flex flex-1">
 
-        {/* Desktop sidebar — Scanner + StaffProfile only */}
+        {/* Desktop sidebar */}
         <aside className="hidden md:flex w-56 bg-white border-r border-gray-200 p-4 flex-col gap-1 sticky top-16 h-[calc(100vh-64px)]">
           {navItems.map(({ path, label, icon: Icon }) => (
             <NavLink
