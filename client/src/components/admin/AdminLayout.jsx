@@ -25,7 +25,7 @@ const mobileNavItems = [
   { path: "/admin/movies",    label: "Movies",    icon: Film },
   { path: "/admin/theatres",  label: "Theatres",  icon: Theater },
   { path: "/admin/shows",     label: "Shows",     icon: Tv },
-  { path: "/admin/profile",   label: "StaffProfile",   icon: UserCircle },
+  { path: "/admin/profile",   label: "Profile",   icon: UserCircle },
 ];
 
 // ─── Drawer sub-components ────────────────────────────────────────────────────
