@@ -1,8 +1,8 @@
 import { useNavigate } from "react-router-dom";
 import { LogOut, HelpCircle, FileText, Shield } from "lucide-react";
 import useAuthStore from "../../store/authStore";
-import toast from "react-hot-toast";
 import StaffLayout from "./StaffLayout"; // adjust path if needed
+import toast from "react-hot-toast";
 
 const Card = ({ children }) => (
   <div className="bg-white rounded-2xl overflow-hidden shadow-sm border border-gray-100 divide-y divide-gray-100">
@@ -43,17 +43,18 @@ const StaffProfile = () => {
 
   return (
     <StaffLayout>
-      {/* Fix 3: animate-in on mount */}
-      <div
-        className="max-w-xl mx-auto space-y-5 py-2 animate-in fade-in slide-in-from-bottom-4 duration-300"
-        style={{ animation: "profileIn 0.25s ease-out both" }}
-      >
-        <style>{`
-          @keyframes profileIn {
-            from { opacity: 0; transform: translateY(12px); }
-            to   { opacity: 1; transform: translateY(0); }
-          }
-        `}</style>
+      {/* Same ease-in-out slide as the desktop drawer */}
+      <style>{`
+        @keyframes staffProfileIn {
+          from { opacity: 0; transform: translateX(20px); }
+          to   { opacity: 1; transform: translateX(0); }
+        }
+        .staff-profile-animate {
+          animation: staffProfileIn 0.3s ease-in-out both;
+        }
+      `}</style>
+
+      <div className="staff-profile-animate max-w-xl mx-auto space-y-5 py-2">
 
         {/* Avatar + info */}
         <div className="flex items-center gap-4 px-1 py-2">

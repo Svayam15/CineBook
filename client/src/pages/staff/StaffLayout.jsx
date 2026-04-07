@@ -7,15 +7,15 @@ import {
 import useAuthStore from "../../store/authStore";
 import toast from "react-hot-toast";
 
-
+// Desktop sidebar — Scanner only (Profile accessible via avatar drawer)
 const navItems = [
   { path: "/staff/scanner", label: "Scanner", icon: ScanLine },
-  { path: "/staff/profile", label: "Profile", icon: UserCircle },
 ];
 
+// Mobile tab bar — Scanner + Profile
 const mobileNavItems = [
   { path: "/staff/scanner", label: "Scanner", icon: ScanLine },
-  { path: "/staff/profile", label: "Profile", icon: UserCircle }, // Fix 2: "StaffProfile" → "Profile"
+  { path: "/staff/profile", label: "Profile",  icon: UserCircle },
 ];
 
 // ─── Drawer sub-components ────────────────────────────────────────────────────
@@ -77,14 +77,8 @@ const StaffProfileDrawer = ({ user, onClose, onLogout, navigate }) => {
 
         {/* Quick nav links */}
         <DrawerCard>
-          {navItems.map(({ path, label, icon: Icon }) => (
-            <DrawerRow
-              key={path}
-              icon={Icon}
-              label={label}
-              onClick={() => { onClose(); navigate(path); }}
-            />
-          ))}
+          <DrawerRow icon={ScanLine}   label="Scanner" onClick={() => { onClose(); navigate("/staff/scanner"); }} />
+          <DrawerRow icon={UserCircle} label="Profile"  onClick={() => { onClose(); navigate("/staff/profile"); }} />
         </DrawerCard>
 
         {/* Legal */}
@@ -145,13 +139,12 @@ const StaffLayout = ({ children }) => {
 
           <div className="flex-1" />
 
-          {/* Fix 1: Desktop — same badge style as mobile, replace old greeting+logout buttons */}
+          {/* Desktop: Scanner Mode badge + avatar (opens drawer) */}
           <div className="hidden md:flex items-center gap-3 shrink-0">
             <span className="inline-flex items-center gap-1.5 bg-yellow-50 border border-yellow-200 text-yellow-700 text-xs font-semibold px-3 py-1 rounded-full">
               <ScanLine size={11} strokeWidth={2} />
-              Scanner Mode
+              Staff
             </span>
-            {/* Avatar opens drawer */}
             <button
               onClick={() => setDrawerOpen(true)}
               className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center font-bold text-sm text-primary hover:bg-primary/20 transition"
@@ -160,7 +153,7 @@ const StaffLayout = ({ children }) => {
             </button>
           </div>
 
-          {/* Mobile: badge only (profile is in tab bar) */}
+          {/* Mobile: Staff badge only */}
           <div className="flex md:hidden items-center">
             <span className="inline-flex items-center gap-1 bg-yellow-50 border border-yellow-200 text-yellow-700 text-[10px] font-semibold px-2 py-0.5 rounded-full">
               <ScanLine size={9} strokeWidth={2} />
@@ -174,7 +167,7 @@ const StaffLayout = ({ children }) => {
       {/* ── Profile Drawer — desktop only ── */}
       <div className="fixed inset-0 z-50 pointer-events-none">
         <div
-          className={`absolute inset-0 bg-black/20 backdrop-blur-sm transition-opacity duration-300
+          className={`absolute inset-0 bg-black/20 backdrop-blur-sm transition-opacity duration-300 ease-in-out
             ${drawerOpen ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"}`}
           onClick={() => setDrawerOpen(false)}
         />
@@ -194,7 +187,7 @@ const StaffLayout = ({ children }) => {
       {/* ── Body: sidebar + main ── */}
       <div className="flex flex-1">
 
-        {/* Desktop sidebar */}
+        {/* Desktop sidebar — Scanner only */}
         <aside className="hidden md:flex w-56 bg-white border-r border-gray-200 p-4 flex-col gap-1 sticky top-16 h-[calc(100vh-64px)]">
           {navItems.map(({ path, label, icon: Icon }) => (
             <NavLink
