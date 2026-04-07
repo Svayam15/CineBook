@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { NavLink, useNavigate, useLocation } from "react-router-dom";
 import {
   Film, LogOut, ScanLine, ArrowLeft, ChevronRight,
-  HelpCircle, FileText, Shield, UserCircle
+  HelpCircle, FileText, Shield, UserCircle,
 } from "lucide-react";
 import useAuthStore from "../../store/authStore";
 import toast from "react-hot-toast";
@@ -52,7 +52,7 @@ const StaffProfileDrawer = ({ user, onClose, onLogout, navigate }) => {
         <button onClick={onClose} className="text-gray-500 hover:text-gray-800 transition">
           <ArrowLeft size={20} />
         </button>
-        <h2 className="text-base font-bold text-gray-900">Staff Profile</h2>
+        <h2 className="text-base font-bold text-gray-900">Profile</h2>
       </div>
 
       <div className="flex flex-col gap-4 px-4 py-5">
@@ -74,12 +74,6 @@ const StaffProfileDrawer = ({ user, onClose, onLogout, navigate }) => {
             <p className="text-gray-400 text-xs mt-0.5">{user?.email}</p>
           </div>
         </div>
-
-        {/* Quick nav links */}
-        <DrawerCard>
-          <DrawerRow icon={ScanLine}   label="Scanner" onClick={() => { onClose(); navigate("/staff/scanner"); }} />
-          <DrawerRow icon={UserCircle} label="Profile"  onClick={() => { onClose(); navigate("/staff/profile"); }} />
-        </DrawerCard>
 
         {/* Legal */}
         <div className="space-y-2">
