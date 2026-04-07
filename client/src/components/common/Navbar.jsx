@@ -94,7 +94,6 @@ const Navbar = ({ onSearchChange, searchValue }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
 
   const handleLogout = async () => {
     setDrawerOpen(false);
@@ -151,13 +150,25 @@ const Navbar = ({ onSearchChange, searchValue }) => {
 
           {/* Right — Avatar */}
           <div className="flex items-center gap-3 ml-auto md:ml-0 shrink-0">
-            {/* Mobile search toggle */}
-            <button
-              onClick={() => setMobileSearchOpen((v) => !v)}
-              className="md:hidden text-gray-600 p-2"
-            >
-              <Search size={20} strokeWidth={1.8} />
-            </button>
+            {/* Mobile search bar — always visible inline */}
+<div className="md:hidden flex-1 relative">
+  <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+  <input
+    type="text"
+    placeholder="Search movies or theatres..."
+    value={searchValue || ""}
+    onChange={(e) => onSearchChange?.(e.target.value)}
+    className="w-full bg-gray-100 text-gray-900 rounded-full pl-9 pr-9 py-2 text-sm outline-none focus:bg-white focus:ring-2 focus:ring-primary/20 transition placeholder:text-gray-400"
+  />
+  {searchValue && (
+    <button
+      onClick={() => onSearchChange?.("")}
+      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400"
+    >
+      <X size={13} />
+    </button>
+  )}
+</div>
 
             {/* Avatar — hidden on mobile since bottom tab has Profile */}
           <button
@@ -168,31 +179,6 @@ const Navbar = ({ onSearchChange, searchValue }) => {
           </button>
           </div>
         </div>
-
-        {/* Mobile search bar — slides down */}
-        {mobileSearchOpen && (
-          <div className="md:hidden px-4 pb-3 border-t border-gray-100 bg-white">
-            <div className="relative mt-3">
-              <Search size={15} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
-              <input
-                type="text"
-                placeholder="Search movies or theatres..."
-                value={searchValue || ""}
-                onChange={(e) => onSearchChange?.(e.target.value)}
-                autoFocus
-                className="w-full bg-gray-100 text-gray-900 rounded-full pl-10 pr-10 py-2.5 text-sm outline-none"
-              />
-              {searchValue && (
-                <button
-                  onClick={() => onSearchChange?.("")}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400"
-                >
-                  <X size={14} />
-                </button>
-              )}
-            </div>
-          </div>
-        )}
       </header>
 
       {/* Profile Drawer */}
