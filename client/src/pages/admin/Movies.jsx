@@ -175,8 +175,8 @@ if (!form.duration)
   if (!/[a-zA-Z]/.test(form.title))
     return toast.error("Title must contain at least one letter");
   const dur = Number(form.duration);
-  if (!Number.isInteger(dur))
-  return toast.error("Duration must be a whole number, decimals not allowed (e.g. 148)");
+if (!Number.isInteger(dur))
+  return toast.error(`"${form.duration}" is not accepted — duration must be a whole number, not a decimal (e.g. 148)`);
 if (dur < 1)
   return toast.error("Duration must be at least 1 minute");
 if (dur > 600)
