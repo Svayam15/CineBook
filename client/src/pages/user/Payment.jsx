@@ -14,7 +14,11 @@ import {
 import Spinner from "../../components/common/Spinner";
 
 const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY, {
-  betas: ['disable_stripe_js_dev_tools_and_reporting_v1'],
+  developerTools: {
+    assistant: {
+      enabled: false,
+    },
+  },
 });
 
 // ✅ Format UTC to IST readable string
