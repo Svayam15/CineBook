@@ -56,7 +56,7 @@ export const sendShowCancelledEmail = async ({ user, booking, show, refundAmount
       html: `
         <h2>Show Cancelled</h2>
         <p>Hi ${user.name},</p>
-        <p>This show was cancelled by <strong>CineBook / Admin</strong>. We apologize for the inconvenience.</p>
+        <p>This show was cancelled by <strong>CineBook</strong>. We apologize for the inconvenience.</p>
         <hr/>
         <h3>Show Details:</h3>
         <p><strong>Movie:</strong> ${show.movie.title}</p>
@@ -65,7 +65,7 @@ export const sendShowCancelledEmail = async ({ user, booking, show, refundAmount
         <hr/>
         <h3>Refund Details:</h3>
         ${booking.paymentType === "CARD"
-          ? `<p><strong>Refund Amount:</strong> ₹${refundAmount} (100% full refund — show cancelled by CineBook)</p>
+          ? `<p><strong>Refund Amount:</strong> ₹${refundAmount} (100% full refund)</p>
              <p>Refund will be credited to your original payment method within 5-7 business days.</p>`
           : `<p>You paid via <strong>CASH</strong>. Please visit the theatre to collect your full refund of ₹${refundAmount}.</p>`
         }
