@@ -1,7 +1,7 @@
-import { useLocation, useNavigate, Link } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { useEffect } from "react";
 import Navbar from "../../components/common/Navbar";
-import { CheckCircle, Home, Ticket } from "lucide-react";
+import { CheckCircle } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 
 const BookingConfirm = () => {
@@ -90,23 +90,6 @@ const BookingConfirm = () => {
           </p>
         </div>
 
-        {/* Actions */}
-        <div className="flex gap-3">
-          <Link
-            to="/"
-            className="flex-1 flex items-center justify-center gap-2 bg-white border border-gray-200 text-gray-600 hover:text-gray-900 py-3 rounded-xl text-sm transition"
-          >
-            <Home size={16} />
-            Home
-          </Link>
-          <Link
-            to="/my-bookings"
-            className="flex-1 flex items-center justify-center gap-2 bg-primary hover:bg-primary-dark text-white py-3 rounded-xl text-sm font-medium transition"
-          >
-            <Ticket size={16} />
-            My Bookings
-          </Link>
-        </div>
       </div>
     </div>
   );
