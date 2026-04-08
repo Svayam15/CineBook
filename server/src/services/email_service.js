@@ -106,7 +106,7 @@ export const sendBookingCancelledEmail = async ({
     }
 
     const cancelledByText = isAdminCancel
-      ? `<p>This booking was cancelled by <strong>CineBook / Admin</strong>.</p>`
+      ? `<p>This booking was cancelled by <strong>CineBook</strong>.</p>`
       : `<p>Your booking cancellation has been processed.</p>`;
 
     const refundSection = neverPaid
