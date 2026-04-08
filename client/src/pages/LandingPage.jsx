@@ -1,214 +1,294 @@
-import { useEffect, useState, useRef, useCallback } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { Film, Search, MapPin, ChevronLeft, ChevronRight, X } from "lucide-react";
+import { Film, Search, X, Sun, Moon, ChevronLeft, ChevronRight } from "lucide-react";
 import api from "../api/axios";
 import toast from "react-hot-toast";
 
-// ─── Constants ────────────────────────────────────────────────────────────────
+// ─── Theme hook ───────────────────────────────────────────────────────────────
+const useTheme = () => {
+  const [dark, setDark] = useState(true);
+  return { dark, toggle: () => setDark((d) => !d) };
+};
+
+// ─── Fonts ────────────────────────────────────────────────────────────────────
 const FONT_HEADING = "'Plus Jakarta Sans', sans-serif";
 const FONT_BODY    = "'Manrope', sans-serif";
 
-// ─── Responsive hook ──────────────────────────────────────────────────────────
-const useIsMobile = () => {
-  const [isMobile, setIsMobile] = useState(() => window.innerWidth < 640);
-  useEffect(() => {
-    const handler = () => setIsMobile(window.innerWidth < 640);
-    window.addEventListener("resize", handler);
-    return () => window.removeEventListener("resize", handler);
-  }, []);
-  return isMobile;
-};
-
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-const formatShowtime = (raw) => {
-  if (!raw) return "";
-  try {
-    return new Date(raw).toLocaleString("en-IN", {
-      weekday: "short", day: "numeric", month: "short",
-      hour: "numeric", minute: "2-digit", hour12: true,
-      timeZone: "Asia/Kolkata",
-    });
-  } catch {
-    return raw;
-  }
-};
-
-const getRatingColor = (rating) => {
-  const map = { U: "#2d6a2d", UA: "#7a5c00", A: "#a02020", S: "#1a4fa0" };
-  return map[rating] || "#555";
-};
-
-// ─── Horizontal Scroll Row ────────────────────────────────────────────────────
-const ScrollRow = ({ children, title, isMobile }) => {
-  const ref = useRef(null);
-  const scroll = (dir) => {
-    ref.current?.scrollBy({ left: dir * (isMobile ? 220 : 320), behavior: "smooth" });
+// ─── Rating Badge ─────────────────────────────────────────────────────────────
+const RatingBadge = ({ rating }) => {
+  if (!rating) return null;
+  const colors = {
+    U:  { bg: "rgba(34,197,94,0.15)",  text: "#4ade80",  border: "rgba(34,197,94,0.3)"  },
+    UA: { bg: "rgba(234,179,8,0.15)",  text: "#facc15",  border: "rgba(234,179,8,0.3)"  },
+    A:  { bg: "rgba(239,68,68,0.15)",  text: "#f87171",  border: "rgba(239,68,68,0.3)"  },
+    S:  { bg: "rgba(59,130,246,0.15)", text: "#60a5fa",  border: "rgba(59,130,246,0.3)" },
   };
-
+  const c = colors[rating] || colors.U;
   return (
-    <div style={{ marginBottom: isMobile ? "32px" : "44px" }}>
-      <div style={{
-        display: "flex", alignItems: "center",
-        justifyContent: "space-between",
-        marginBottom: isMobile ? "14px" : "18px",
-      }}>
-        <h2 style={{
-          fontFamily: FONT_HEADING,
-          fontSize: isMobile ? "16px" : "20px",
-          fontWeight: 800, color: "#111", letterSpacing: "-0.03em",
-        }}>{title}</h2>
-
-        {/* Scroll arrows — desktop only */}
-        {!isMobile && (
-          <div style={{ display: "flex", gap: "6px" }}>
-            {[ChevronLeft, ChevronRight].map((Icon, i) => (
-              <button key={i} onClick={() => scroll(i === 0 ? -1 : 1)} style={{
-                width: "32px", height: "32px", borderRadius: "50%",
-                border: "1.5px solid #ddd", background: "#fff",
-                cursor: "pointer", display: "flex",
-                alignItems: "center", justifyContent: "center", color: "#555",
-              }}>
-                <Icon size={15} />
-              </button>
-            ))}
-          </div>
-        )}
-      </div>
-
-      {/* Strip — bleeds to edge on mobile for that peek effect */}
-      <div ref={ref} style={{
-        display: "flex",
-        gap: isMobile ? "12px" : "16px",
-        overflowX: "auto",
-        paddingBottom: "8px",
-        marginLeft:   isMobile ? "-16px" : "0",
-        marginRight:  isMobile ? "-16px" : "0",
-        paddingLeft:  isMobile ? "16px"  : "0",
-        paddingRight: isMobile ? "32px"  : "0",
-        scrollbarWidth: "none",
-        msOverflowStyle: "none",
-        WebkitOverflowScrolling: "touch",
-      }}>
-        {children}
-      </div>
-    </div>
+    <span style={{
+      background: c.bg, color: c.text, border: `1px solid ${c.border}`,
+      padding: "2px 8px", borderRadius: "4px",
+      fontSize: "11px", fontWeight: 700,
+      letterSpacing: "0.05em", display: "inline-block",
+      fontFamily: FONT_HEADING,
+    }}>{rating}</span>
   );
 };
 
-// ─── Show Card ────────────────────────────────────────────────────────────────
-const ShowCard = ({ show, onBook, isMobile }) => {
-  const [hov, setHov] = useState(false);
+// ─── Hero Carousel ────────────────────────────────────────────────────────────
+const HeroCarousel = ({ movies, shows, onBook, dark }) => {
+  const [current, setCurrent] = useState(0);
+  const featured = movies.filter((m) => m.posterUrl).slice(0, 5);
+
+  const prev = useCallback(() =>
+    setCurrent((c) => (c - 1 + featured.length) % featured.length), [featured.length]);
+  const next = useCallback(() =>
+    setCurrent((c) => (c + 1) % featured.length), [featured.length]);
+
+  useEffect(() => {
+    if (featured.length <= 1) return;
+    const t = setInterval(next, 5500);
+    return () => clearInterval(t);
+  }, [next, featured.length]);
+
+  if (featured.length === 0) return null;
+
+  const movie = featured[current];
+  const firstShow = shows.find((s) => s.movie?.id === movie.id);
+  const textMain  = dark ? "#fff" : "#0a0a0a";
+  const textMuted = dark ? "#a0a0a0" : "#555";
 
   return (
-    <div
-      onMouseEnter={() => setHov(true)}
-      onMouseLeave={() => setHov(false)}
-      onClick={() => onBook(show.id)}
-      style={{
-        flexShrink: 0,
-        width: isMobile ? "200px" : "260px",
-        cursor: "pointer",
-        transform: hov && !isMobile ? "translateY(-4px)" : "none",
-        transition: "transform 0.22s ease",
-      }}
-    >
-      {/* Image */}
+    <div style={{
+      position: "relative", width: "100%", overflow: "hidden",
+      height: "clamp(420px, 58vh, 600px)",
+    }}>
+      {/* Blurred bg from poster */}
       <div style={{
-        width: "100%",
-        height: isMobile ? "134px" : "175px",
-        borderRadius: isMobile ? "10px" : "14px",
-        overflow: "hidden", background: "#e8e2d8",
-        marginBottom: isMobile ? "9px" : "12px",
-        boxShadow: hov && !isMobile
-          ? "0 12px 32px rgba(0,0,0,0.18)"
-          : "0 2px 8px rgba(0,0,0,0.08)",
-        transition: "box-shadow 0.22s ease",
-        position: "relative",
+        position: "absolute", inset: "-30px",
+        backgroundImage: `url(${movie.posterUrl})`,
+        backgroundSize: "cover", backgroundPosition: "center top",
+        filter: `blur(50px) brightness(${dark ? "0.28" : "0.55"}) saturate(1.6)`,
+        transform: "scale(1.15)",
+        transition: "background-image 0.6s ease",
+      }} />
+
+      {/* Directional gradient */}
+      <div style={{
+        position: "absolute", inset: 0,
+        background: dark
+          ? "linear-gradient(105deg, rgba(8,8,8,0.97) 0%, rgba(8,8,8,0.72) 50%, rgba(8,8,8,0.08) 100%)"
+          : "linear-gradient(105deg, rgba(246,246,246,0.98) 0%, rgba(246,246,246,0.75) 50%, rgba(246,246,246,0.05) 100%)",
+      }} />
+
+      {/* Content */}
+      <div style={{
+        position: "relative", zIndex: 2,
+        maxWidth: "1280px", margin: "0 auto",
+        padding: "0 40px", height: "100%",
+        display: "flex", alignItems: "center",
+        justifyContent: "space-between", gap: "48px",
       }}>
-        {show.movie?.posterUrl ? (
+        {/* Left */}
+        <div style={{ flex: 1, maxWidth: "520px" }}>
+          {/* Meta row */}
+          <div style={{
+            display: "flex", alignItems: "center",
+            gap: "10px", marginBottom: "16px", flexWrap: "wrap",
+          }}>
+            <RatingBadge rating={movie.rating} />
+            {movie.language && (
+              <span style={{ color: textMuted, fontSize: "14px", fontWeight: 500 }}>
+                {movie.language}
+              </span>
+            )}
+            {movie.genre && (
+              <>
+                <span style={{ color: dark ? "#333" : "#ccc", fontWeight: 300 }}>|</span>
+                <span style={{ color: textMuted, fontSize: "14px" }}>{movie.genre}</span>
+              </>
+            )}
+            {movie.duration && (
+              <>
+                <span style={{ color: dark ? "#333" : "#ccc", fontWeight: 300 }}>|</span>
+                <span style={{ color: textMuted, fontSize: "14px" }}>{movie.duration} min</span>
+              </>
+            )}
+          </div>
+
+          {/* Title */}
+          <h1 style={{
+            fontFamily: FONT_HEADING,
+            fontSize: "clamp(28px, 4.5vw, 54px)",
+            fontWeight: 800, lineHeight: 1.08,
+            color: textMain, marginBottom: "16px",
+            letterSpacing: "-0.03em",
+          }}>
+            {movie.title}
+          </h1>
+
+          {/* Description */}
+          {movie.description && (
+            <p style={{
+              color: textMuted,
+              fontFamily: FONT_BODY,
+              fontSize: "14px", lineHeight: 1.7,
+              marginBottom: "32px",
+              display: "-webkit-box",
+              WebkitLineClamp: 3,
+              WebkitBoxOrient: "vertical",
+              overflow: "hidden",
+              maxWidth: "420px",
+            }}>
+              {movie.description}
+            </p>
+          )}
+
+          {/* CTA */}
+          <button
+            onClick={() => firstShow && onBook(firstShow.id)}
+            style={{
+              background: dark ? "#fff" : "#0a0a0a",
+              color: dark ? "#0a0a0a" : "#fff",
+              border: "none",
+              cursor: firstShow ? "pointer" : "default",
+              padding: "14px 32px",
+              borderRadius: "12px",
+              fontFamily: FONT_HEADING,
+              fontSize: "15px", fontWeight: 700,
+              letterSpacing: "-0.01em",
+              transition: "opacity 0.15s, transform 0.15s",
+              opacity: firstShow ? 1 : 0.45,
+            }}
+            onMouseEnter={(e) => { if (firstShow) e.currentTarget.style.opacity = "0.8"; }}
+            onMouseLeave={(e) => { if (firstShow) e.currentTarget.style.opacity = "1"; }}
+          >
+            Book now
+          </button>
+        </div>
+
+        {/* Right — poster */}
+        <div style={{
+          flexShrink: 0,
+          width: "clamp(190px, 21vw, 290px)",
+          aspectRatio: "2/3",
+          borderRadius: "20px",
+          overflow: "hidden",
+          boxShadow: dark
+            ? "0 32px 80px rgba(0,0,0,0.7), 0 0 0 1px rgba(255,255,255,0.06)"
+            : "0 32px 80px rgba(0,0,0,0.25), 0 0 0 1px rgba(0,0,0,0.06)",
+        }}>
           <img
-            src={show.movie.posterUrl} alt={show.movie?.title}
+            src={movie.posterUrl}
+            alt={movie.title}
             style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
           />
-        ) : (
-          <div style={{
-            width: "100%", height: "100%",
-            display: "flex", alignItems: "center", justifyContent: "center",
-          }}>
-            <Film size={32} style={{ color: "#c5bfb3" }} />
-          </div>
-        )}
-        {show.showType && (
-          <span style={{
-            position: "absolute", top: "8px", left: "8px",
-            background: "rgba(0,0,0,0.65)", backdropFilter: "blur(6px)",
-            color: "#fff", fontSize: "9px", fontWeight: 700,
-            letterSpacing: "0.06em", padding: "3px 7px",
-            borderRadius: "5px", fontFamily: FONT_HEADING,
-          }}>{show.showType}</span>
-        )}
+        </div>
       </div>
 
-      <p style={{
-        fontFamily: FONT_BODY, fontSize: isMobile ? "11px" : "12px",
-        fontWeight: 600, color: "#5a6e2e", marginBottom: "4px",
-      }}>
-        {formatShowtime(show.startTime)}
-      </p>
-      <h3 style={{
-        fontFamily: FONT_HEADING, fontSize: isMobile ? "13px" : "14px",
-        fontWeight: 800, color: "#111", letterSpacing: "-0.02em",
-        lineHeight: 1.3, marginBottom: "4px",
-        display: "-webkit-box", WebkitLineClamp: 2,
-        WebkitBoxOrient: "vertical", overflow: "hidden",
-      }}>
-        {show.movie?.title}
-      </h3>
-      <p style={{
-        fontFamily: FONT_BODY, fontSize: "12px", color: "#888",
-        marginBottom: "4px", whiteSpace: "nowrap",
-        overflow: "hidden", textOverflow: "ellipsis",
-      }}>
-        {show.theatre?.name}{show.theatre?.location ? `, ${show.theatre.location}` : ""}
-      </p>
-      <p style={{ fontFamily: FONT_BODY, fontSize: "12px", fontWeight: 600, color: "#555" }}>
-        ₹{show.regularPrice} onwards
-      </p>
+      {/* Arrows */}
+      {featured.length > 1 && (
+        <>
+          {[
+            { fn: prev, side: "left",  Icon: ChevronLeft  },
+            { fn: next, side: "right", Icon: ChevronRight },
+          ].map(({ fn, side, Icon }) => (
+            <button key={side} onClick={fn} style={{
+              position: "absolute", [side]: "20px", top: "50%",
+              transform: "translateY(-50%)", zIndex: 3,
+              width: "40px", height: "40px", borderRadius: "50%",
+              background: "rgba(255,255,255,0.1)",
+              backdropFilter: "blur(10px)",
+              border: "1px solid rgba(255,255,255,0.2)",
+              color: "#fff", cursor: "pointer",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              transition: "background 0.2s",
+            }}
+              onMouseEnter={(e) => e.currentTarget.style.background = "rgba(255,255,255,0.22)"}
+              onMouseLeave={(e) => e.currentTarget.style.background = "rgba(255,255,255,0.1)"}
+            >
+              <Icon size={18} />
+            </button>
+          ))}
+        </>
+      )}
+
+      {/* Dots */}
+      {featured.length > 1 && (
+        <div style={{
+          position: "absolute", bottom: "22px", left: "50%",
+          transform: "translateX(-50%)", zIndex: 3,
+          display: "flex", gap: "7px", alignItems: "center",
+        }}>
+          {featured.map((_, i) => (
+            <button key={i} onClick={() => setCurrent(i)} style={{
+              width: i === current ? "24px" : "7px",
+              height: "7px", borderRadius: "100px",
+              background: i === current ? "#fff" : "rgba(255,255,255,0.3)",
+              border: "none", cursor: "pointer", padding: 0,
+              transition: "all 0.35s ease",
+            }} />
+          ))}
+        </div>
+      )}
     </div>
   );
 };
 
+// ─── Filter Chip ──────────────────────────────────────────────────────────────
+const FilterChip = ({ label, active, onClick, dark, border }) => (
+  <button onClick={onClick} style={{
+    padding: "8px 20px", borderRadius: "100px",
+    border: active ? "1.5px solid #7C3AED" : `1.5px solid ${border}`,
+    background: active
+      ? "rgba(124,58,237,0.12)"
+      : dark ? "rgba(255,255,255,0.04)" : "#fff",
+    color: active ? "#a78bfa" : dark ? "#71717A" : "#666",
+    fontFamily: FONT_BODY,
+    fontSize: "13px", fontWeight: active ? 700 : 500,
+    cursor: "pointer", transition: "all 0.18s ease",
+    whiteSpace: "nowrap", letterSpacing: "-0.01em",
+  }}>
+    {label}
+  </button>
+);
+
 // ─── Movie Card ───────────────────────────────────────────────────────────────
-const MovieCard = ({ movie, shows, onBook, isMobile }) => {
-  const [hov, setHov] = useState(false);
+const MovieCard = ({ movie, shows, onBook, dark, border }) => {
+  const [hovered, setHovered] = useState(false);
   const firstShow = shows.find((s) => s.movie?.id === movie.id);
   const showCount = shows.filter((s) => s.movie?.id === movie.id).length;
+  const textMain  = dark ? "#f0f0f0" : "#0a0a0a";
+  const textMuted = dark ? "#555" : "#999";
 
   return (
     <div
-      onMouseEnter={() => setHov(true)}
-      onMouseLeave={() => setHov(false)}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
       onClick={() => firstShow && onBook(firstShow.id)}
       style={{
-        flexShrink: 0,
-        width: isMobile ? "130px" : "160px",
-        cursor: showCount ? "pointer" : "default",
-        transform: hov && showCount && !isMobile ? "translateY(-4px)" : "none",
-        transition: "transform 0.22s ease",
+        cursor: showCount > 0 ? "pointer" : "default",
+        transform: hovered && showCount > 0 ? "translateY(-8px)" : "translateY(0)",
+        transition: "transform 0.28s cubic-bezier(0.34,1.56,0.64,1)",
       }}
     >
+      {/* Poster */}
       <div style={{
-        width: "100%", aspectRatio: "2/3",
-        borderRadius: isMobile ? "10px" : "12px",
-        overflow: "hidden", background: "#e8e2d8", marginBottom: "9px",
-        boxShadow: hov && showCount && !isMobile
-          ? "0 12px 32px rgba(0,0,0,0.18)"
-          : "0 2px 8px rgba(0,0,0,0.08)",
-        transition: "box-shadow 0.22s ease", position: "relative",
+        position: "relative",
+        aspectRatio: "2/3",
+        borderRadius: "14px",
+        overflow: "hidden",
+        marginBottom: "14px",
+        background: dark ? "#1a1a1a" : "#e0e0e0",
+        boxShadow: hovered && showCount > 0
+          ? `0 24px 56px rgba(0,0,0,${dark ? "0.65" : "0.22"})`
+          : `0 4px 16px rgba(0,0,0,${dark ? "0.3" : "0.1"})`,
+        transition: "box-shadow 0.28s ease",
       }}>
         {movie.posterUrl ? (
           <img
-            src={movie.posterUrl} alt={movie.title}
+            src={movie.posterUrl}
+            alt={movie.title}
             style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
           />
         ) : (
@@ -216,83 +296,118 @@ const MovieCard = ({ movie, shows, onBook, isMobile }) => {
             width: "100%", height: "100%",
             display: "flex", alignItems: "center", justifyContent: "center",
           }}>
-            <Film size={24} style={{ color: "#c5bfb3" }} />
+            <Film size={40} style={{ color: dark ? "#2a2a2a" : "#ccc" }} />
           </div>
         )}
-        {movie.rating && (
+
+        {/* Hover overlay */}
+        <div style={{
+          position: "absolute", inset: 0,
+          background: "linear-gradient(to top, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0) 52%)",
+          opacity: hovered && showCount > 0 ? 1 : 0,
+          transition: "opacity 0.22s ease",
+          display: "flex", alignItems: "flex-end", padding: "14px",
+        }}>
           <span style={{
-            position: "absolute", top: "7px", left: "7px",
-            background: "#fff", color: getRatingColor(movie.rating),
-            fontSize: "9px", fontWeight: 800, letterSpacing: "0.06em",
-            padding: "2px 5px", borderRadius: "4px", fontFamily: FONT_HEADING,
-          }}>{movie.rating}</span>
+            background: "#7C3AED", color: "#fff",
+            padding: "8px 16px", borderRadius: "9px",
+            fontFamily: FONT_HEADING,
+            fontSize: "12px", fontWeight: 700,
+            letterSpacing: "0.02em",
+          }}>Book Now</span>
+        </div>
+
+        {/* Show type badge */}
+        {firstShow?.showType && (
+          <div style={{ position: "absolute", top: "10px", left: "10px" }}>
+            <span style={{
+              background: "rgba(0,0,0,0.72)",
+              backdropFilter: "blur(8px)",
+              color: "#fff",
+              border: "1px solid rgba(255,255,255,0.14)",
+              padding: "3px 8px", borderRadius: "6px",
+              fontFamily: FONT_HEADING,
+              fontSize: "10px", fontWeight: 700,
+              letterSpacing: "0.04em",
+            }}>{firstShow.showType}</span>
+          </div>
         )}
-        {!showCount && (
+
+        {/* No shows overlay */}
+        {showCount === 0 && (
           <div style={{
-            position: "absolute", inset: 0, background: "rgba(255,255,255,0.55)",
-            backdropFilter: "blur(1px)", display: "flex",
-            alignItems: "center", justifyContent: "center",
+            position: "absolute", inset: 0,
+            background: "rgba(0,0,0,0.55)",
+            backdropFilter: "blur(1.5px)",
+            display: "flex", alignItems: "center", justifyContent: "center",
           }}>
             <span style={{
-              background: "rgba(0,0,0,0.6)", color: "#fff",
-              fontSize: "10px", fontWeight: 700, padding: "4px 9px",
-              borderRadius: "5px", fontFamily: FONT_BODY,
-            }}>No shows</span>
+              background: "rgba(0,0,0,0.82)", color: "#4a4a4a",
+              padding: "6px 12px", borderRadius: "8px",
+              fontFamily: FONT_BODY,
+              fontSize: "11px", fontWeight: 600,
+            }}>No Shows</span>
           </div>
         )}
       </div>
 
+      {/* Text below */}
       <h3 style={{
-        fontFamily: FONT_HEADING, fontSize: isMobile ? "12px" : "13px",
-        fontWeight: 800, color: "#111", letterSpacing: "-0.02em",
-        lineHeight: 1.3, marginBottom: "3px",
-        display: "-webkit-box", WebkitLineClamp: 2,
-        WebkitBoxOrient: "vertical", overflow: "hidden",
-      }}>{movie.title}</h3>
-      <p style={{ fontFamily: FONT_BODY, fontSize: "11px", color: "#888" }}>
-        {[movie.language, movie.genre].filter(Boolean).join(" · ")}
-      </p>
+        fontFamily: FONT_HEADING,
+        fontSize: "14px", fontWeight: 700,
+        lineHeight: 1.3, color: textMain,
+        marginBottom: "6px", letterSpacing: "-0.02em",
+        display: "-webkit-box",
+        WebkitLineClamp: 2, WebkitBoxOrient: "vertical",
+        overflow: "hidden",
+      }}>
+        {movie.title}
+      </h3>
+
+      <div style={{ display: "flex", alignItems: "center", gap: "6px", flexWrap: "wrap" }}>
+        <RatingBadge rating={movie.rating} />
+        {movie.language && (
+          <span style={{ fontFamily: FONT_BODY, fontSize: "12px", color: textMuted }}>
+            {movie.language}
+          </span>
+        )}
+        {movie.genre && movie.language && (
+          <span style={{ fontSize: "12px", color: dark ? "#2a2a2a" : "#d0d0d0" }}>·</span>
+        )}
+        {movie.genre && (
+          <span style={{ fontFamily: FONT_BODY, fontSize: "12px", color: textMuted }}>
+            {movie.genre}
+          </span>
+        )}
+      </div>
+
       {showCount > 0 && (
         <p style={{
-          fontFamily: FONT_BODY, fontSize: "11px",
-          fontWeight: 700, color: "#5a6e2e", marginTop: "2px",
+          fontFamily: FONT_BODY,
+          fontSize: "12px", color: "#7C3AED",
+          marginTop: "6px", fontWeight: 700,
         }}>
-          {showCount} show{showCount > 1 ? "s" : ""}
+          {showCount} show{showCount !== 1 ? "s" : ""}
         </p>
       )}
     </div>
   );
 };
 
-// ─── Skeleton ─────────────────────────────────────────────────────────────────
-const SkeletonShowCard = ({ isMobile }) => (
-  <div style={{ flexShrink: 0, width: isMobile ? "200px" : "260px" }}>
-    <div className="shimmer" style={{
-      height: isMobile ? "134px" : "175px",
-      borderRadius: isMobile ? "10px" : "14px", marginBottom: "9px",
-    }} />
-    <div className="shimmer" style={{ height: "11px", width: "55%", marginBottom: "7px" }} />
-    <div className="shimmer" style={{ height: "14px", width: "80%", marginBottom: "5px" }} />
-    <div className="shimmer" style={{ height: "11px", width: "65%" }} />
-  </div>
-);
-
 // ─── Main ─────────────────────────────────────────────────────────────────────
 const LandingPage = () => {
-  const navigate  = useNavigate();
-  const isMobile  = useIsMobile();
-  const [movies, setMovies]         = useState([]);
-  const [shows, setShows]           = useState([]);
-  const [loading, setLoading]       = useState(true);
-  const [search, setSearch]         = useState("");
-  const [activeTab, setActiveTab]   = useState("For you");
-  const [searchOpen, setSearchOpen] = useState(false);
+  const navigate = useNavigate();
+  const { dark, toggle } = useTheme();
+  const [movies, setMovies]     = useState([]);
+  const [shows, setShows]       = useState([]);
+  const [loading, setLoading]   = useState(true);
+  const [search, setSearch]     = useState("");
+  const [activeFilter, setActiveFilter] = useState("All");
 
-  const tabs = ["For you", "Movies", "Events", "Dining"];
-  const px   = isMobile ? "16px" : "32px";
+  const filters = ["All", "Hindi", "English", "Tamil", "Telugu", "2D", "3D", "4D"];
 
   useEffect(() => {
-    (async () => {
+    const fetchData = async () => {
       try {
         const [moviesRes, showsRes] = await Promise.all([
           api.get("/movies"),
@@ -305,333 +420,326 @@ const LandingPage = () => {
       } finally {
         setLoading(false);
       }
-    })();
+    };
+    fetchData().catch(console.error);
   }, []);
 
-  const handleBookNow = useCallback((showId) => {
+  const handleBookNow = (showId) => {
+    toast("Please login to book tickets 🔐", {
+      style: {
+        background: dark ? "#1a1a1a" : "#fff",
+        color: dark ? "#fff" : "#111",
+        border: `1px solid ${dark ? "#27272A" : "#e0e0e0"}`,
+        fontFamily: FONT_BODY,
+        fontSize: "14px",
+      },
+    });
     navigate("/login", { state: { redirect: `/shows/${showId}` } });
-  }, [navigate]);
+  };
 
   const filteredMovies = movies.filter((m) => {
     const q = search.toLowerCase();
-    return !q ||
-      m.title?.toLowerCase().includes(q) ||
+    const matchSearch = !q ||
+      m.title.toLowerCase().includes(q) ||
       m.genre?.toLowerCase().includes(q) ||
       m.language?.toLowerCase().includes(q);
+    if (!matchSearch) return false;
+    if (activeFilter === "All") return true;
+    const langFilters = ["Hindi", "English", "Tamil", "Telugu"];
+    const typeFilters = ["2D", "3D", "4D"];
+    if (langFilters.includes(activeFilter))
+      return m.language?.toLowerCase().includes(activeFilter.toLowerCase());
+    if (typeFilters.includes(activeFilter))
+      return shows.some((s) => s.movie?.id === m.id && s.showType === activeFilter);
+    return true;
   });
 
-  const filteredShows = shows.filter((s) => {
-    const q = search.toLowerCase();
-    return !q ||
-      s.movie?.title?.toLowerCase().includes(q) ||
-      s.theatre?.name?.toLowerCase().includes(q) ||
-      s.theatre?.location?.toLowerCase().includes(q);
-  });
-
-  const premiumShows = filteredShows.filter((s) =>
-    ["IMAX", "4DX", "Dolby", "4D"].includes(s.showType)
-  );
-  const noResults = !loading && filteredShows.length === 0 && filteredMovies.length === 0;
+  // Theme tokens
+  const bg        = dark ? "#0a0a0a" : "#f6f6f6";
+  const textMain  = dark ? "#ffffff" : "#0a0a0a";
+  const textMuted = dark ? "#6b6b6b" : "#888";
+  const border    = dark ? "rgba(255,255,255,0.08)" : "#e8e8e8";
+  const navBg     = dark ? "rgba(10,10,10,0.94)" : "rgba(246,246,246,0.95)";
+  const sectionBg = dark ? "#0d0d0d" : "#efefef";
 
   return (
-    <div style={{ minHeight: "100vh", background: "#f5f0e8", fontFamily: FONT_BODY, color: "#111" }}>
+    <div style={{
+      minHeight: "100vh", background: bg,
+      color: textMain, fontFamily: FONT_BODY,
+      transition: "background 0.3s, color 0.3s",
+    }}>
 
-      <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Manrope:wght@400;500;600;700&display=swap');
-        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-        ::-webkit-scrollbar { display: none; }
-        @keyframes shimmer {
-          0%   { background-position: -600px 0; }
-          100% { background-position:  600px 0; }
-        }
-        .shimmer {
-          background: linear-gradient(90deg, #ede8df 25%, #e0d9ce 50%, #ede8df 75%);
-          background-size: 1200px 100%;
-          animation: shimmer 1.5s ease-in-out infinite;
-          border-radius: 8px;
-        }
-      `}</style>
-
-      {/* ══════════ NAVBAR ══════════ */}
+      {/* ── Navbar ── */}
       <header style={{
         position: "sticky", top: 0, zIndex: 100,
-        background: "#fff", borderBottom: "1px solid #e8e2d8",
+        background: navBg, backdropFilter: "blur(24px)",
+        borderBottom: `1px solid ${border}`,
       }}>
-        <div style={{ maxWidth: "1280px", margin: "0 auto", padding: `0 ${px}` }}>
+        <div style={{
+          maxWidth: "1280px", margin: "0 auto",
+          padding: "0 40px", height: "62px",
+          display: "flex", alignItems: "center", gap: "20px",
+        }}>
+          {/* Logo */}
+          <Link to="/" style={{ display: "flex", alignItems: "center", gap: "10px", textDecoration: "none", flexShrink: 0 }}>
+            <div style={{
+              width: "34px", height: "34px", background: "#7C3AED",
+              borderRadius: "10px",
+              display: "flex", alignItems: "center", justifyContent: "center",
+            }}>
+              <Film size={16} color="#fff" />
+            </div>
+            <span style={{
+              fontFamily: FONT_HEADING,
+              fontSize: "18px", fontWeight: 800,
+              color: textMain, letterSpacing: "-0.03em",
+            }}>
+              Cine<span style={{ color: "#7C3AED" }}>Book</span>
+            </span>
+          </Link>
 
-          {/* Top bar */}
-          <div style={{
-            height: isMobile ? "52px" : "60px",
-            display: "flex", alignItems: "center",
-            gap: isMobile ? "10px" : "16px",
-          }}>
-
-            {/* Logo — hide when mobile search is open */}
-            {(!isMobile || !searchOpen) && (
-              <Link to="/" style={{ textDecoration: "none", flexShrink: 0 }}>
-                <span style={{
-                  fontFamily: FONT_HEADING,
-                  fontSize: isMobile ? "18px" : "20px",
-                  fontWeight: 800, color: "#111", letterSpacing: "-0.04em",
-                }}>
-                  cine<span style={{ color: "#e23744" }}>book</span>
-                </span>
-              </Link>
-            )}
-
-            {/* Location pill — desktop only */}
-            {!isMobile && (
-              <button style={{
-                display: "flex", alignItems: "center", gap: "5px",
-                background: "transparent", border: "1px solid #ddd",
-                borderRadius: "100px", padding: "6px 12px",
-                cursor: "pointer", color: "#444",
-                fontFamily: FONT_BODY, fontSize: "13px", fontWeight: 500,
-                flexShrink: 0,
+          {/* Search */}
+          <div style={{ flex: 1, maxWidth: "400px", position: "relative" }}>
+            <Search size={14} style={{
+              position: "absolute", left: "14px", top: "50%",
+              transform: "translateY(-50%)", color: textMuted,
+              pointerEvents: "none",
+            }} />
+            <input
+              type="text"
+              placeholder="Search movies..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              style={{
+                width: "100%",
+                background: dark ? "rgba(255,255,255,0.05)" : "#fff",
+                border: `1.5px solid ${border}`,
+                borderRadius: "100px",
+                padding: "9px 38px",
+                fontFamily: FONT_BODY,
+                fontSize: "13px", fontWeight: 500,
+                color: textMain, outline: "none",
+                boxSizing: "border-box",
+                transition: "border-color 0.2s",
+              }}
+              onFocus={(e) => e.target.style.borderColor = "#7C3AED"}
+              onBlur={(e) => e.target.style.borderColor = border}
+            />
+            {search && (
+              <button onClick={() => setSearch("")} style={{
+                position: "absolute", right: "14px", top: "50%",
+                transform: "translateY(-50%)",
+                background: "none", border: "none",
+                cursor: "pointer", color: textMuted,
+                display: "flex", padding: 0,
               }}>
-                <MapPin size={13} style={{ color: "#e23744" }} />
-                Mumbai
+                <X size={13} />
               </button>
-            )}
-
-            {/* Search */}
-            {isMobile ? (
-              searchOpen ? (
-                /* Expanded mobile search bar */
-                <div style={{ flex: 1, position: "relative" }}>
-                  <Search size={14} style={{
-                    position: "absolute", left: "12px", top: "50%",
-                    transform: "translateY(-50%)", color: "#aaa", pointerEvents: "none",
-                  }} />
-                  <input
-                    autoFocus
-                    type="text"
-                    placeholder="Search movies, theatres..."
-                    value={search}
-                    onChange={(e) => setSearch(e.target.value)}
-                    style={{
-                      width: "100%", background: "#f5f0e8",
-                      border: "1.5px solid #e23744", borderRadius: "100px",
-                      padding: "9px 36px 9px 34px",
-                      fontFamily: FONT_BODY, fontSize: "14px",
-                      fontWeight: 500, color: "#111", outline: "none",
-                    }}
-                  />
-                  <button
-                    onClick={() => { setSearch(""); setSearchOpen(false); }}
-                    style={{
-                      position: "absolute", right: "10px", top: "50%",
-                      transform: "translateY(-50%)",
-                      background: "none", border: "none",
-                      cursor: "pointer", color: "#aaa", display: "flex", padding: 0,
-                    }}
-                  >
-                    <X size={14} />
-                  </button>
-                </div>
-              ) : (
-                /* Search icon only */
-                <button
-                  onClick={() => setSearchOpen(true)}
-                  style={{
-                    marginLeft: "auto", background: "none", border: "none",
-                    cursor: "pointer", color: "#555",
-                    display: "flex", alignItems: "center", padding: "6px",
-                  }}
-                >
-                  <Search size={20} />
-                </button>
-              )
-            ) : (
-              /* Desktop search bar */
-              <div style={{ flex: 1, maxWidth: "440px", position: "relative" }}>
-                <Search size={14} style={{
-                  position: "absolute", left: "13px", top: "50%",
-                  transform: "translateY(-50%)", color: "#aaa", pointerEvents: "none",
-                }} />
-                <input
-                  type="text"
-                  placeholder="Search movies, shows, theatres..."
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  style={{
-                    width: "100%", background: "#f5f0e8",
-                    border: "1.5px solid transparent", borderRadius: "100px",
-                    padding: "9px 36px 9px 36px",
-                    fontFamily: FONT_BODY, fontSize: "13px", fontWeight: 500,
-                    color: "#111", outline: "none",
-                    transition: "border-color 0.2s, background 0.2s",
-                  }}
-                  onFocus={(e) => {
-                    e.target.style.borderColor = "#e23744";
-                    e.target.style.background = "#fff";
-                  }}
-                  onBlur={(e) => {
-                    e.target.style.borderColor = "transparent";
-                    e.target.style.background = "#f5f0e8";
-                  }}
-                />
-                {search && (
-                  <button onClick={() => setSearch("")} style={{
-                    position: "absolute", right: "12px", top: "50%",
-                    transform: "translateY(-50%)",
-                    background: "none", border: "none",
-                    cursor: "pointer", color: "#aaa", display: "flex", padding: 0,
-                  }}>
-                    <X size={13} />
-                  </button>
-                )}
-              </div>
-            )}
-
-            {/* Auth — hide on mobile when search open */}
-            {(!isMobile || !searchOpen) && (
-              <div style={{
-                marginLeft: isMobile ? "0" : "auto",
-                display: "flex", alignItems: "center",
-                gap: isMobile ? "6px" : "8px",
-              }}>
-                {!isMobile && (
-                  <Link to="/login" style={{
-                    fontFamily: FONT_BODY, fontSize: "14px",
-                    fontWeight: 600, color: "#444", textDecoration: "none",
-                    padding: "8px 14px",
-                  }}>Login</Link>
-                )}
-                <Link to={isMobile ? "/login" : "/signup"} style={{
-                  background: "#e23744", color: "#fff",
-                  fontFamily: FONT_HEADING,
-                  fontSize: isMobile ? "12px" : "13px", fontWeight: 700,
-                  padding: isMobile ? "7px 14px" : "9px 22px",
-                  borderRadius: "100px", textDecoration: "none",
-                  letterSpacing: "-0.01em", whiteSpace: "nowrap",
-                }}>
-                  {isMobile ? "Login" : "Sign Up"}
-                </Link>
-              </div>
             )}
           </div>
 
-          {/* Tab row — scrollable on mobile */}
-          <div style={{
-            display: "flex", borderTop: "1px solid #f0ebe0",
-            overflowX: "auto", scrollbarWidth: "none",
-          }}>
-            {tabs.map((tab) => (
-              <button key={tab} onClick={() => setActiveTab(tab)} style={{
-                background: "transparent", border: "none",
-                borderBottom: activeTab === tab ? "2.5px solid #111" : "2.5px solid transparent",
-                padding: isMobile ? "10px 14px" : "12px 16px",
-                fontFamily: FONT_BODY, fontSize: isMobile ? "13px" : "14px",
-                fontWeight: activeTab === tab ? 700 : 500,
-                color: activeTab === tab ? "#111" : "#888",
-                cursor: "pointer", letterSpacing: "-0.01em",
-                transition: "color 0.15s", whiteSpace: "nowrap",
-                flexShrink: 0, marginBottom: "-1px",
-              }}>{tab}</button>
-            ))}
+          {/* Right */}
+          <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: "10px" }}>
+            {/* Theme toggle */}
+            <button onClick={toggle} title={dark ? "Light mode" : "Dark mode"} style={{
+              width: "36px", height: "36px", borderRadius: "50%",
+              border: `1.5px solid ${border}`,
+              background: dark ? "rgba(255,255,255,0.05)" : "#fff",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              cursor: "pointer", color: textMuted,
+              transition: "all 0.2s",
+            }}>
+              {dark ? <Sun size={15} /> : <Moon size={15} />}
+            </button>
+
+            <Link to="/login" style={{
+              fontFamily: FONT_BODY,
+              fontSize: "14px", fontWeight: 600,
+              color: textMuted, textDecoration: "none",
+              padding: "8px 14px", borderRadius: "8px",
+              transition: "color 0.2s", letterSpacing: "-0.01em",
+            }}
+              onMouseEnter={(e) => e.target.style.color = textMain}
+              onMouseLeave={(e) => e.target.style.color = textMuted}
+            >Login</Link>
+
+            <Link to="/signup" style={{
+              background: "#7C3AED", color: "#fff",
+              fontFamily: FONT_HEADING,
+              fontSize: "13px", fontWeight: 700,
+              padding: "9px 22px", borderRadius: "100px",
+              textDecoration: "none",
+              letterSpacing: "-0.01em",
+              transition: "background 0.2s, transform 0.15s",
+            }}
+              onMouseEnter={(e) => {
+                e.target.style.background = "#5B21B6";
+                e.target.style.transform = "scale(1.02)";
+              }}
+              onMouseLeave={(e) => {
+                e.target.style.background = "#7C3AED";
+                e.target.style.transform = "scale(1)";
+              }}
+            >Sign Up</Link>
           </div>
         </div>
       </header>
 
-      {/* ══════════ MAIN ══════════ */}
-      <main style={{
-        maxWidth: "1280px", margin: "0 auto",
-        padding: isMobile ? "24px 16px 72px" : "36px 32px 80px",
-      }}>
-        {loading ? (
-          <>
-            {[0, 1].map((s) => (
-              <div key={s} style={{ marginBottom: isMobile ? "32px" : "44px" }}>
-                <div className="shimmer" style={{
-                  height: "20px", width: "150px",
-                  marginBottom: isMobile ? "14px" : "18px",
-                }} />
-                <div style={{ display: "flex", gap: isMobile ? "12px" : "16px" }}>
-                  {[...Array(isMobile ? 2 : 4)].map((_, i) => (
-                    <SkeletonShowCard key={i} isMobile={isMobile} />
-                  ))}
-                </div>
-              </div>
-            ))}
-          </>
-        ) : noResults ? (
-          <div style={{ textAlign: "center", padding: "80px 0" }}>
-            <Film size={44} style={{ color: "#c5bfb3", marginBottom: "14px" }} />
-            <p style={{
-              fontFamily: FONT_HEADING, fontSize: "17px",
-              fontWeight: 700, color: "#888", marginBottom: "18px",
-            }}>Nothing found</p>
-            <button onClick={() => setSearch("")} style={{
-              background: "#fff", border: "1.5px solid #ddd",
-              color: "#555", padding: "10px 22px", borderRadius: "9px",
-              cursor: "pointer", fontFamily: FONT_BODY, fontSize: "13px", fontWeight: 600,
-            }}>Clear search</button>
+      {/* ── Hero Carousel ── */}
+      {!loading && movies.length > 0 && (
+        <HeroCarousel movies={movies} shows={shows} onBook={handleBookNow} dark={dark} />
+      )}
+
+      {/* ── Grid Section ── */}
+      <div style={{ background: sectionBg, borderTop: `1px solid ${border}` }}>
+        <div style={{ maxWidth: "1280px", margin: "0 auto", padding: "36px 40px 72px" }}>
+
+          {/* Section header */}
+          <div style={{ marginBottom: "24px" }}>
+            <h2 style={{
+              fontFamily: FONT_HEADING,
+              fontSize: "24px", fontWeight: 800,
+              color: textMain, marginBottom: "18px",
+              letterSpacing: "-0.03em",
+            }}>Only in Theatres</h2>
+
+            {/* Filter chips */}
+            <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+              {filters.map((f) => (
+                <FilterChip
+                  key={f} label={f}
+                  active={activeFilter === f}
+                  onClick={() => setActiveFilter(f)}
+                  dark={dark} border={border}
+                />
+              ))}
+            </div>
           </div>
-        ) : (
-          <>
-            {filteredShows.length > 0 && (
-              <ScrollRow title="Now Showing" isMobile={isMobile}>
-                {filteredShows.slice(0, 10).map((show) => (
-                  <ShowCard key={show.id} show={show} onBook={handleBookNow} isMobile={isMobile} />
-                ))}
-              </ScrollRow>
-            )}
 
-            {premiumShows.length > 0 && (
-              <ScrollRow title="Premium Formats" isMobile={isMobile}>
-                {premiumShows.map((show) => (
-                  <ShowCard key={show.id} show={show} onBook={handleBookNow} isMobile={isMobile} />
-                ))}
-              </ScrollRow>
-            )}
+          {/* Count line */}
+          {!loading && filteredMovies.length > 0 && (
+            <p style={{
+              fontFamily: FONT_BODY,
+              color: textMuted, fontSize: "13px",
+              marginBottom: "24px", fontWeight: 500,
+            }}>
+              {filteredMovies.length} movie{filteredMovies.length !== 1 ? "s" : ""}
+              {activeFilter !== "All" ? ` · ${activeFilter}` : ""}
+              {search ? ` · "${search}"` : ""}
+            </p>
+          )}
 
-            {filteredMovies.length > 0 && (
-              <ScrollRow title="Movies in Theatres" isMobile={isMobile}>
-                {filteredMovies.map((movie) => (
-                  <MovieCard
-                    key={movie.id} movie={movie}
-                    shows={shows} onBook={handleBookNow}
-                    isMobile={isMobile}
-                  />
-                ))}
-              </ScrollRow>
-            )}
-          </>
-        )}
-      </main>
+          {/* Grid */}
+          {loading ? (
+            <div style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))",
+              gap: "32px 20px",
+            }}>
+              {[...Array(12)].map((_, i) => (
+                <div key={i}>
+                  <div style={{
+                    aspectRatio: "2/3", borderRadius: "14px",
+                    background: dark ? "#1a1a1a" : "#e0e0e0",
+                    marginBottom: "14px",
+                    animation: "pulse 1.6s ease-in-out infinite",
+                    animationDelay: `${i * 0.07}s`,
+                  }} />
+                  <div style={{ height: "14px", borderRadius: "5px", background: dark ? "#1a1a1a" : "#e0e0e0", width: "80%", marginBottom: "8px" }} />
+                  <div style={{ height: "12px", borderRadius: "5px", background: dark ? "#1a1a1a" : "#e0e0e0", width: "55%" }} />
+                </div>
+              ))}
+            </div>
+          ) : filteredMovies.length === 0 ? (
+            <div style={{ textAlign: "center", padding: "80px 0" }}>
+              <Film size={44} style={{ color: textMuted, marginBottom: "14px" }} />
+              <p style={{ fontFamily: FONT_HEADING, color: textMuted, fontSize: "16px", fontWeight: 600, marginBottom: "18px" }}>
+                No movies found
+              </p>
+              <button
+                onClick={() => { setSearch(""); setActiveFilter("All"); }}
+                style={{
+                  background: "none", border: `1.5px solid ${border}`,
+                  color: textMuted, padding: "9px 20px",
+                  borderRadius: "9px", cursor: "pointer",
+                  fontFamily: FONT_BODY, fontSize: "13px", fontWeight: 600,
+                }}
+              >Clear filters</button>
+            </div>
+          ) : (
+            <div style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))",
+              gap: "36px 20px",
+            }}>
+              {filteredMovies.map((movie) => (
+                <MovieCard
+                  key={movie.id}
+                  movie={movie} shows={shows}
+                  onBook={handleBookNow}
+                  dark={dark} border={border}
+                />
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
 
-      {/* ══════════ FOOTER ══════════ */}
+      {/* ── Footer ── */}
       <footer style={{
-        background: "#fff", borderTop: "1px solid #e8e2d8",
-        padding: isMobile ? "20px 16px" : "28px 32px",
+        background: dark ? "#080808" : "#fff",
+        borderTop: `1px solid ${border}`,
+        padding: "32px 40px",
       }}>
         <div style={{
           maxWidth: "1280px", margin: "0 auto",
-          display: "flex",
-          flexDirection: isMobile ? "column" : "row",
-          alignItems: isMobile ? "flex-start" : "center",
-          justifyContent: "space-between", gap: "12px",
+          display: "flex", flexWrap: "wrap",
+          alignItems: "center", justifyContent: "space-between", gap: "16px",
         }}>
-          <span style={{
-            fontFamily: FONT_HEADING, fontWeight: 800,
-            fontSize: "16px", color: "#111", letterSpacing: "-0.04em",
-          }}>
-            cine<span style={{ color: "#e23744" }}>book</span>
-          </span>
-          <p style={{ fontFamily: FONT_BODY, color: "#aaa", fontSize: "12px", fontWeight: 500 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "9px" }}>
+            <div style={{
+              width: "28px", height: "28px", background: "#7C3AED",
+              borderRadius: "7px", display: "flex",
+              alignItems: "center", justifyContent: "center",
+            }}>
+              <Film size={13} color="#fff" />
+            </div>
+            <span style={{
+              fontFamily: FONT_HEADING, fontWeight: 800,
+              fontSize: "15px", color: textMain, letterSpacing: "-0.02em",
+            }}>
+              Cine<span style={{ color: "#7C3AED" }}>Book</span>
+            </span>
+          </div>
+
+          <p style={{ fontFamily: FONT_BODY, color: textMuted, fontSize: "12px", fontWeight: 500 }}>
             © 2026 CineBook · Made by Svayam Shanishwara
           </p>
-          <div style={{ display: "flex", gap: "20px" }}>
-            {["Privacy", "Terms", "Contact"].map((item) => (
+
+          <div style={{ display: "flex", gap: "24px" }}>
+            {["Privacy Policy", "Terms of Use", "Contact"].map((item) => (
               <a key={item} href="#" style={{
-                fontFamily: FONT_BODY, color: "#888",
-                fontSize: "13px", fontWeight: 500, textDecoration: "none",
-              }}>{item}</a>
+                fontFamily: FONT_BODY,
+                color: textMuted, fontSize: "13px",
+                fontWeight: 500, textDecoration: "none",
+                transition: "color 0.2s",
+              }}
+                onMouseEnter={(e) => e.target.style.color = textMain}
+                onMouseLeave={(e) => e.target.style.color = textMuted}
+              >{item}</a>
             ))}
           </div>
         </div>
       </footer>
+
+      <style>{`
+        @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+        *{box-sizing:border-box;margin:0;padding:0;}
+        input::placeholder{color:#6b6b6b; font-family:${FONT_BODY};}
+        ::-webkit-scrollbar{width:5px;height:5px;}
+        ::-webkit-scrollbar-track{background:transparent;}
+        ::-webkit-scrollbar-thumb{background:#27272A;border-radius:3px;}
+      `}</style>
     </div>
   );
 };
