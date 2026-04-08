@@ -1,39 +1,41 @@
 import { create } from "zustand";
-import { persist } from "zustand/middleware";
 import api from "../api/axios";
 
-const useAuthStore = create(
-  persist(
-    (set) => ({
-      user: null,
-      isAuthenticated: false,
-      authChecked: false,
+// ─── NO persist middleware ─────────────────────────────────────────────────────
+// The httpOnly cookie is the source of truth.
+// Persisting isAuthenticated/user to localStorage causes stale state on refresh
+// — the user appears logged in before verifyAuth (in App.jsx) has run.
+// ──────────────────────────────────────────────────────────────────────────────
 
-      setUser: (user) => set({ user, isAuthenticated: true }),
+const useAuthStore = create((set) => ({
+  user: null,
+  isAuthenticated: false,
+  authChecked: false,         // stays false until verifyAuth resolves
 
-      setAuthChecked: () => set({ authChecked: true }),
+  setUser: (user) => set({ user, isAuthenticated: true }),
 
-      logout: async () => {
-        await api.post("/auth/logout");
-        set({ user: null, isAuthenticated: false, authChecked: true });
-      },
+  setAuthChecked: () => set({ authChecked: true }),
 
-      clearAuth: () => set({ user: null, isAuthenticated: false, authChecked: true }),
-    }),
-    {
-      name: "auth-storage",
+  logout: async () => {
+    try {
+      await api.post("/auth/logout");
+    } catch {
+      // even if the request fails, clear client state
     }
-  )
-);
+    set({ user: null, isAuthenticated: false, authChecked: true });
+  },
 
-// Multi-tab logout sync
+  clearAuth: () => set({ user: null, isAuthenticated: false, authChecked: true }),
+}));
+
+// ─── Multi-tab logout sync ─────────────────────────────────────────────────────
+// Without persist there's no "auth-storage" key to watch, so we use a simple
+// custom localStorage flag that logout() can set manually if you need tab sync.
+// (Optional — remove if you don't need it.)
 window.addEventListener("storage", (e) => {
-  if (e.key === "auth-storage") {
-    const newValue = e.newValue ? JSON.parse(e.newValue) : null;
-    if (!newValue?.state?.isAuthenticated) {
-      useAuthStore.getState().clearAuth();
-      window.location.href = "/login";
-    }
+  if (e.key === "cinebook-logout") {
+    useAuthStore.getState().clearAuth();
+    window.location.href = "/";
   }
 });
 
