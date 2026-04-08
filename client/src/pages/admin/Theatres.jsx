@@ -66,6 +66,16 @@ const Theatres = () => {
 
   const handleAdd = async (e) => {
     e.preventDefault();
+
+      const nameLetters = form.name.replace(/[^a-zA-Z]/g, "");
+  const locationLetters = form.location.replace(/[^a-zA-Z]/g, "");
+
+  if (nameLetters.length < 5)
+    return toast.error("Theatre name must contain at least 5 letters");
+  if (locationLetters.length < 5)
+    return toast.error("Location must contain at least 5 letters");
+
+
     setAdding(true);
     try {
       await api.post("/theatres", form);
@@ -132,7 +142,6 @@ const Theatres = () => {
               placeholder="Theatre name"
               value={form.name}
               onChange={(e) => setForm({ ...form, name: e.target.value })}
-              required
               className="flex-1 bg-gray-50 border border-gray-200 text-gray-900 rounded-xl px-4 py-2.5 outline-none focus:border-primary text-sm"
             />
             <input
@@ -140,7 +149,6 @@ const Theatres = () => {
               placeholder="Location"
               value={form.location}
               onChange={(e) => setForm({ ...form, location: e.target.value })}
-              required
               className="flex-1 bg-gray-50 border border-gray-200 text-gray-900 rounded-xl px-4 py-2.5 outline-none focus:border-primary text-sm"
             />
             <button

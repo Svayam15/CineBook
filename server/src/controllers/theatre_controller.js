@@ -12,6 +12,21 @@ export const createTheatre = asyncHandler(async (req, res) => {
     throw error;
   }
 
+  const nameLetters = name.replace(/[^a-zA-Z]/g, "");
+if (nameLetters.length < 5) {
+  const error = new Error("Theatre name must contain at least 5 letters");
+  error.statusCode = 400;
+  throw error;
+}
+
+const locationLetters = location.replace(/[^a-zA-Z]/g, "");
+if (locationLetters.length < 5) {
+  const error = new Error("Location must contain at least 5 letters");
+  error.statusCode = 400;
+  throw error;
+}
+
+
   const theatre = await prisma.theatre.create({
     data: { name, location },
   });
@@ -61,6 +76,25 @@ export const updateTheatre = asyncHandler(async (req, res) => {
     error.statusCode = 400;
     throw error;
   }
+
+  if (name) {
+  const nameLetters = name.replace(/[^a-zA-Z]/g, "");
+  if (nameLetters.length < 5) {
+    const error = new Error("Theatre name must contain at least 5 letters");
+    error.statusCode = 400;
+    throw error;
+  }
+}
+
+if (location) {
+  const locationLetters = location.replace(/[^a-zA-Z]/g, "");
+  if (locationLetters.length < 5) {
+    const error = new Error("Location must contain at least 5 letters");
+    error.statusCode = 400;
+    throw error;
+  }
+}
+
 
   const theatre = await prisma.theatre.findUnique({
     where: { id: parseInt(id) },
