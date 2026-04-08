@@ -13,7 +13,9 @@ import {
 } from "@stripe/react-stripe-js";
 import Spinner from "../../components/common/Spinner";
 
-const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY);
+const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY, {
+  betas: ['disable_stripe_js_dev_tools_and_reporting_v1'],
+});
 
 // ✅ Format UTC to IST readable string
 const formatIST = (dateStr) => {
