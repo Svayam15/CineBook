@@ -376,6 +376,7 @@ export const adminCancelBooking = asyncHandler(async (req, res) => {
     show: booking.show,
     refundAmount,
     cancelledSeats: seatsToCancel.length,
+    cancelledBy: "admin",
   }).catch((err) => logger.error(`Cancel email error: ${err.message}`));
 
   // ✅ Broadcast AVAILABLE — seats freed up

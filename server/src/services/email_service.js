@@ -56,7 +56,7 @@ export const sendShowCancelledEmail = async ({ user, booking, show, refundAmount
       html: `
         <h2>Show Cancelled</h2>
         <p>Hi ${user.name},</p>
-        <p>We regret to inform you that the following show has been cancelled:</p>
+        <p>This show was cancelled by <strong>CineBook / Admin</strong>. We apologize for the inconvenience.</p>
         <hr/>
         <h3>Show Details:</h3>
         <p><strong>Movie:</strong> ${show.movie.title}</p>
@@ -65,9 +65,9 @@ export const sendShowCancelledEmail = async ({ user, booking, show, refundAmount
         <hr/>
         <h3>Refund Details:</h3>
         ${booking.paymentType === "CARD"
-          ? `<p><strong>Refund Amount:</strong> ₹${refundAmount} (100% refund)</p>
+          ? `<p><strong>Refund Amount:</strong> ₹${refundAmount} (100% full refund — show cancelled by CineBook)</p>
              <p>Refund will be credited to your original payment method within 5-7 business days.</p>`
-          : `<p>You paid via <strong>CASH</strong>. Please visit the theatre to collect your refund of ₹${refundAmount}.</p>`
+          : `<p>You paid via <strong>CASH</strong>. Please visit the theatre to collect your full refund of ₹${refundAmount}.</p>`
         }
         <hr/>
         <p>We apologize for the inconvenience. 🙏</p>
@@ -80,22 +80,48 @@ export const sendShowCancelledEmail = async ({ user, booking, show, refundAmount
   }
 };
 
-// 🔄 BOOKING CANCELLED BY USER
-export const sendBookingCancelledEmail = async ({ user, booking, show, refundAmount, cancelledSeats }) => {
+// 🔄 BOOKING CANCELLED BY USER OR ADMIN
+export const sendBookingCancelledEmail = async ({
+  user, booking, show, refundAmount, cancelledSeats, cancelledBy = "user"
+}) => {
   try {
+    const neverPaid = !booking.paymentId && booking.paymentType === "CARD";
+    const isAdminCancel = cancelledBy === "admin";
+
     const now = new Date();
     const showTime = new Date(show.startTime);
     const hoursRemaining = (showTime - now) / (1000 * 60 * 60);
 
-    // ✅ Fixed to match actual refund policy: 24hrs/4hrs tiers
     let refundPolicyText = "";
-    if (hoursRemaining >= 24) {
+    if (neverPaid) {
+      refundPolicyText = ""; // no refund text needed
+    } else if (isAdminCancel) {
+      refundPolicyText = "✅ Full refund applied (cancelled by CineBook)";
+    } else if (hoursRemaining >= 24) {
       refundPolicyText = "✅ Full refund applied (cancelled more than 24 hours before show)";
     } else if (hoursRemaining >= 4) {
       refundPolicyText = "⚠️ 50% refund applied (cancelled between 4-24 hours before show)";
     } else {
       refundPolicyText = "❌ No refund (cancelled less than 4 hours before show)";
     }
+
+    const cancelledByText = isAdminCancel
+      ? `<p>This booking was cancelled by <strong>CineBook / Admin</strong>.</p>`
+      : `<p>Your booking cancellation has been processed.</p>`;
+
+    const refundSection = neverPaid
+      ? `<p>No payment was made for this booking, so no refund is applicable.</p>`
+      : booking.paymentType === "CARD"
+      ? `
+        <p><strong>Refund Amount:</strong> ₹${refundAmount}</p>
+        <p>${refundPolicyText}</p>
+        ${refundAmount > 0
+          ? `<p>Refund will be credited to your original payment method within 5-7 business days.</p>`
+          : ""}
+      `
+      : refundAmount > 0
+        ? `<p>You paid via <strong>CASH</strong>. Please visit the theatre to collect your refund of ₹${refundAmount}.</p>`
+        : `<p>No refund applicable as per cancellation policy.</p>`;
 
     await resend.emails.send({
       from: FROM_EMAIL,
@@ -104,23 +130,16 @@ export const sendBookingCancelledEmail = async ({ user, booking, show, refundAmo
       html: `
         <h2>Booking Cancelled</h2>
         <p>Hi ${user.name},</p>
-        <p>Your booking cancellation for <strong>${show.movie.title}</strong> has been processed.</p>
+        ${cancelledByText}
         <hr/>
-        <h3>Cancelled Seats: ${cancelledSeats}</h3>
+        <h3>Booking Details:</h3>
+        <p><strong>Movie:</strong> ${show.movie.title}</p>
+        <p><strong>Theatre:</strong> ${show.theatre.name}, ${show.theatre.location}</p>
+        <p><strong>Date & Time:</strong> ${new Date(show.startTime).toLocaleString("en-IN", { timeZone: "Asia/Kolkata", hour12: true })}</p>
+        <p><strong>Cancelled Seats:</strong> ${cancelledSeats}</p>
+        <hr/>
         <h3>Refund Details:</h3>
-        ${booking.paymentType === "CARD"
-          ? `
-            <p><strong>Refund Amount:</strong> ₹${refundAmount}</p>
-            <p>${refundPolicyText}</p>
-            ${refundAmount > 0
-              ? `<p>Refund will be credited to your original payment method within 5-7 business days.</p>`
-              : ""
-            }
-          `
-          : refundAmount > 0
-            ? `<p>You paid via <strong>CASH</strong>. Please visit the theatre to collect your refund of ₹${refundAmount}.</p>`
-            : `<p>No refund applicable as per cancellation policy.</p>`
-        }
+        ${refundSection}
         <hr/>
         <p>Thank you for using CineBook! 🎬</p>
       `,
