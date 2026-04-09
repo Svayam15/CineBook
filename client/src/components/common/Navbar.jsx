@@ -57,13 +57,6 @@ const ProfileDrawer = ({ onClose, user, onLogout, navigate }) => {
         </DrawerCard>
 
         <div className="space-y-2">
-          <p className="text-gray-400 text-xs font-semibold uppercase tracking-wider px-1">Support</p>
-          <DrawerCard>
-            <DrawerRow icon={MessageSquare} label="Chat with us" onClick={() => { onClose(); navigate("/support"); }} />
-          </DrawerCard>
-        </div>
-
-        <div className="space-y-2">
           <p className="text-gray-400 text-xs font-semibold uppercase tracking-wider px-1">Legal</p>
           <DrawerCard>
             <DrawerRow icon={HelpCircle} label="Terms & Conditions" onClick={() => { onClose(); navigate("/terms"); }} />
