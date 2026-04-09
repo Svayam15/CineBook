@@ -47,18 +47,18 @@ function App() {
   const setAuthChecked = useAuthStore((state) => state.setAuthChecked);
 
   useEffect(() => {
-    const verifyAuth = async () => {
-      try {
-        const res = await api.get("/users/me");
-        setUser(res.data);
-      } catch {
-        clearAuth();
-      } finally {
-        setAuthChecked();
-      }
-    };
-    verifyAuth().catch(console.error);
-  }, []);
+  const verifyAuth = async () => {
+    try {
+      const res = await api.get("/users/me");
+      setUser(res.data);
+    } catch {
+      clearAuth();
+    } finally {
+      setAuthChecked(); // ← move finally here (was missing before)
+    }
+  };
+  verifyAuth().catch(console.error);
+}, [setUser, clearAuth, setAuthChecked]);
 
   if (!authChecked) {
     return (

@@ -15,13 +15,18 @@ const useAuthStore = create(
 
       logout: async () => {
         await api.post("/auth/logout");
+        localStorage.removeItem("auth-storage"); // ← added
         set({ user: null, isAuthenticated: false, authChecked: true });
       },
 
-      clearAuth: () => set({ user: null, isAuthenticated: false, authChecked: true }),
+      clearAuth: () => {
+        localStorage.removeItem("auth-storage"); // ← added
+        set({ user: null, isAuthenticated: false, authChecked: true });
+      },
     }),
     {
       name: "auth-storage",
+      partialize: (state) => ({ user: state.user }), // ← added
     }
   )
 );
