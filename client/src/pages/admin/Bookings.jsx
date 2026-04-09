@@ -319,13 +319,7 @@ const TicketModal = ({ booking, onClose }) => {
             <Download size={16} />
             Download Ticket PDF
           </button>
-          <button
-            onClick={handlePrint}
-            className="w-full flex items-center justify-center gap-2 bg-white border border-gray-200 text-gray-500 hover:text-gray-900 font-semibold py-3 rounded-xl transition text-sm"
-          >
-            <Printer size={16} />
-            Print Ticket
-          </button>
+
           <button
             onClick={onClose}
             className="w-full bg-white border border-gray-200 text-gray-500 hover:text-gray-900 py-2.5 rounded-xl text-sm transition"
