@@ -11,7 +11,7 @@ const OTPVerify = () => {
   const location = useLocation();
   const { setUser } = useAuthStore();
 
-  const { email, type, stayLoggedIn, redirect } = location.state || {};
+const { email, type, stayLoggedIn, redirect, isAdmin } = location.state || {}; // ← add isAdmin
 
   const [otp, setOtp] = useState(["", "", "", "", "", ""]);
   const [loading, setLoading] = useState(false);
@@ -61,11 +61,11 @@ const OTPVerify = () => {
   };
 
   const getEndpoint = () => {
-    if (type === "SIGNUP") return "/auth/verify-signup";
-    if (type === "LOGIN") return "/auth/verify-login";
-    if (type === "FORGOT_PASSWORD") return null; // ← no API call, just redirect
-    return "/auth/verify-login";
-  };
+  if (type === "SIGNUP") return isAdmin ? "/auth/verify-admin-signup" : "/auth/verify-signup"; // ← fix
+  if (type === "LOGIN") return "/auth/verify-login";
+  if (type === "FORGOT_PASSWORD") return null;
+  return "/auth/verify-login";
+};
 
   const handleSubmit = async (e) => {
     e.preventDefault();
