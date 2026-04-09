@@ -340,23 +340,28 @@ const LandingPage = () => {
           </Link>
 
         {/* Search */}
-<div className="flex-1 max-w-sm md:max-w-md relative">
-  <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
-  <input
-    type="text"
-    placeholder="Search movies or theatres..."
-    value={search}
-    onChange={(e) => setSearch(e.target.value)}
-    className="bg-gray-100 text-gray-900 rounded-full pl-9 pr-8 py-2 md:py-2.5 text-sm outline-none focus:bg-white focus:ring-2 focus:ring-primary/30 transition placeholder:text-gray-400 border-2 border-primary/50 w-full"
-  />
-  {search && (
-    <button
-      onClick={() => setSearch("")}
-      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-    >
-      <X size={13} />
-    </button>
-  )}
+<div className="hidden md:flex flex-1 max-w-sm md:max-w-md relative items-center gap-2">
+  <div className="relative flex-1">
+    <input
+      type="text"
+      placeholder="Search movies or theatres..."
+      value={search}
+      onChange={(e) => setSearch(e.target.value)}
+      className="bg-gray-100 text-gray-900 rounded-full pl-4 pr-8 py-2 md:py-2.5 text-sm outline-none focus:bg-white focus:ring-2 focus:ring-primary/30 transition placeholder:text-gray-400 border-2 border-primary/50 w-full"
+    />
+    {search && (
+      <button
+        onClick={() => setSearch("")}
+        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+      >
+        <X size={13} />
+      </button>
+    )}
+  </div>
+  {/* Search icon button — outside, to the right */}
+  <button className="p-2 text-gray-500 hover:text-gray-900 transition shrink-0">
+    <Search size={19} strokeWidth={1.8} />
+  </button>
 </div>
 
           {/* Auth buttons */}
