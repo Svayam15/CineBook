@@ -1,9 +1,9 @@
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import AuthLayout from "../components/auth/AuthLayout.jsx";
-import Spinner from "../components/common/Spinner";
+import AuthLayout from "../../components/auth/AuthLayout.jsx";
+import Spinner from "../../components/common/Spinner";
 import { Eye, EyeOff, ShieldCheck } from "lucide-react";
-import api from "../api/axios";
+import api from "../../api/axios";
 import toast from "react-hot-toast";
 
 const AdminSignup = () => {
