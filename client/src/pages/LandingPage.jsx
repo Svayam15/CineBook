@@ -339,22 +339,25 @@ const LandingPage = () => {
             </span>
           </Link>
 
-          {/* Search */}
-          <div className="flex-1 max-w-sm md:max-w-md relative">
-            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
-            <input
-              type="text"
-              placeholder="Search movies..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="w-full bg-gray-100 rounded-full pl-9 pr-8 py-2 text-sm outline-none focus:ring-2 focus:ring-primary/30 focus:bg-white border-2 border-transparent focus:border-primary/30 transition placeholder:text-gray-400"
-            />
-            {search && (
-              <button onClick={() => setSearch("")} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
-                <X size={13} />
-              </button>
-            )}
-          </div>
+        {/* Search */}
+<div className="flex-1 max-w-sm md:max-w-md relative">
+  <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+  <input
+    type="text"
+    placeholder="Search movies or theatres..."
+    value={search}
+    onChange={(e) => setSearch(e.target.value)}
+    className="bg-gray-100 text-gray-900 rounded-full pl-9 pr-8 py-2 md:py-2.5 text-sm outline-none focus:bg-white focus:ring-2 focus:ring-primary/30 transition placeholder:text-gray-400 border-2 border-primary/50 w-full"
+  />
+  {search && (
+    <button
+      onClick={() => setSearch("")}
+      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+    >
+      <X size={13} />
+    </button>
+  )}
+</div>
 
           {/* Auth buttons */}
           <div className="ml-auto flex items-center gap-2">
