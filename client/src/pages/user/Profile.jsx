@@ -1,7 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import {
   ArrowLeft, ChevronRight, LogOut,
-  BookMarked, MessageSquare, HelpCircle, FileText,
+  BookMarked, HelpCircle, FileText,
 } from "lucide-react";
 import useAuthStore from "../../store/authStore";
 import toast from "react-hot-toast";
@@ -81,14 +81,6 @@ const Profile = () => {
         <Card>
           <Row icon={BookMarked} label="View all bookings" to="/my-bookings" />
         </Card>
-
-        {/* Support */}
-        <div className="space-y-2">
-          <p className="text-gray-900 text-sm font-bold px-1">Support</p>
-          <Card>
-            <Row icon={MessageSquare} label="Chat with us" to="/support" />
-          </Card>
-        </div>
 
         {/* Legal */}
         <div className="space-y-2">
