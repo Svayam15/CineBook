@@ -14,24 +14,14 @@ const useAuthStore = create(
       setAuthChecked: () => set({ authChecked: true }),
 
       logout: async () => {
-        try {
-          await api.post("/auth/logout"); // ← wrapped in try/catch
-        } catch {
-          // server might be down or slow, continue anyway
-        }
-        // these ALWAYS run now
-        localStorage.removeItem("auth-storage");
+        await api.post("/auth/logout");
         set({ user: null, isAuthenticated: false, authChecked: true });
       },
 
-      clearAuth: () => {
-        localStorage.removeItem("auth-storage");
-        set({ user: null, isAuthenticated: false, authChecked: true });
-      },
+      clearAuth: () => set({ user: null, isAuthenticated: false, authChecked: true }),
     }),
     {
       name: "auth-storage",
-      partialize: (state) => ({ user: state.user }),
     }
   )
 );

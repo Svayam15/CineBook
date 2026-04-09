@@ -46,7 +46,7 @@ function App() {
   const clearAuth = useAuthStore((state) => state.clearAuth);
   const setAuthChecked = useAuthStore((state) => state.setAuthChecked);
 
-  useEffect(() => {
+useEffect(() => {
   const verifyAuth = async () => {
     try {
       const res = await api.get("/users/me");
@@ -54,11 +54,11 @@ function App() {
     } catch {
       clearAuth();
     } finally {
-      setAuthChecked(); // ← move finally here (was missing before)
+      setAuthChecked();
     }
   };
   verifyAuth().catch(console.error);
-}, [setUser, clearAuth, setAuthChecked]);
+}, []);
 
   if (!authChecked) {
     return (
