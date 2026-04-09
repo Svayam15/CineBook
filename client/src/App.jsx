@@ -3,6 +3,7 @@ import { Routes, Route, Navigate } from "react-router-dom";
 import useAuthStore from "./store/authStore";
 import api from "./api/axios";
 import AdminProfile from "./pages/admin/AdminProfile";
+import AdminSignup from "./pages/admin/AdminSignup";
 
 // Auth pages
 import Login from "./pages/Login";
@@ -31,10 +32,10 @@ import Shows from "./pages/admin/Shows";
 import Bookings from "./pages/admin/Bookings";
 import Users from "./pages/admin/Users";
 import WindowBooking from "./pages/admin/WindowBooking";
-import Scanner from "./pages/admin/Scanner"; // ✅ NEW
+import Scanner from "./pages/admin/Scanner";
 
 // Staff pages
-import StaffScanner from "./pages/staff/StaffScanner"; // ✅ NEW
+import StaffScanner from "./pages/staff/StaffScanner";
 import StaffProfile from "./pages/staff/StaffProfile";
 
 // Components
@@ -46,19 +47,19 @@ function App() {
   const clearAuth = useAuthStore((state) => state.clearAuth);
   const setAuthChecked = useAuthStore((state) => state.setAuthChecked);
 
-useEffect(() => {
-  const verifyAuth = async () => {
-    try {
-      const res = await api.get("/users/me");
-      setUser(res.data);
-    } catch {
-      clearAuth();
-    } finally {
-      setAuthChecked();
-    }
-  };
-  verifyAuth().catch(console.error);
-}, []);
+  useEffect(() => {
+    const verifyAuth = async () => {
+      try {
+        const res = await api.get("/users/me");
+        setUser(res.data);
+      } catch {
+        clearAuth();
+      } finally {
+        setAuthChecked();
+      }
+    };
+    verifyAuth().catch(console.error);
+  }, []);
 
   if (!authChecked) {
     return (
@@ -82,10 +83,10 @@ useEffect(() => {
       <Route path="/verify-otp" element={<OTPVerify />} />
       <Route path="/forgot-password" element={<ForgotPassword />} />
       <Route path="/reset-password" element={<ResetPassword />} />
-
-<Route path="/profile" element={<Profile />} />
-<Route path="/terms" element={<Terms />} />
-<Route path="/privacy" element={<Privacy />} />
+      <Route path="/admin-setup" element={<AdminSignup />} />
+      <Route path="/profile" element={<Profile />} />
+      <Route path="/terms" element={<Terms />} />
+      <Route path="/privacy" element={<Privacy />} />
 
       {/* Root redirect based on role */}
       <Route
@@ -96,7 +97,7 @@ useEffect(() => {
           ) : user?.role === "ADMIN" ? (
             <Navigate to="/admin" replace />
           ) : user?.role === "STAFF" ? (
-            <Navigate to="/staff/scanner" replace /> // ✅ Staff redirected to scanner
+            <Navigate to="/staff/scanner" replace />
           ) : (
             <Home />
           )
@@ -112,7 +113,7 @@ useEffect(() => {
       <Route path="/my-bookings" element={<ProtectedRoute><MyBookings /></ProtectedRoute>} />
       <Route path="/booking-confirm" element={<ProtectedRoute><BookingConfirm /></ProtectedRoute>} />
 
-      {/* ✅ Staff routes */}
+      {/* Staff routes */}
       <Route
         path="/staff/scanner"
         element={
@@ -121,15 +122,14 @@ useEffect(() => {
           </ProtectedRoute>
         }
       />
-
       <Route
-  path="/staff/profile"
-  element={
-    <ProtectedRoute staffOnly>
-      <StaffProfile />
-    </ProtectedRoute>
-  }
-/>
+        path="/staff/profile"
+        element={
+          <ProtectedRoute staffOnly>
+            <StaffProfile />
+          </ProtectedRoute>
+        }
+      />
 
       {/* Admin routes */}
       <Route path="/admin" element={<ProtectedRoute adminOnly><Dashboard /></ProtectedRoute>} />
@@ -139,7 +139,7 @@ useEffect(() => {
       <Route path="/admin/bookings" element={<ProtectedRoute adminOnly><Bookings /></ProtectedRoute>} />
       <Route path="/admin/users" element={<ProtectedRoute adminOnly><Users /></ProtectedRoute>} />
       <Route path="/admin/window-booking" element={<ProtectedRoute adminOnly><WindowBooking /></ProtectedRoute>} />
-      <Route path="/admin/scanner" element={<ProtectedRoute adminOnly><Scanner /></ProtectedRoute>} /> {/* ✅ NEW */}
+      <Route path="/admin/scanner" element={<ProtectedRoute adminOnly><Scanner /></ProtectedRoute>} />
       <Route path="/admin/profile" element={<ProtectedRoute adminOnly><AdminProfile /></ProtectedRoute>} />
 
       <Route path="*" element={<Navigate to="/" replace />} />
