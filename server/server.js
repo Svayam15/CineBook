@@ -22,14 +22,14 @@ cleanupExpiredOTPs().catch((err) =>
 );
 
 // ⏱️ Release expired locks every 1 minute
-setInterval(() => {
+const lockReleaseInterval = setInterval(() => {
   releaseExpiredLocks().catch((err) =>
     logger.error(`Release locks error: ${err.message}`)
   );
 }, 60 * 1000);
 
 // 🧹 Cleanup expired OTPs every 1 hour
-setInterval(() => {
+const otpCleanupInterval = setInterval(() => {
   cleanupExpiredOTPs().catch((err) =>
     logger.error(`Cleanup OTPs error: ${err.message}`)
   );
@@ -42,6 +42,9 @@ const server = app.listen(PORT, () => {
 // ✅ FIX: proper graceful shutdown — wait for in-flight requests, force exit after 10s
 process.on("SIGTERM", async () => {
   logger.info("SIGTERM received, shutting down gracefully...");
+
+  clearInterval(lockReleaseInterval);
+  clearInterval(otpCleanupInterval);
 
   server.close(async () => {
     logger.info("HTTP server closed — no more new connections");
@@ -59,6 +62,8 @@ process.on("SIGTERM", async () => {
 
 process.on("SIGINT", async () => {
   logger.info("SIGINT received, shutting down...");
+  clearInterval(lockReleaseInterval);
+  clearInterval(otpCleanupInterval);
   server.close(async () => {
     await prisma.$disconnect();
     process.exit(0);

@@ -33,13 +33,15 @@ const verifyOTPHash = async (plain, hashed) => {
 // 📧 Send OTP email
 const sendOTPEmail = async (email, otp, type) => {
   const subjects = {
-    [OTP_TYPE.SIGNUP]: "🎬 Verify your email - Ticket Booking",
-    [OTP_TYPE.LOGIN]: "🔐 Your login OTP - Ticket Booking",
-    [OTP_TYPE.FORGOT_PASSWORD]: "🔑 Reset your password - Ticket Booking",
+    [OTP_TYPE.SIGNUP]: "🎬 Verify your email - CineBook",
+    [OTP_TYPE.ADMIN_SIGNUP]: "👑 Verify your admin account - CineBook",
+    [OTP_TYPE.LOGIN]: "🔐 Your login OTP - CineBook",
+    [OTP_TYPE.FORGOT_PASSWORD]: "🔑 Reset your password - CineBook",
   };
 
   const messages = {
     [OTP_TYPE.SIGNUP]: `Welcome! Your signup verification OTP is:`,
+    [OTP_TYPE.ADMIN_SIGNUP]: `Your admin account verification OTP is:`,
     [OTP_TYPE.LOGIN]: `Your login OTP is:`,
     [OTP_TYPE.FORGOT_PASSWORD]: `Your password reset OTP is:`,
   };
@@ -50,7 +52,7 @@ const sendOTPEmail = async (email, otp, type) => {
     subject: subjects[type],
     html: `
       <div style="font-family: Arial, sans-serif; max-width: 400px; margin: 0 auto;">
-        <h2>🎬 Ticket Booking System</h2>
+        <h2>🎬 CineBook</h2>
         <p>${messages[type]}</p>
         <h1 style="letter-spacing: 8px; color: #e74c3c; font-size: 36px;">${otp}</h1>
         <p>This OTP expires in <strong>10 minutes</strong>.</p>

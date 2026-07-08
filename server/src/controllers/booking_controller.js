@@ -168,15 +168,49 @@ export const getBookingStatus = asyncHandler(async (req, res) => {
 // 📋 GET MY BOOKINGS
 export const getMyBookings = asyncHandler(async (req, res) => {
   const userId = req.user.userId;
-  const bookings = await prisma.booking.findMany({
-    where: { userId, status: { notIn: ["FAILED"] } },
-    include: {
-      show: { include: { movie: true, theatre: true } },
-      seats: { include: { showSeat: true } },
+
+  // 📄 Pagination
+  const page = Math.max(parseInt(req.query.page) || 1, 1);
+  const limit = Math.min(Math.max(parseInt(req.query.limit) || 10, 1), 50);
+  const skip = (page - 1) * limit;
+
+  // 🔀 Filter: "upcoming" (default) or "past", based on the show's start time
+  const filter = req.query.filter === "past" ? "past" : "upcoming";
+  const now = new Date();
+
+  const where = {
+    userId,
+    status: { notIn: ["FAILED"] },
+    show: {
+      startTime: filter === "upcoming" ? { gte: now } : { lt: now },
     },
-    orderBy: { createdAt: "desc" },
+  };
+
+  const [bookings, total] = await Promise.all([
+    prisma.booking.findMany({
+      where,
+      include: {
+        show: { include: { movie: true, theatre: true } },
+        seats: { include: { showSeat: true } },
+      },
+      orderBy: { show: { startTime: filter === "upcoming" ? "asc" : "desc" } },
+      skip,
+      take: limit,
+    }),
+    prisma.booking.count({ where }),
+  ]);
+
+  res.json({
+    success: true,
+    bookings,
+    pagination: {
+      page,
+      limit,
+      total,
+      totalPages: Math.ceil(total / limit) || 1,
+      hasMore: skip + bookings.length < total,
+    },
   });
-  res.json({ success: true, bookings });
 });
 
 // ❌ CANCEL BOOKING (USER)

@@ -11,7 +11,7 @@ const AdminSignup = () => {
   const [formData, setFormData] = useState({
     name: "",
     surname: "",
-    username: "",
+    phone: "",
     email: "",
     password: "",
     adminSecret: "",
@@ -93,20 +93,23 @@ const AdminSignup = () => {
           </div>
         </div>
 
-        {/* Username */}
+        {/* Phone */}
         <div>
-          <label className="block text-sm text-gray-600 mb-1.5">Username</label>
+          <label className="block text-sm text-gray-600 mb-1.5">Phone Number</label>
           <input
-            type="text"
-            name="username"
-            value={formData.username}
+            type="tel"
+            name="phone"
+            value={formData.phone}
             onChange={handleChange}
-            placeholder="admin_john"
+            placeholder="+919876543210"
             required
             className={`w-full bg-gray-50 border text-gray-900 rounded-xl px-4 py-3 outline-none focus:ring-1 transition placeholder:text-gray-400 text-sm
-              ${errors.username ? "border-red-500 focus:border-red-500 focus:ring-red-500" : "border-gray-200 focus:border-primary focus:ring-primary"}`}
+              ${errors.phone ? "border-red-500 focus:border-red-500 focus:ring-red-500" : "border-gray-200 focus:border-primary focus:ring-primary"}`}
           />
-          {errors.username && <p className="text-red-400 text-xs mt-1">⚠️ {errors.username}</p>}
+          {errors.phone
+            ? <p className="text-red-400 text-xs mt-1">⚠️ {errors.phone}</p>
+            : <p className="text-xs text-muted mt-1.5">Include country code, e.g. +919876543210</p>
+          }
         </div>
 
         {/* Email */}

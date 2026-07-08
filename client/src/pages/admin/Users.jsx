@@ -44,7 +44,7 @@ const DeleteModal = ({ user, onClose, onConfirm, deleting }) => (
 // ─── Create Staff Modal ───────────────────────────────────────────────────────
 const CreateStaffModal = ({ onClose, onCreated }) => {
   const [form, setForm] = useState({
-    name: "", surname: "", username: "", email: "", password: "",
+    name: "", surname: "", phone: "", email: "", password: "",
   });
   const [creating, setCreating] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -126,20 +126,20 @@ const CreateStaffModal = ({ onClose, onCreated }) => {
             </div>
           </div>
 
-          {/* Username */}
+          {/* Phone */}
           <div className="flex flex-col gap-1.5">
-            <label className="text-xs text-muted font-medium">Username</label>
+            <label className="text-xs text-muted font-medium">Phone Number</label>
             <input
-              type="text"
-              name="username"
-              value={form.username}
+              type="tel"
+              name="phone"
+              value={form.phone}
               onChange={handleChange}
               required
-              placeholder="rahul_staff"
+              placeholder="+919876543210"
               className={`bg-gray-50 border text-gray-900 rounded-xl px-3 py-2 outline-none focus:ring-1 transition text-sm placeholder:text-gray-400
-                ${errors.username ? "border-red-500 focus:border-red-500 focus:ring-red-500" : "border-gray-200 focus:border-primary focus:ring-primary"}`}
+                ${errors.phone ? "border-red-500 focus:border-red-500 focus:ring-red-500" : "border-gray-200 focus:border-primary focus:ring-primary"}`}
             />
-            {errors.username && <p className="text-red-400 text-xs">⚠️ {errors.username}</p>}
+            {errors.phone && <p className="text-red-400 text-xs">⚠️ {errors.phone}</p>}
           </div>
 
           {/* Email */}
@@ -314,7 +314,7 @@ const Users = () => {
                     <p className="text-gray-900 font-medium">{user.name} {user.surname}</p>
                     {roleBadge(user.role)}
                   </div>
-                  <p className="text-muted text-sm">@{user.username} · {user.email}</p>
+                  <p className="text-muted text-sm">{user.phone} · {user.email}</p>
                 </div>
                 {user.role !== "ADMIN" && (
                   <button

@@ -269,24 +269,51 @@ const MyBookings = () => {
   const navigate = useNavigate();
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [selectedTicket, setSelectedTicket] = useState(null);
   const [cancelTarget, setCancelTarget] = useState(null);
   const [cancelling, setCancelling] = useState(false);
+  const [filter, setFilter] = useState("upcoming"); // "upcoming" | "past"
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(false);
+  const [total, setTotal] = useState(0);
 
-  const fetchBookings = async () => {
+  const fetchBookings = async ({ filter: f, page: p, append = false } = {}) => {
     try {
-      const res = await api.get("/bookings/my-bookings");
-      setBookings(res.data.bookings);
+      if (append) setLoadingMore(true);
+      else setLoading(true);
+
+      const res = await api.get("/bookings/my-bookings", {
+        params: { filter: f, page: p, limit: 10 },
+      });
+
+      setBookings((prev) => (append ? [...prev, ...res.data.bookings] : res.data.bookings));
+      setHasMore(res.data.pagination?.hasMore ?? false);
+      setTotal(res.data.pagination?.total ?? res.data.bookings.length);
     } catch (err) {
       toast.error(err.message);
     } finally {
       setLoading(false);
+      setLoadingMore(false);
     }
   };
 
+  // Refetch from page 1 whenever the tab changes
   useEffect(() => {
-    fetchBookings().catch(console.error);
-  }, []);
+    setPage(1);
+    fetchBookings({ filter, page: 1 }).catch(console.error);
+  }, [filter]);
+
+  const handleLoadMore = () => {
+    const nextPage = page + 1;
+    setPage(nextPage);
+    fetchBookings({ filter, page: nextPage, append: true }).catch(console.error);
+  };
+
+  const refreshCurrentView = async () => {
+    setPage(1);
+    await fetchBookings({ filter, page: 1 });
+  };
 
   const handleCancel = async () => {
     if (!cancelTarget) return;
@@ -295,7 +322,7 @@ const MyBookings = () => {
       const res = await api.delete(`/bookings/${cancelTarget.id}`);
       toast.success(res.data.message);
       setCancelTarget(null);
-      await fetchBookings();
+      await refreshCurrentView();
     } catch (err) {
       toast.error(err.response?.data?.message || err.message);
     } finally {
@@ -353,7 +380,27 @@ const MyBookings = () => {
       <div className="max-w-3xl mx-auto px-4 sm:px-6 py-8">
         <div className="mb-6">
           <h1 className="font-heading text-2xl font-bold text-gray-900">My Bookings</h1>
-          <p className="text-gray-500 text-sm mt-1">{bookings.length} booking(s)</p>
+          <p className="text-gray-500 text-sm mt-1">{total} booking(s)</p>
+        </div>
+
+        {/* Upcoming / Past tabs */}
+        <div className="flex gap-2 mb-6 border-b border-gray-100">
+          {[
+            { key: "upcoming", label: "Upcoming" },
+            { key: "past", label: "Past" },
+          ].map((tab) => (
+            <button
+              key={tab.key}
+              onClick={() => setFilter(tab.key)}
+              className={`px-4 py-2.5 text-sm font-medium border-b-2 transition ${
+                filter === tab.key
+                  ? "border-primary text-primary"
+                  : "border-transparent text-gray-500 hover:text-gray-900"
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
         </div>
 
         {loading ? (
@@ -365,8 +412,12 @@ const MyBookings = () => {
         ) : bookings.length === 0 ? (
           <div className="text-center py-16">
             <Ticket size={40} className="text-gray-300 mx-auto mb-3" />
-            <p className="text-gray-500 text-lg">No bookings yet</p>
-            <p className="text-gray-400 text-sm mt-1">Book your first movie experience!</p>
+            <p className="text-gray-500 text-lg">
+              {filter === "upcoming" ? "No upcoming bookings" : "No past bookings"}
+            </p>
+            <p className="text-gray-400 text-sm mt-1">
+              {filter === "upcoming" ? "Book your first movie experience!" : "Your booking history will show up here."}
+            </p>
           </div>
         ) : (
           <div className="space-y-4">
@@ -479,6 +530,18 @@ const MyBookings = () => {
                 </div>
               </div>
             ))}
+          </div>
+        )}
+
+        {!loading && hasMore && (
+          <div className="flex justify-center mt-6">
+            <button
+              onClick={handleLoadMore}
+              disabled={loadingMore}
+              className="px-5 py-2.5 rounded-xl border border-gray-200 text-gray-600 hover:text-gray-900 hover:border-gray-300 text-sm font-medium transition disabled:opacity-50"
+            >
+              {loadingMore ? "Loading..." : "Load more"}
+            </button>
           </div>
         )}
       </div>

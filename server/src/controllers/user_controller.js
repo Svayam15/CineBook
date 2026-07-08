@@ -10,7 +10,7 @@ export const getMe = asyncHandler(async (req, res) => {
       id: true,
       name: true,
       surname: true,
-      username: true,
+      phone: true,
       email: true,
       role: true,
       createdAt: true,

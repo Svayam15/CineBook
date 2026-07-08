@@ -184,7 +184,7 @@ const TicketModal = ({ booking, onClose }) => {
               <span className="font-heading font-semibold text-gray-900 text-sm">Ticket</span>
               <span className="text-gray-500 text-xs ml-2">
                 {booking.user?.name} {booking.user?.surname}
-                <span className="text-gray-400 ml-1">@{booking.user?.username}</span>
+                <span className="text-gray-400 ml-1">{booking.user?.phone}</span>
               </span>
             </div>
           </div>
@@ -377,7 +377,7 @@ const BookingCard = ({ booking, onViewTicket, onCancel, cancelling }) => {
             #{booking.id} — {booking.user?.name} {booking.user?.surname}
           </p>
           <p className="text-muted text-xs mt-0.5">
-            @{booking.user?.username} · ID: {booking.user?.id}
+            {booking.user?.phone} · ID: {booking.user?.id}
           </p>
         </div>
       </div>
@@ -548,7 +548,7 @@ const Bookings = () => {
           <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted" />
           <input
             type="text"
-            placeholder="Search by booking ID, user ID, @username, or email..."
+            placeholder="Search by booking ID, user ID, phone, name, or email..."
             value={searchInput}
             onChange={(e) => setSearchInput(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && applySearch()}
@@ -572,7 +572,7 @@ const Bookings = () => {
       </div>
 
       <p className="text-muted text-xs mb-5">
-        Tip: Use a number for booking/user ID, <span className="text-primary">@username</span> for username, or type an email address.
+        Tip: Use a number for booking/user ID, <span className="text-primary">a phone number or name</span> to search by user, or type an email address.
       </p>
 
       {loading ? (

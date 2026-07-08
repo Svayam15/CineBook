@@ -13,7 +13,7 @@ const Privacy = () => {
       </div>
       <div className="max-w-xl mx-auto px-4 sm:px-6 py-6 space-y-4">
         {[
-          ["1. Information We Collect", "We collect your name, email address, and username when you create an account. Booking details including show, seats, and payment type are stored to provide our services."],
+          ["1. Information We Collect", "We collect your name, email address, and phone number when you create an account. Booking details including show, seats, and payment type are stored to provide our services."],
           ["2. How We Use Your Data", "Your data is used solely to process bookings, send confirmation emails, and provide customer support. We do not sell your data to third parties."],
           ["3. Cookies & Sessions", "CineBook uses HTTP-only cookies to manage authentication sessions securely. These cookies are never accessible via JavaScript and expire automatically."],
           ["4. Payment Security", "All card payments are processed securely through Stripe. CineBook does not store any card details on its servers."],

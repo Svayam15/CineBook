@@ -23,7 +23,7 @@ export const getAllUsers = asyncHandler(async (req, res) => {
         id: true,
         name: true,
         surname: true,
-        username: true,
+        phone: true,
         email: true,
         role: true,
         createdAt: true,
@@ -95,9 +95,12 @@ export const getAllBookings = asyncHandler(async (req, res) => {
         user: { email: { contains: search, mode: "insensitive" } },
       };
     } else {
-      const username = search.startsWith("@") ? search.slice(1) : search;
       where = {
-        user: { username: { contains: username, mode: "insensitive" } },
+        OR: [
+          { user: { phone: { contains: search, mode: "insensitive" } } },
+          { user: { name: { contains: search, mode: "insensitive" } } },
+          { user: { surname: { contains: search, mode: "insensitive" } } },
+        ],
       };
     }
   }
@@ -106,7 +109,7 @@ export const getAllBookings = asyncHandler(async (req, res) => {
     prisma.booking.findMany({
       where,
       include: {
-        user: { select: { id: true, name: true, email: true, username: true, surname: true } },
+        user: { select: { id: true, name: true, email: true, phone: true, surname: true } },
         show: { include: { movie: true, theatre: true } },
         seats: { include: { showSeat: true } },
       },
@@ -636,10 +639,10 @@ export const getDashboardStats = asyncHandler(async (req, res) => {
 
 // 👷 CREATE STAFF ACCOUNT (ADMIN ONLY)
 export const createStaff = asyncHandler(async (req, res) => {
-  const { name, surname, username, email, password } = req.body;
+  const { name, surname, phone, email, password } = req.body;
 
-  if (!name || !surname || !username || !email || !password) {
-    const error = new Error("All fields are required: name, surname, username, email, password");
+  if (!name || !surname || !phone || !email || !password) {
+    const error = new Error("All fields are required: name, surname, phone, email, password");
     error.statusCode = 400;
     throw error;
   }
@@ -650,10 +653,10 @@ export const createStaff = asyncHandler(async (req, res) => {
     throw error;
   }
 
-  // Check if email or username already exists
+  // Check if email or phone already exists
   const existing = await prisma.user.findFirst({
     where: {
-      OR: [{ email }, { username }],
+      OR: [{ email }, { phone }],
     },
   });
 
@@ -661,7 +664,7 @@ export const createStaff = asyncHandler(async (req, res) => {
     const error = new Error(
       existing.email === email
         ? "Email already in use"
-        : "Username already taken"
+        : "Phone number already in use"
     );
     error.statusCode = 400;
     throw error;
@@ -673,7 +676,7 @@ export const createStaff = asyncHandler(async (req, res) => {
     data: {
       name,
       surname,
-      username,
+      phone,
       email,
       password: hashedPassword,
       role: "STAFF",
@@ -682,7 +685,7 @@ export const createStaff = asyncHandler(async (req, res) => {
       id: true,
       name: true,
       surname: true,
-      username: true,
+      phone: true,
       email: true,
       role: true,
       createdAt: true,

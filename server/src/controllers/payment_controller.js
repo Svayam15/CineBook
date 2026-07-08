@@ -3,14 +3,27 @@ import prisma from "../utils/prisma.js";
 import { calculateRefund } from "../services/booking_service.js";
 import { processRefund } from "../services/refund_service.js";
 import { sendBookingConfirmationEmail } from "../services/email_service.js";
+import { broadcastToShow } from "../utils/sseManager.js";
 import logger from "../config/logger.js";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
+// 🛡️ Validate and coerce bookingId to a positive integer, or null if invalid
+const parseBookingId = (value) => {
+  const id = Number(value);
+  if (!Number.isInteger(id) || id <= 0) return null;
+  return id;
+};
+
 // 🔥 CREATE PAYMENT INTENT
 export const createOrder = async (req, res) => {
   try {
-    const { bookingId } = req.body;
+    const { bookingId: rawBookingId } = req.body;
+
+    const bookingId = parseBookingId(rawBookingId);
+    if (!bookingId) {
+      return res.status(400).json({ message: "Invalid or missing bookingId" });
+    }
 
     const booking = await prisma.booking.findUnique({
       where: { id: bookingId },
@@ -64,7 +77,12 @@ export const createOrder = async (req, res) => {
 // 🔥 VERIFY PAYMENT
 export const verifyPayment = async (req, res) => {
   try {
-    const { paymentIntentId, bookingId } = req.body;
+    const { paymentIntentId, bookingId: rawBookingId } = req.body;
+
+    const bookingId = parseBookingId(rawBookingId);
+    if (!bookingId) {
+      return res.status(400).json({ message: "Invalid or missing bookingId" });
+    }
 
     const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
 
@@ -162,7 +180,13 @@ export const verifyPayment = async (req, res) => {
 // 🔥 CANCEL BOOKING PAYMENT (refund)
 export const cancelAndRefund = async (req, res) => {
   try {
-    const { bookingId, seatIds } = req.body;
+    const { bookingId: rawBookingId, seatIds } = req.body;
+
+    const bookingId = parseBookingId(rawBookingId);
+    if (!bookingId) {
+      return res.status(400).json({ message: "Invalid or missing bookingId" });
+    }
+
     const cancelledByAdmin = req.user.role === "ADMIN";
 
     const booking = await prisma.booking.findUnique({
@@ -213,6 +237,11 @@ export const cancelAndRefund = async (req, res) => {
     });
 
     logger.info(`Booking ${bookingId} cancelled. Refund: ₹${refundAmount}`);
+
+    // 🔴 Notify anyone viewing this show's seat map that these seats are free again
+    cancelledSeatsData.forEach((bs) => {
+      broadcastToShow(booking.show.id, { seatId: bs.showSeatId, status: "AVAILABLE" });
+    });
 
     return res.json({
       message:

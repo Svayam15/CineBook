@@ -1,7 +1,7 @@
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import prisma from "../utils/prisma.js";
-import { validateSignup } from "../utils/validateAuth.js";
+import { validateSignup, detectIdentifierType } from "../utils/validateAuth.js";
 import { createAndSendOTP, verifyOTP } from "../services/otp_service.js";
 import { checkLoginBlock, recordFailedAttempt, resetLoginAttempts } from "../services/login_attempt_service.js";
 import { sendPasswordResetSuccessEmail } from "../services/email_service.js";
@@ -27,19 +27,19 @@ const setAuthCookie = (res, token, stayLoggedIn = false) => {
 // 📝 SIGNUP — validate + send OTP
 export const signup = async (req, res) => {
   try {
-    let { name, surname, username, email, password } = req.body;
+    let { name, surname, phone, email, password } = req.body;
 
-    username = username?.toLowerCase();
+    phone = phone?.trim();
     email = email?.toLowerCase();
 
-    const errors = validateSignup({ name, surname, username, email, password });
+    const errors = validateSignup({ name, surname, phone, email, password });
     if (Object.keys(errors).length > 0) {
       return res.status(400).json({ errors });
     }
 
-    const existingUsername = await prisma.user.findUnique({ where: { username } });
-    if (existingUsername) {
-      return res.status(400).json({ errors: { username: "Username already taken" } });
+    const existingPhone = await prisma.user.findUnique({ where: { phone } });
+    if (existingPhone) {
+      return res.status(400).json({ errors: { phone: "Phone number already registered" } });
     }
 
     const existingEmail = await prisma.user.findUnique({ where: { email } });
@@ -49,11 +49,10 @@ export const signup = async (req, res) => {
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // Store user data temporarily in OTP table
     await createAndSendOTP({
       email,
       type: "SIGNUP",
-      userData: { name, surname, username, email, password: hashedPassword },
+      userData: { name, surname, phone, email, password: hashedPassword },
     });
 
     return res.json({
@@ -79,14 +78,12 @@ export const verifySignup = async (req, res) => {
 
     const record = await verifyOTP({ email, otp, type: "SIGNUP" });
 
-    // Create user from stored userData
-    const { name, surname, username, password } = record.userData;
+    const { name, surname, phone, password } = record.userData;
 
     const user = await prisma.user.create({
-      data: { name, surname, username, email, password },
+      data: { name, surname, phone, email, password },
     });
 
-    // Auto login after signup
     const token = jwt.sign(
       { userId: user.id, role: user.role },
       JWT_SECRET,
@@ -100,7 +97,7 @@ export const verifySignup = async (req, res) => {
       user: {
         id: user.id,
         name: user.name,
-        username: user.username,
+        phone: user.phone,
         email: user.email,
         role: user.role,
       },
@@ -122,16 +119,22 @@ export const login = async (req, res) => {
       return res.status(400).json({ message: "Identifier and password are required" });
     }
 
-    identifier = identifier.toLowerCase();
+    identifier = identifier.trim();
 
-    // Check if blocked
+    // Check if blocked (uses email or phone as key)
     await checkLoginBlock(identifier);
 
-    const user = await prisma.user.findFirst({
-      where: {
-        OR: [{ email: identifier }, { username: identifier }],
-      },
-    });
+    // Determine whether the identifier is an email or phone number
+    const { type, normalized } = detectIdentifierType(identifier);
+
+    let user;
+    if (type === "email") {
+      user = await prisma.user.findUnique({ where: { email: normalized } });
+    } else if (type === "phone") {
+      user = await prisma.user.findUnique({ where: { phone: normalized } });
+    } else {
+      return res.status(400).json({ message: "Enter a valid email or phone number (+91XXXXXXXXXX)" });
+    }
 
     if (!user) {
       return res.status(401).json({ message: "Invalid credentials" });
@@ -144,10 +147,8 @@ export const login = async (req, res) => {
       return res.status(401).json({ message: "Invalid credentials" });
     }
 
-    // Reset failed attempts on successful password
     await resetLoginAttempts(user.email);
 
-    // Send OTP
     await createAndSendOTP({ email: user.email, type: "LOGIN" });
 
     return res.json({
@@ -192,7 +193,7 @@ export const verifyLogin = async (req, res) => {
       user: {
         id: user.id,
         name: user.name,
-        username: user.username,
+        phone: user.phone,
         role: user.role,
       },
     });
@@ -245,7 +246,6 @@ export const resetPassword = async (req, res) => {
       return res.status(400).json({ message: "Email, OTP and new password are required" });
     }
 
-    // Validate new password
     const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&]).{8,16}$/;
     if (!passwordRegex.test(newPassword)) {
       return res.status(400).json({
@@ -262,10 +262,7 @@ export const resetPassword = async (req, res) => {
       data: { password: hashedPassword },
     });
 
-    // Reset login attempts after password reset
     await resetLoginAttempts(email);
-
-    // Send password reset success email
     await sendPasswordResetSuccessEmail({ user });
 
     return res.json({ message: "Password reset successfully! Please login." });
@@ -290,7 +287,6 @@ export const resendOTP = async (req, res) => {
       return res.status(400).json({ message: "Invalid OTP type" });
     }
 
-    // For LOGIN resend — verify user exists
     if (type === "LOGIN") {
       const user = await prisma.user.findUnique({ where: { email } });
       if (!user) {
@@ -324,27 +320,26 @@ export const logout = (req, res) => {
 // 👑 ADMIN SIGNUP
 export const adminSignup = async (req, res) => {
   try {
-    const { name, surname, username, email, password, adminSecret } = req.body;
+    const { name, surname, phone, email, password, adminSecret } = req.body;
 
-// NEW — replace with this
-const provided = Buffer.from(adminSecret ?? "");
-const expected = Buffer.from(process.env.ADMIN_SECRET ?? "");
-const isValidSecret = provided.length === expected.length && timingSafeEqual(provided, expected);
-if (!isValidSecret) {
-  return res.status(403).json({ message: "Invalid admin secret" });
-}
+    const provided = Buffer.from(adminSecret ?? "");
+    const expected = Buffer.from(process.env.ADMIN_SECRET ?? "");
+    const isValidSecret = provided.length === expected.length && timingSafeEqual(provided, expected);
+    if (!isValidSecret) {
+      return res.status(403).json({ message: "Invalid admin secret" });
+    }
 
-    let usernameFormatted = username?.toLowerCase();
-    let emailFormatted = email?.toLowerCase();
+    const phoneFormatted = phone?.trim();
+    const emailFormatted = email?.toLowerCase();
 
-    const errors = validateSignup({ name, surname, username: usernameFormatted, email: emailFormatted, password });
+    const errors = validateSignup({ name, surname, phone: phoneFormatted, email: emailFormatted, password });
     if (Object.keys(errors).length > 0) {
       return res.status(400).json({ errors });
     }
 
-    const existingUsername = await prisma.user.findUnique({ where: { username: usernameFormatted } });
-    if (existingUsername) {
-      return res.status(400).json({ errors: { username: "Username already taken" } });
+    const existingPhone = await prisma.user.findUnique({ where: { phone: phoneFormatted } });
+    if (existingPhone) {
+      return res.status(400).json({ errors: { phone: "Phone number already registered" } });
     }
 
     const existingEmail = await prisma.user.findUnique({ where: { email: emailFormatted } });
@@ -354,11 +349,10 @@ if (!isValidSecret) {
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // Send OTP for admin signup too
     await createAndSendOTP({
       email: emailFormatted,
-      type: "SIGNUP",
-      userData: { name, surname, username: usernameFormatted, email: emailFormatted, password: hashedPassword, role: "ADMIN" },
+      type: "ADMIN_SIGNUP",
+      userData: { name, surname, phone: phoneFormatted, email: emailFormatted, password: hashedPassword, role: "ADMIN" },
     });
 
     return res.json({
@@ -382,12 +376,12 @@ export const verifyAdminSignup = async (req, res) => {
       return res.status(400).json({ message: "Email and OTP are required" });
     }
 
-    const record = await verifyOTP({ email, otp, type: "SIGNUP" });
+    const record = await verifyOTP({ email, otp, type: "ADMIN_SIGNUP" });
 
-    const { name, surname, username, password, role } = record.userData;
+    const { name, surname, phone, password, role } = record.userData;
 
     const user = await prisma.user.create({
-      data: { name, surname, username, email, password, role: role || "ADMIN" },
+      data: { name, surname, phone, email, password, role: role || "ADMIN" },
     });
 
     const token = jwt.sign(
@@ -403,7 +397,7 @@ export const verifyAdminSignup = async (req, res) => {
       user: {
         id: user.id,
         name: user.name,
-        username: user.username,
+        phone: user.phone,
         role: user.role,
       },
     });

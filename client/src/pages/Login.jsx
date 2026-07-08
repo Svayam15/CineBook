@@ -64,14 +64,14 @@ const Login = () => {
             {/* Identifier */}
             <div>
               <label className="block text-sm text-gray-600 mb-1.5">
-                Email or Username
+                Email or Phone Number
               </label>
               <input
                 type="text"
                 name="identifier"
                 value={formData.identifier}
                 onChange={handleChange}
-                placeholder="Enter your email or username"
+                placeholder="Enter your email or phone number"
                 required
                 className="w-full bg-gray-50 border border-gray-200 text-gray-900 rounded-xl px-4 py-3 outline-none focus:border-primary focus:ring-1 focus:ring-primary transition placeholder:text-gray-400 text-sm"
               />

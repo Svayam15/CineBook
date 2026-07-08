@@ -9,11 +9,24 @@ if (!process.env.FROM_EMAIL) {
 
 const FROM_EMAIL = process.env.FROM_EMAIL;
 
+// 🛡️ Escape HTML-significant characters before interpolating into email templates.
+// Applied to any field that originates from user or admin input (names, movie
+// titles, theatre names/locations) to prevent HTML/markup injection into emails.
+const escapeHtml = (value) => {
+  if (value === null || value === undefined) return "";
+  return String(value)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+};
+
 // 🎟️ BOOKING CONFIRMED + PAYMENT SUCCESSFUL
 export const sendBookingConfirmationEmail = async ({ user, booking, show, seats }) => {
   try {
     const seatList = seats
-      .map((s) => `Row ${s.showSeat.row} - Seat ${s.showSeat.number} (${s.seatType})`)
+      .map((s) => `Row ${escapeHtml(s.showSeat.row)} - Seat ${s.showSeat.number} (${escapeHtml(s.seatType)})`)
       .join("\n");
 
     await resend.emails.send({
@@ -22,12 +35,12 @@ export const sendBookingConfirmationEmail = async ({ user, booking, show, seats 
       subject: `🎬 Booking Confirmed - ${show.movie.title}`,
       html: `
         <h2>Booking Confirmed! 🎉</h2>
-        <p>Hi ${user.name},</p>
-        <p>Your booking for <strong>${show.movie.title}</strong> is confirmed!</p>
+        <p>Hi ${escapeHtml(user.name)},</p>
+        <p>Your booking for <strong>${escapeHtml(show.movie.title)}</strong> is confirmed!</p>
         <hr/>
         <h3>Booking Details:</h3>
-        <p><strong>Movie:</strong> ${show.movie.title} (${show.showType})</p>
-        <p><strong>Theatre:</strong> ${show.theatre.name}, ${show.theatre.location}</p>
+        <p><strong>Movie:</strong> ${escapeHtml(show.movie.title)} (${escapeHtml(show.showType)})</p>
+        <p><strong>Theatre:</strong> ${escapeHtml(show.theatre.name)}, ${escapeHtml(show.theatre.location)}</p>
         <p><strong>Date & Time:</strong> ${new Date(show.startTime).toLocaleString("en-IN", { timeZone: "Asia/Kolkata", hour12: true })}</p>
         <p><strong>Seats:</strong></p>
         <pre>${seatList}</pre>
@@ -55,12 +68,12 @@ export const sendShowCancelledEmail = async ({ user, booking, show, refundAmount
       subject: `❌ Show Cancelled - ${show.movie.title}`,
       html: `
         <h2>Show Cancelled</h2>
-        <p>Hi ${user.name},</p>
+        <p>Hi ${escapeHtml(user.name)},</p>
         <p>This show was cancelled by <strong>CineBook</strong>. We apologize for the inconvenience.</p>
         <hr/>
         <h3>Show Details:</h3>
-        <p><strong>Movie:</strong> ${show.movie.title}</p>
-        <p><strong>Theatre:</strong> ${show.theatre.name}, ${show.theatre.location}</p>
+        <p><strong>Movie:</strong> ${escapeHtml(show.movie.title)}</p>
+        <p><strong>Theatre:</strong> ${escapeHtml(show.theatre.name)}, ${escapeHtml(show.theatre.location)}</p>
         <p><strong>Date & Time:</strong> ${new Date(show.startTime).toLocaleString("en-IN", { timeZone: "Asia/Kolkata", hour12: true })}</p>
         <hr/>
         <h3>Refund Details:</h3>
@@ -129,12 +142,12 @@ export const sendBookingCancelledEmail = async ({
       subject: `🔄 Booking Cancelled - ${show.movie.title}`,
       html: `
         <h2>Booking Cancelled</h2>
-        <p>Hi ${user.name},</p>
+        <p>Hi ${escapeHtml(user.name)},</p>
         ${cancelledByText}
         <hr/>
         <h3>Booking Details:</h3>
-        <p><strong>Movie:</strong> ${show.movie.title}</p>
-        <p><strong>Theatre:</strong> ${show.theatre.name}, ${show.theatre.location}</p>
+        <p><strong>Movie:</strong> ${escapeHtml(show.movie.title)}</p>
+        <p><strong>Theatre:</strong> ${escapeHtml(show.theatre.name)}, ${escapeHtml(show.theatre.location)}</p>
         <p><strong>Date & Time:</strong> ${new Date(show.startTime).toLocaleString("en-IN", { timeZone: "Asia/Kolkata", hour12: true })}</p>
         <p><strong>Cancelled Seats:</strong> ${cancelledSeats}</p>
         <hr/>
@@ -157,12 +170,12 @@ export const sendPasswordResetSuccessEmail = async ({ user }) => {
     await resend.emails.send({
       from: FROM_EMAIL,
       to: user.email,
-      subject: "🔑 Password Reset Successful - Ticket Booking",
+      subject: "🔑 Password Reset Successful - CineBook",
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 400px; margin: 0 auto;">
-          <h2>🎬 Ticket Booking System</h2>
+          <h2>🎬 CineBook</h2>
           <h3>Password Reset Successful ✅</h3>
-          <p>Hi ${user.name},</p>
+          <p>Hi ${escapeHtml(user.name)},</p>
           <p>Your password has been reset successfully.</p>
           <p>Please <strong>login again</strong> with your new password.</p>
           <hr/>
@@ -185,11 +198,11 @@ export const sendShowRescheduledEmail = async ({ user, booking, show, oldStartTi
       subject: `Show Rescheduled — ${show.movie?.title}`,
       html: `
         <h2>Show Rescheduled</h2>
-        <p>Hi ${user.name},</p>
+        <p>Hi ${escapeHtml(user.name)},</p>
         <p>The show you booked has been rescheduled.</p>
         <table>
-          <tr><td><strong>Movie</strong></td><td>${show.movie?.title}</td></tr>
-          <tr><td><strong>Theatre</strong></td><td>${show.theatre?.name}, ${show.theatre?.location}</td></tr>
+          <tr><td><strong>Movie</strong></td><td>${escapeHtml(show.movie?.title)}</td></tr>
+          <tr><td><strong>Theatre</strong></td><td>${escapeHtml(show.theatre?.name)}, ${escapeHtml(show.theatre?.location)}</td></tr>
           <tr><td><strong>Old Time</strong></td><td>${new Date(oldStartTime).toLocaleString("en-IN", { timeZone: "Asia/Kolkata", hour12: true })}</td></tr>
           <tr><td><strong>New Time</strong></td><td>${new Date(show.startTime).toLocaleString("en-IN", { timeZone: "Asia/Kolkata", hour12: true })}</td></tr>
           <tr><td><strong>Booking ID</strong></td><td>#${booking.id}</td></tr>

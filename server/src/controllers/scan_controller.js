@@ -35,7 +35,7 @@ export const scanTicket = asyncHandler(async (req, res) => {
     include: {
       user: {
         // ✅ Added email to user select
-        select: { id: true, name: true, surname: true, username: true, email: true },
+        select: { id: true, name: true, surname: true, phone: true, email: true },
       },
       show: {
         include: {

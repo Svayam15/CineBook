@@ -59,7 +59,7 @@ function App() {
       }
     };
     verifyAuth().catch(console.error);
-  }, []);
+  }, [setUser, clearAuth, setAuthChecked]);
 
   if (!authChecked) {
     return (
@@ -83,7 +83,9 @@ function App() {
       <Route path="/verify-otp" element={<OTPVerify />} />
       <Route path="/forgot-password" element={<ForgotPassword />} />
       <Route path="/reset-password" element={<ResetPassword />} />
-      <Route path="/admin-setup" element={<AdminSignup />} />
+      {import.meta.env.VITE_ADMIN_SETUP_ENABLED === "true" && (
+        <Route path="/admin-setup" element={<AdminSignup />} />
+      )}
       <Route path="/profile" element={<Profile />} />
       <Route path="/terms" element={<Terms />} />
       <Route path="/privacy" element={<Privacy />} />

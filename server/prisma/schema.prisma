@@ -38,6 +38,7 @@ enum Role {
 
 enum OTPType {
   SIGNUP
+  ADMIN_SIGNUP
   LOGIN
   FORGOT_PASSWORD
 }
@@ -53,7 +54,7 @@ model User {
   id        Int      @id @default(autoincrement())
   name      String
   surname   String
-  username  String   @unique
+  phone     String   @unique
   email     String   @unique
   password  String
   role      Role     @default(USER)

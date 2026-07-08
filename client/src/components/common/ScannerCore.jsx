@@ -124,7 +124,7 @@ const ResultCard = ({ result, onConfirm, onReset, confirming, isAdmin }) => {
                 <span className="text-gray-900 font-medium">
                   {booking.user?.name} {booking.user?.surname}
                 </span>
-                <span className="text-gray-400 text-xs">@{booking.user?.username}</span>
+                <span className="text-gray-400 text-xs">{booking.user?.phone}</span>
               </div>
               {booking.user?.email && (
                 <div className="flex items-center gap-2 text-sm">
