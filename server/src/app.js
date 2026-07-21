@@ -48,8 +48,6 @@ app.use((req, res, next) => {
   globalLimiter(req, res, next);
 });
 
-// 🌐 Global rate limiter
-//app.use(globalLimiter);
 
 // ⚠️ Raw body for Stripe webhook — MUST be before express.json()
 app.use((req, res, next) => {
